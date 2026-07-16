@@ -1,0 +1,11 @@
+# Copy this file to application-local.properties and fill in local values.
+db.driver=com.mysql.cj.jdbc.Driver
+db.url=jdbc:mysql://localhost:3306/jaedaero?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+db.username=your_username
+db.password=your_password
+
+kakao.client-id=your_kakao_client_id
+google.client-id=your_google_client_id
+codef.client-id=your_codef_client_id
+codef.client-secret=your_codef_client_secret
+llm.api-key=your_llm_api_key

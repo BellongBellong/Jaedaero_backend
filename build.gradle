@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group = 'com.jaedaero'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Framework
+    implementation 'org.springframework:spring-context:5.3.39'
+    implementation 'org.springframework:spring-webmvc:5.3.39'
+    implementation 'org.springframework:spring-jdbc:5.3.39'
+
+    // Spring Security
+    implementation 'org.springframework.security:spring-security-web:5.8.15'
+    implementation 'org.springframework.security:spring-security-config:5.8.15'
+    implementation 'org.springframework.security:spring-security-oauth2-client:5.8.15'
+
+    // Tomcat 9 / Servlet 4.0
+    compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
+
+    // MyBatis
+    implementation 'org.mybatis:mybatis:3.5.19'
+    implementation 'org.mybatis:mybatis-spring:2.1.2'
+
+    // MySQL
+    runtimeOnly 'com.mysql:mysql-connector-j:9.3.0'
+
+    // JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
+
+    // Validation (Spring Framework 5 / javax namespace)
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    // Test
+    testImplementation 'javax.servlet:javax.servlet-api:4.0.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.5'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.5'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
+    testImplementation 'org.springframework:spring-test:5.3.39'
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
