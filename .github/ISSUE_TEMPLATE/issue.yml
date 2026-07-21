@@ -1,0 +1,50 @@
+name: ISSUE TEMPLATE
+description: 작업 이슈를 등록합니다.
+title: "✨ Feat: "
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ✨ Feat: 새로운 기능 추가 및 기존 기능 요구사항에 맞춰 수정
+        🐛 Fix: 기능에 대한 버그 수정
+        📦 Chore: 패키지 매니저 수정, 그 외 기타 수정
+        ♻️ Refactor: 코드 리팩토링
+        💄 Design: CSS 및 디자인 수정
+        📝 Docs: 문서 수정
+        🧪 Test: 테스트 코드 관련
+        🚨 Hotfix: 긴급 수정
+        ⛑️ Qa: QA
+
+  - type: textarea
+    id: title
+    attributes:
+      label: ✨ 작업 내용
+      description: 해야 할 작업을 간단히 작성해 주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: content
+    attributes:
+      label: ⚙ 상세 작업 내용
+      description: 상세 작업을 체크리스트로 작성해 주세요.
+      value: |
+        - [ ] 작업 1
+        - [ ] 작업 2
+        - [ ] 작업 3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: estimated-time
+    attributes:
+      label: 🛠 예상 소요 시간
+      multiple: false
+      options:
+        - 하루 이상
+        - 12시간 이내
+        - 5시간 이내
+        - 3시간 이내
+        - 1시간 이내
+        - 30분 이내
