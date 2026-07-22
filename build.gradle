@@ -40,9 +40,16 @@ dependencies {
     // JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
 
+    // API documentation (Spring MVC / non-Boot)
+    implementation 'io.springfox:springfox-swagger2:3.0.0'
+    implementation 'io.springfox:springfox-swagger-ui:3.0.0'
+
     // Validation (Spring Framework 5 / javax namespace)
     implementation 'javax.validation:validation-api:2.0.1.Final'
     implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
+
+    // JSP view rendering
+    implementation 'javax.servlet:jstl:1.2'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.38'

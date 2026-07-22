@@ -8,4 +8,5 @@ kakao.client-id=your_kakao_client_id
 google.client-id=your_google_client_id
 codef.client-id=your_codef_client_id
 codef.client-secret=your_codef_client_secret
+codef.public-key=your_codef_rsa_public_key
 llm.api-key=your_llm_api_key
