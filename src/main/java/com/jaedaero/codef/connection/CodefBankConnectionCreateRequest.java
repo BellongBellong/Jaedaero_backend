@@ -3,23 +3,25 @@ package com.jaedaero.codef.connection;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 
 /** Generic personal-bank connection request selected from the frontend institution catalogue. */
 @ApiModel(description = "은행 선택 후 CODEF Connected ID를 생성하거나 기존 Connected ID에 은행을 추가하는 요청")
 public class CodefBankConnectionCreateRequest {
 
+    @NotNull
+    @ApiModelProperty(value = "임시 사용자 식별자. JWT 도입 후 인증 사용자 ID로 대체합니다.", required = true, example = "1")
+    private Long userId;
+
     @NotBlank
-    @ApiModelProperty(value = "GET /api/codef/institutions/banks 응답의 organizationCode", required = true, example = "0004")
+    @ApiModelProperty(value = "GET /api/v1/codef/institutions/banks 응답의 organizationCode", required = true, example = "0004")
     private String organizationCode;
 
     @NotBlank
     @Pattern(regexp = "[01]", message = "loginType은 0(공동인증서) 또는 1(ID/PW)이어야 합니다.")
     @ApiModelProperty(value = "0: 공동인증서, 1: 인터넷뱅킹 ID/PW", required = true, example = "1")
     private String loginType;
-
-    @ApiModelProperty(value = "기존 Connected ID. 있으면 해당 Connected ID에 선택 은행을 추가합니다.")
-    private String connectedId;
 
     @ApiModelProperty(value = "ID/PW 방식일 때 은행 인터넷뱅킹 ID")
     private String loginId;
@@ -37,6 +39,14 @@ public class CodefBankConnectionCreateRequest {
     @ApiModelProperty(value = "공동인증서 방식일 때 Base64 der 파일")
     private String derFile;
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
     public String getOrganizationCode() {
         return organizationCode;
     }
@@ -51,14 +61,6 @@ public class CodefBankConnectionCreateRequest {
 
     public void setLoginType(String loginType) {
         this.loginType = loginType;
-    }
-
-    public String getConnectedId() {
-        return connectedId;
-    }
-
-    public void setConnectedId(String connectedId) {
-        this.connectedId = connectedId;
     }
 
     public String getLoginId() {

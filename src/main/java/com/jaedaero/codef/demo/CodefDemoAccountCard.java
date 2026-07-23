@@ -3,30 +3,33 @@ package com.jaedaero.codef.demo;
 /** View model rendered as one account card in the JSP demonstration. */
 public class CodefDemoAccountCard {
 
-    private final String account;
+    private final long accountId;
     private final String accountDisplay;
     private final String accountName;
     private final String category;
     private final String balance;
     private final boolean transactionSupported;
+    private final String transactionKind;
 
     public CodefDemoAccountCard(
-            String account,
+            long accountId,
             String accountDisplay,
             String accountName,
             String category,
             String balance,
-            boolean transactionSupported) {
-        this.account = account;
+            boolean transactionSupported,
+            String transactionKind) {
+        this.accountId = accountId;
         this.accountDisplay = accountDisplay;
         this.accountName = accountName;
         this.category = category;
         this.balance = balance;
         this.transactionSupported = transactionSupported;
+        this.transactionKind = transactionKind;
     }
 
-    public String getAccount() {
-        return account;
+    public long getAccountId() {
+        return accountId;
     }
 
     public String getAccountDisplay() {
@@ -47,5 +50,13 @@ public class CodefDemoAccountCard {
 
     public boolean isTransactionSupported() {
         return transactionSupported;
+    }
+
+    public String getTransactionKind() {
+        return transactionKind;
+    }
+
+    public boolean isSavingsTransaction() {
+        return "INSTALLMENT_SAVINGS".equals(transactionKind);
     }
 }

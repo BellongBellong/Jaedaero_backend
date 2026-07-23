@@ -42,3 +42,35 @@ th, td { padding: 16px 18px; border-bottom: 1px solid #edf0f5; text-align: left;
 th { color: #64748b; background: #fafbfe; font-size: 12px; }
 .withdrawal { color: #e25555; }.deposit { color: #2775d8; }.empty-message { padding: 40px; color: #64748b; text-align: center; }
 @media (max-width: 720px) { .login-shell { grid-template-columns: 1fr; padding-top: 32px; }.page-shell { padding: 32px 16px; }.dashboard-header { flex-direction: column; }.dashboard-header h1 { font-size: 28px; } }
+
+.savings-status { margin: 0 0 22px; padding: 22px; border: 1px solid #e4eaf4; border-radius: 18px; background: #fff; box-shadow: 0 8px 20px rgba(18, 32, 59, .05); }
+.savings-status.active { border-color: #9cdbb6; background: #f3fcf6; }
+.savings-status.matured { border-color: #f4d595; background: #fffaf0; }
+.savings-status.not-found { border-color: #e4eaf4; background: #f8fafc; }
+.savings-status h2 { margin: 4px 0 8px; font-size: 20px; }
+.savings-status > div > p { margin: 0; color: #64748b; }
+.savings-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 16px; }
+.saving-item { display: flex; flex-direction: column; gap: 5px; padding: 14px; border: 1px solid rgba(18, 32, 59, .1); border-radius: 12px; background: rgba(255, 255, 255, .7); font-size: 13px; color: #64748b; }
+.saving-item strong { color: #1f334f; font-size: 14px; }
+.savings-note { margin: 16px 0 0; color: #7c8aa0; font-size: 12px; line-height: 1.5; }
+
+.transaction-list { display: grid; gap: 12px; }
+.transaction-item { padding: 20px 22px; border: 1px solid #e4eaf4; border-radius: 16px; background: #fff; box-shadow: 0 6px 16px rgba(18, 32, 59, .05); }
+.transaction-item.deposit-card { border-left: 5px solid #2a9b67; }
+.transaction-item.withdrawal-card { border-left: 5px solid #e25555; }
+.transaction-topline, .transaction-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.transaction-type { padding: 5px 9px; border-radius: 999px; font-weight: 800; font-size: 12px; }
+.deposit-card .transaction-type { color: #176b46; background: #eaf8ef; }
+.withdrawal-card .transaction-type { color: #b33c3c; background: #fff0f0; }
+.transaction-amount { font-size: 20px; }
+.deposit-card .transaction-amount { color: #18704a; }
+.withdrawal-card .transaction-amount { color: #d64545; }
+.transaction-description { margin: 16px 0; color: #142640; font-size: 20px; line-height: 1.35; }
+.transaction-meta { justify-content: flex-start; flex-wrap: wrap; color: #728198; font-size: 13px; }
+.transaction-meta span + span::before { content: '·'; margin-right: 12px; color: #bdc7d5; }
+.transaction-meta strong { color: #40516a; }
+
+.period-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; padding: 16px; border: 1px solid #e4eaf4; border-radius: 14px; background: #fff; }
+.period-filter label { margin: 0 2px 0 0; }
+.period-filter input { width: auto; min-width: 150px; padding: 10px 12px; }
+@media (max-width: 720px) { .period-filter { align-items: stretch; }.period-filter input { width: 100%; }.period-filter .secondary-button { width: 100%; } }

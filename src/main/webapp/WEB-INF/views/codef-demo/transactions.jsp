@@ -13,40 +13,52 @@
     <header class="dashboard-header">
         <div>
             <p class="eyebrow">${bank.displayName} · 최근 3개월</p>
-            <h1>입출금 거래내역</h1>
-            <p class="account-number"><c:out value="${account}"/></p>
+            <h1>${transactionKind == 'INSTALLMENT_SAVINGS' ? '적금 납입내역' : '입출금 거래내역'}</h1>
+            <p class="account-number"><c:out value="${accountDisplay}"/></p>
         </div>
         <a class="secondary-button link-button" href="${pageContext.request.contextPath}/codef-demo/accounts">계좌 목록으로</a>
     </header>
 
-    <section class="transaction-card">
+    <form class="period-filter" action="${pageContext.request.contextPath}/codef-demo/transactions" method="post">
+        <input type="hidden" name="accountId" value="${accountId}">
+        <input type="hidden" name="transactionKind" value="${transactionKind}">
+        <label for="startDate">조회 시작일</label>
+        <input id="startDate" type="date" name="startDate" value="${startDate}">
+        <label for="endDate">조회 종료일</label>
+        <input id="endDate" type="date" name="endDate" value="${endDate}">
+        <button class="secondary-button" type="submit">기간 조회</button>
+    </form>
+
+    <section class="transaction-list">
         <c:choose>
             <c:when test="${empty transactions}">
                 <p class="empty-message">최근 3개월 내 거래내역이 없습니다.</p>
             </c:when>
             <c:otherwise>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>일시</th>
-                        <th>거래 내용</th>
-                        <th>출금</th>
-                        <th>입금</th>
-                        <th>거래 후 잔액</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <c:forEach var="transaction" items="${transactions}">
-                        <tr>
-                            <td><c:out value="${transaction.dateTime}"/></td>
-                            <td><c:out value="${transaction.description}"/></td>
-                            <td class="withdrawal"><c:out value="${transaction.withdrawal}"/></td>
-                            <td class="deposit"><c:out value="${transaction.deposit}"/></td>
-                            <td><c:out value="${transaction.balance}"/></td>
-                        </tr>
-                    </c:forEach>
-                    </tbody>
-                </table>
+                <c:forEach var="transaction" items="${transactions}">
+                    <article class="transaction-item ${transaction.deposit ? 'deposit-card' : 'withdrawal-card'}">
+                        <div class="transaction-topline">
+                            <span class="transaction-type">
+                                <c:choose>
+                                    <c:when test="${transaction.deposit}">입금</c:when>
+                                    <c:otherwise>출금</c:otherwise>
+                                </c:choose>
+                            </span>
+                            <strong class="transaction-amount">
+                                <c:choose>
+                                    <c:when test="${transaction.deposit}">+<c:out value="${transaction.amount}"/></c:when>
+                                    <c:otherwise>-<c:out value="${transaction.amount}"/></c:otherwise>
+                                </c:choose>
+                            </strong>
+                        </div>
+                        <h2 class="transaction-description"><c:out value="${transaction.description}"/></h2>
+                        <div class="transaction-meta">
+                            <span><c:out value="${transaction.date}"/></span>
+                            <span><c:out value="${transaction.time}"/></span>
+                            <span>거래 후 잔액 <strong><c:out value="${transaction.balance}"/></strong></span>
+                        </div>
+                    </article>
+                </c:forEach>
             </c:otherwise>
         </c:choose>
     </section>

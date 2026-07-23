@@ -61,7 +61,11 @@ public class CodefAccountClient {
         JsonNode response = codefApiClient.post(path, body);
         JsonNode result = response.path("result");
         if (!"CF-00000".equals(result.path("code").asText())) {
-            throw new CodefApiException("CODEF account registration failed.", 422);
+            String code = result.path("code").asText("UNKNOWN");
+            String message = result.path("message").asText("CODEF 계정 등록 요청이 거절되었습니다.");
+            String extraMessage = result.path("extraMessage").asText();
+            String detail = extraMessage.isBlank() ? message : message + " (" + extraMessage + ")";
+            throw new CodefApiException("CODEF 계정 등록 실패 [" + code + "]: " + detail, 422);
         }
 
         JsonNode data = response.path("data");

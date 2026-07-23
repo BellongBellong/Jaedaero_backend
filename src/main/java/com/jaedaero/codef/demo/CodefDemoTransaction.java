@@ -1,40 +1,46 @@
 package com.jaedaero.codef.demo;
 
-/** View model for one demand-deposit transaction row. */
+/** View model for one transaction card in the local JSP demonstration. */
 public class CodefDemoTransaction {
 
-    private final String dateTime;
+    private final String date;
+    private final String time;
     private final String description;
-    private final String withdrawal;
-    private final String deposit;
+    private final String amount;
     private final String balance;
+    private final boolean deposit;
 
     public CodefDemoTransaction(
-            String dateTime, String description, String withdrawal, String deposit, String balance) {
-        this.dateTime = dateTime;
+            String date, String time, String description, String amount, String balance, boolean deposit) {
+        this.date = date;
+        this.time = time;
         this.description = description;
-        this.withdrawal = withdrawal;
-        this.deposit = deposit;
+        this.amount = amount;
         this.balance = balance;
+        this.deposit = deposit;
     }
 
-    public String getDateTime() {
-        return dateTime;
+    public String getDate() {
+        return date;
+    }
+
+    public String getTime() {
+        return time;
     }
 
     public String getDescription() {
         return description;
     }
 
-    public String getWithdrawal() {
-        return withdrawal;
-    }
-
-    public String getDeposit() {
-        return deposit;
+    public String getAmount() {
+        return amount;
     }
 
     public String getBalance() {
         return balance;
+    }
+
+    public boolean isDeposit() {
+        return deposit;
     }
 }
