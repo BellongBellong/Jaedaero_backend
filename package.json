@@ -1,0 +1,27 @@
+{
+  "name": "jaedaero-backend",
+  "version": "1.0.0",
+  "description": "군인의 확정소득을 기반으로 전역 예상 자산을 계산하고 AI 금융 코칭을 제공하는 `제대로(JaedaeRo)`의 백엔드 저장소입니다.",
+  "main": "index.js",
+  "scripts": {
+    "test": "./gradlew test",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BellongBellong/Jaedaero_backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/BellongBellong/Jaedaero_backend/issues"
+  },
+  "homepage": "https://github.com/BellongBellong/Jaedaero_backend#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "husky": "^9.1.7"
+  }
+}
