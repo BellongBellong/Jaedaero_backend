@@ -12,7 +12,7 @@
 <main class="page-shell dashboard-shell">
     <header class="dashboard-header">
         <div>
-            <p class="eyebrow">${bank.displayName}</p>
+            <p class="eyebrow"><c:out value="${institutionDisplayName}"/></p>
             <h1>연결된 보유계좌</h1>
             <p>입출금 계좌 카드를 선택하면 최근 3개월 거래내역을 확인할 수 있습니다.</p>
         </div>
@@ -25,6 +25,7 @@
         <p class="alert error"><c:out value="${errorMessage}"/></p>
     </c:if>
 
+    <c:if test="${not securitiesInstitution}">
     <section class="savings-status ${militarySavingsStatus.active ? 'active' : militarySavingsStatus.matured ? 'matured' : 'not-found'}">
         <div>
             <p class="eyebrow">장병내일준비적금 조회</p>
@@ -52,6 +53,7 @@
         </c:if>
         <p class="savings-note">※ 은행 계좌를 모두 연동하지 않은 경우에는 실제 복무 여부를 확정할 수 없습니다.</p>
     </section>
+    </c:if>
 
     <c:choose>
         <c:when test="${empty accounts}">

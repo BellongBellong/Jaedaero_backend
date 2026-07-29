@@ -61,7 +61,7 @@ public class CodefSavingsTransactionSyncService {
         body.put("orderBy", "0");
         body.put("inquiryType", "1");
 
-        JsonNode data = codefApiClient.post(INSTALLMENT_SAVINGS_TRANSACTION_LIST_PATH, body).path("data");
+        JsonNode data = codefApiClient.postProduct(INSTALLMENT_SAVINGS_TRANSACTION_LIST_PATH, body).path("data");
         syncSoldierSavingIfMatched(userId, account, data);
 
         JsonNode rows = data.path("resTrHistoryList");

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jaedaero.codef.common.CodefApiClient;
+import com.jaedaero.codef.institution.CodefBusinessType;
 import com.jaedaero.codef.token.CodefAccessTokenProvider;
 import com.jaedaero.codef.token.CodefTokenClient;
 import java.util.Map;
@@ -47,10 +48,23 @@ class CodefAccountClientTest {
         assertEquals("existing-connected-id", apiClient.body.get("connectedId"));
     }
 
+    @Test
+    void securitiesConnection_usesIntegratedClientTypeRequiredByCodef() {
+        CodefBankConnectionCreateRequest request = new CodefBankConnectionCreateRequest();
+        request.setBusinessType(CodefBusinessType.SECURITIES.getCode());
+        request.setOrganizationCode("0238");
+        request.setLoginId("mirae-user");
+        request.setPassword("mirae-password");
+
+        CodefAccountCreateRequest codefRequest = request.toCodefRequest();
+
+        assertEquals("ST", codefRequest.getBusinessType());
+        assertEquals("A", codefRequest.getClientType());
+    }
+
     private CodefAccountCreateRequest idPasswordRequest() {
         CodefAccountCreateRequest request = new CodefAccountCreateRequest();
         request.setOrganization("0004");
-        request.setLoginType("1");
         request.setLoginId("bank-user");
         request.setPassword("bank-password");
         return request;

@@ -5,6 +5,7 @@ public record StoredConnectedAccount(
         long userId,
         long connectionId,
         String institutionCode,
+        String businessType,
         String institutionName,
         String accountNumberEncrypted,
         String accountMasked,

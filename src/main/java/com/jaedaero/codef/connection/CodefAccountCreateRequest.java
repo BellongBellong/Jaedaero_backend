@@ -3,21 +3,21 @@ package com.jaedaero.codef.connection;
 /**
  * Input for one CODEF institution registration.
  *
- * <p>Required fields differ by organization and login type. The frontend must use CODEF's
- * organization-specific required parameter guide before submitting this request.
+ * <p>Only ID/password login is supported. Institution-specific required fields must follow the
+ * CODEF product guide.
  */
 public class CodefAccountCreateRequest {
+
+    public static final String ID_PASSWORD_LOGIN_TYPE = "1";
 
     private String countryCode = "KR";
     private String businessType = "BK";
     private String clientType = "P";
     private String organization;
-    private String loginType;
+    private String loginType = ID_PASSWORD_LOGIN_TYPE;
     private String loginId;
     private String password;
-    private String birthday;
-    private String keyFile;
-    private String derFile;
+    private String birthDate;
 
     public String getCountryCode() {
         return countryCode;
@@ -55,10 +55,6 @@ public class CodefAccountCreateRequest {
         return loginType;
     }
 
-    public void setLoginType(String loginType) {
-        this.loginType = loginType;
-    }
-
     public String getLoginId() {
         return loginId;
     }
@@ -75,27 +71,12 @@ public class CodefAccountCreateRequest {
         this.password = password;
     }
 
-    public String getBirthday() {
-        return birthday;
+    public String getBirthDate() {
+        return birthDate;
     }
 
-    public void setBirthday(String birthday) {
-        this.birthday = birthday;
+    public void setBirthDate(String birthDate) {
+        this.birthDate = birthDate;
     }
 
-    public String getKeyFile() {
-        return keyFile;
-    }
-
-    public void setKeyFile(String keyFile) {
-        this.keyFile = keyFile;
-    }
-
-    public String getDerFile() {
-        return derFile;
-    }
-
-    public void setDerFile(String derFile) {
-        this.derFile = derFile;
-    }
 }

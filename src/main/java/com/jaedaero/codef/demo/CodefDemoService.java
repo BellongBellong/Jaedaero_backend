@@ -5,6 +5,8 @@ import com.jaedaero.codef.account.CodefTransactionSyncService;
 import com.jaedaero.codef.connection.CodefBankConnectionCreateRequest;
 import com.jaedaero.codef.connection.CodefConnectionService;
 import com.jaedaero.codef.institution.CodefBankInstitution;
+import com.jaedaero.codef.institution.CodefBusinessType;
+import com.jaedaero.codef.institution.CodefSecuritiesInstitution;
 import com.jaedaero.codef.persistence.CodefPersistenceRepository;
 import com.jaedaero.codef.persistence.StoredConnectedAccount;
 import com.jaedaero.codef.persistence.StoredTransaction;
@@ -42,26 +44,33 @@ public class CodefDemoService {
         this.savingsTransactionSyncService = savingsTransactionSyncService;
     }
 
-    /** Uses cached accounts when this demo user already connected the selected bank. */
+    /** Uses cached accounts when this demo user already connected the selected institution. */
     public void connect(long userId, CodefDemoLoginForm form) {
-        CodefBankInstitution.fromOrganizationCode(form.getOrganizationCode());
+        CodefBusinessType businessType = CodefBusinessType.fromCode(form.getBusinessType());
+        if (businessType == CodefBusinessType.BANK) {
+            CodefBankInstitution.fromOrganizationCode(form.getOrganizationCode());
+        } else {
+            CodefSecuritiesInstitution.fromOrganizationCode(form.getOrganizationCode());
+        }
         repository.createDemoUserIfAbsent(userId);
-        if (!repository.findAccountsByUserIdAndInstitution(userId, form.getOrganizationCode()).isEmpty()) {
+        if (!repository.findAccountsByUserIdAndInstitution(
+                userId, form.getOrganizationCode(), businessType.getCode()).isEmpty()) {
             return;
         }
         CodefBankConnectionCreateRequest request = new CodefBankConnectionCreateRequest();
         request.setUserId(userId);
         request.setOrganizationCode(form.getOrganizationCode());
-        request.setLoginType("1");
+        request.setBusinessType(businessType.getCode());
         request.setLoginId(form.getLoginId());
         request.setPassword(form.getPassword());
-        request.setBirthday(form.getBirthday());
+        request.setBirthDate(form.getBirthDate());
         connectionService.connect(userId, request);
     }
 
-    public CodefDemoAccountOverview getAccountOverview(long userId, String organizationCode) {
+    public CodefDemoAccountOverview getAccountOverview(long userId, String organizationCode, String businessType) {
         List<CodefDemoAccountCard> cards = new ArrayList<>();
-        List<StoredConnectedAccount> accounts = repository.findAccountsByUserIdAndInstitution(userId, organizationCode);
+        List<StoredConnectedAccount> accounts =
+                repository.findAccountsByUserIdAndInstitution(userId, organizationCode, businessType);
         for (StoredConnectedAccount account : accounts) {
             addCard(cards, account);
         }

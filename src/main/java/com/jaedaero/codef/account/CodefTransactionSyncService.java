@@ -51,7 +51,7 @@ public class CodefTransactionSyncService {
         body.put("orderBy", "0");
         body.put("inquiryType", "1");
 
-        JsonNode rows = codefApiClient.post(TRANSACTION_LIST_PATH, body).path("data").path("resTrHistoryList");
+        JsonNode rows = codefApiClient.postProduct(TRANSACTION_LIST_PATH, body).path("data").path("resTrHistoryList");
         if (!rows.isArray()) return 0;
         int count = 0;
         for (JsonNode row : rows) {

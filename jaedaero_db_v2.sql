@@ -1,7 +1,44 @@
+use jaedaero_db;
+
 -- ============================================================
 -- JAEDAERO Database Schema
 -- MySQL 8.0+
 -- ============================================================
+
+-- 기존 스키마를 초기화한 뒤 아래 정의로 다시 생성합니다.
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS investment_badge;
+DROP TABLE IF EXISTS refresh_token;
+DROP TABLE IF EXISTS discharge_report;
+DROP TABLE IF EXISTS strategy_application;
+DROP TABLE IF EXISTS ai_recommended_scenario;
+DROP TABLE IF EXISTS product_recommendation;
+DROP TABLE IF EXISTS military_benefit;
+DROP TABLE IF EXISTS financial_product;
+DROP TABLE IF EXISTS ai_analysis;
+DROP TABLE IF EXISTS leave_budget;
+DROP TABLE IF EXISTS simulation;
+DROP TABLE IF EXISTS challenge_monthly_result;
+DROP TABLE IF EXISTS challenge_member;
+DROP TABLE IF EXISTS challenge_group;
+DROP TABLE IF EXISTS asset_snapshot;
+DROP TABLE IF EXISTS transaction_history;
+DROP TABLE IF EXISTS soldier_saving;
+DROP TABLE IF EXISTS account_transaction_sync;
+DROP TABLE IF EXISTS connected_account;
+DROP TABLE IF EXISTS codef_institution_connection;
+DROP TABLE IF EXISTS codef_connection;
+DROP TABLE IF EXISTS cashflow_forecast_month;
+DROP TABLE IF EXISTS cashflow_forecast;
+DROP TABLE IF EXISTS military_pay_policy;
+DROP TABLE IF EXISTS goal;
+DROP TABLE IF EXISTS financial_test;
+DROP TABLE IF EXISTS user_agreement;
+DROP TABLE IF EXISTS soldier_profile;
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------------------------------------------
 -- 1. users : 사용자
@@ -10,7 +47,9 @@ CREATE TABLE users (
                        user_id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 ID',
                        social_type       VARCHAR(20) NOT NULL COMMENT 'KAKAO, GOOGLE',
                        social_id         VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
-                       nickname          VARCHAR(50) NOT NULL COMMENT '닉네임',
+                       nickname          VARCHAR(50) NULL COMMENT '닉네임',
+                       profile_image     ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘',
+                       profile_source    ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색',
                        military_verified BOOLEAN NOT NULL DEFAULT FALSE COMMENT '군인 인증 완료 여부',
                        is_withdrawn      BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at      TIMESTAMP NULL COMMENT '탈퇴 일시',
@@ -18,7 +57,8 @@ CREATE TABLE users (
                        updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                            ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
-                       CONSTRAINT uq_users_social_identity UNIQUE (social_type, social_id)
+                       CONSTRAINT uq_users_social_identity UNIQUE (social_type, social_id),
+                       CONSTRAINT uq_users_nickname UNIQUE (nickname)
 ) COMMENT='사용자'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
@@ -219,17 +259,44 @@ CREATE TABLE codef_connection (
 
 
 -- ---------------------------------------------
--- 10. connected_account : CODEF 연동 계좌
+-- 10. codef_institution_connection : Connected ID에 등록된 기관
+-- ---------------------------------------------
+CREATE TABLE codef_institution_connection (
+                                               institution_connection_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'CODEF 기관 연결 ID',
+                                               connection_id             BIGINT NOT NULL COMMENT 'CODEF 연동 ID',
+                                               institution_code          VARCHAR(20) NOT NULL COMMENT 'CODEF 기관 코드',
+                                               business_type             VARCHAR(2) NOT NULL COMMENT 'CODEF 업무 구분(BK: 은행, ST: 증권)',
+                                               login_type                VARCHAR(10) NULL COMMENT '등록에 사용한 CODEF 로그인 방식',
+                                               status                    ENUM('ACTIVE', 'ERROR', 'DISCONNECTED') NOT NULL DEFAULT 'ACTIVE' COMMENT '기관 등록 상태',
+                                               last_sync_at              TIMESTAMP NULL COMMENT '기관 마지막 동기화 시각',
+                                               last_sync_error_message   VARCHAR(500) NULL COMMENT '기관 최근 동기화 실패 사유',
+                                               created_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                                               updated_at                TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                               CONSTRAINT uq_codef_institution_connection
+                                                   UNIQUE (connection_id, institution_code, business_type),
+                                               CONSTRAINT fk_codef_institution_connection_connection
+                                                   FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
+                                                       ON DELETE CASCADE
+) COMMENT='CODEF Connected ID에 등록된 금융기관'
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------
+-- 11. connected_account : CODEF 연동 계좌
 -- ---------------------------------------------
 CREATE TABLE connected_account (
                                    account_id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '연동 계좌 ID',
                                    connection_id             BIGINT NOT NULL COMMENT 'CODEF 연동 ID',
                                    institution_code          VARCHAR(20) NOT NULL COMMENT 'CODEF 기관 코드',
+                                   business_type             VARCHAR(2) NOT NULL DEFAULT 'BK' COMMENT 'CODEF 업무 구분(BK: 은행, ST: 증권)',
                                    institution_name          VARCHAR(100) NOT NULL COMMENT '금융기관명',
                                    account_number_encrypted  VARCHAR(1024) NOT NULL COMMENT '암호화된 실제 계좌번호',
                                    account_number_hash       CHAR(64) NOT NULL COMMENT '계좌번호 SHA-256 해시',
                                    account_masked            VARCHAR(50) NOT NULL COMMENT '화면 표시용 마스킹 계좌번호',
                                    account_type              VARCHAR(50) NULL COMMENT '입출금, 적금, 대출, 펀드 등',
+                                   account_role              ENUM('SOLDIER_SAVING', 'NARASARANG', 'GENERAL') NOT NULL DEFAULT 'GENERAL' COMMENT '계좌 분류',
                                    product_name              VARCHAR(255) NULL COMMENT '상품명',
                                    current_balance           BIGINT NOT NULL DEFAULT 0 COMMENT '조회 시점 잔액',
                                    available_balance         BIGINT NULL COMMENT '출금 가능 금액',
@@ -243,7 +310,7 @@ CREATE TABLE connected_account (
                                        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
                                    CONSTRAINT uq_connected_account_source
-                                       UNIQUE (connection_id, institution_code, account_number_hash),
+                                       UNIQUE (connection_id, institution_code, business_type, account_number_hash),
                                    CONSTRAINT fk_connected_account_connection
                                        FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
                                            ON DELETE CASCADE
@@ -428,10 +495,12 @@ CREATE TABLE simulation (
                             scenario_name            VARCHAR(100) NOT NULL COMMENT '시나리오명',
                             monthly_saving_amount    BIGINT NOT NULL COMMENT '월 저축액',
                             investment_ratio         DECIMAL(5,2) NOT NULL COMMENT '투자 비율',
+                            expected_return_rate     DECIMAL(5,2) NULL COMMENT '목표 투자수익률(%, 연 환산)',
                             investment_type          ENUM('SAFE', 'BALANCED', 'AGGRESSIVE')
         NOT NULL COMMENT '투자 성향',
                             monthly_spending_amount  BIGINT NOT NULL COMMENT '월 소비액',
                             expected_asset           BIGINT NOT NULL COMMENT '전역 예상 자산',
+                            financial_discharge_date DATE NULL COMMENT '재정적 전역일',
                             is_saved                 BOOLEAN NOT NULL DEFAULT TRUE COMMENT '사용자 저장 여부',
                             created_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
                             updated_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -482,6 +551,7 @@ CREATE TABLE ai_analysis (
                              analysis_id       BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'AI 분석 ID',
                              user_id           BIGINT NOT NULL COMMENT '사용자 ID',
                              snapshot_id       BIGINT NULL COMMENT '분석 기준 자산 스냅샷 ID',
+                             simulation_id     BIGINT NULL COMMENT '분석 기준 시뮬레이션 ID',
                              analysis_type     ENUM(
         'CONSUMPTION',
         'SAVING',
@@ -500,6 +570,9 @@ CREATE TABLE ai_analysis (
                                      ON DELETE CASCADE,
                              CONSTRAINT fk_ai_analysis_snapshot
                                  FOREIGN KEY (snapshot_id) REFERENCES asset_snapshot(snapshot_id)
+                                     ON DELETE SET NULL,
+                             CONSTRAINT fk_ai_analysis_simulation
+                                 FOREIGN KEY (simulation_id) REFERENCES simulation(simulation_id)
                                      ON DELETE SET NULL
 ) COMMENT='AI 분석 이력'
   DEFAULT CHARSET=utf8mb4
@@ -516,6 +589,7 @@ CREATE TABLE financial_product (
                                    product_type        VARCHAR(50) NULL COMMENT '상품 유형',
                                    base_interest_rate  DECIMAL(5,2) NULL COMMENT '기본 금리',
                                    max_interest_rate   DECIMAL(5,2) NULL COMMENT '최고 금리',
+                                   return_rate_1y      DECIMAL(6,2) NULL COMMENT '최근 1년 수익률(%)',
                                    eligibility         TEXT NULL COMMENT '가입 조건',
                                    description         TEXT NULL COMMENT '상품 설명',
                                    source_url          VARCHAR(1000) NULL COMMENT '출처 URL',
@@ -584,6 +658,7 @@ CREATE TABLE ai_recommended_scenario (
                                          user_id                   BIGINT NOT NULL COMMENT '사용자 ID',
                                          monthly_saving_amount     BIGINT NOT NULL COMMENT '추천 월 저축액',
                                          investment_ratio          DECIMAL(5,2) NOT NULL COMMENT '추천 투자 비율',
+                                         expected_return_rate      DECIMAL(5,2) NULL COMMENT '목표 투자수익률(%)',
                                          investment_type           ENUM('SAFE', 'BALANCED', 'AGGRESSIVE')
         NOT NULL COMMENT '추천 투자 성향',
                                          monthly_spending_amount   BIGINT NOT NULL COMMENT '추천 월 소비액',
@@ -614,6 +689,7 @@ CREATE TABLE strategy_application (
                                       ai_scenario_id                   BIGINT NULL COMMENT '원본 AI 추천 시나리오 ID',
                                       applied_monthly_saving_amount    BIGINT NULL COMMENT '적용 월 저축액',
                                       applied_investment_ratio         DECIMAL(5,2) NULL COMMENT '적용 투자 비율',
+                                      applied_expected_return_rate     DECIMAL(5,2) NULL COMMENT '적용 목표 투자수익률(%)',
                                       applied_investment_type          ENUM('SAFE', 'BALANCED', 'AGGRESSIVE')
         NULL COMMENT '적용 투자 성향',
                                       applied_monthly_spending_amount  BIGINT NULL COMMENT '적용 월 소비액',
@@ -660,3 +736,51 @@ CREATE TABLE discharge_report (
 ) COMMENT='전역 리포트'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------
+-- 26. refresh_token : JWT Refresh Token 관리
+-- ---------------------------------------------
+CREATE TABLE refresh_token (
+                               token_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '토큰 ID',
+                               user_id    BIGINT NOT NULL COMMENT '사용자 ID',
+                               token_hash CHAR(64) NOT NULL COMMENT 'Refresh Token SHA-256 해시값',
+                               user_agent VARCHAR(255) NULL COMMENT '발급 기기 정보',
+                               expires_at DATETIME NOT NULL COMMENT '만료 일시',
+                               created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                               CONSTRAINT uq_refresh_token_hash UNIQUE (token_hash),
+                               CONSTRAINT fk_refresh_token_user
+                                   FOREIGN KEY (user_id) REFERENCES users(user_id)
+                                       ON DELETE CASCADE
+) COMMENT='JWT Refresh Token 관리'
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------
+-- 27. investment_badge : 투자 뱃지
+-- ---------------------------------------------
+CREATE TABLE investment_badge (
+                                   badge_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 뱃지 ID',
+                                   user_id             BIGINT NOT NULL COMMENT '사용자 ID',
+                                   badge_month         DATE NOT NULL COMMENT '산정 기준 월의 첫날',
+                                   monthly_return_rate DECIMAL(6,2) NOT NULL COMMENT '해당 월 저축+투자 합산 수익률(%)',
+                                   badge_tier          ENUM('SAFE', 'BALANCED', 'AGGRESSIVE') NOT NULL COMMENT '월간 뱃지 등급',
+                                   badge_grade         ENUM('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND') NULL COMMENT '누적 등급',
+                                   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                                   CONSTRAINT uq_investment_badge_user_month UNIQUE (user_id, badge_month),
+                                   CONSTRAINT fk_investment_badge_user
+                                       FOREIGN KEY (user_id) REFERENCES users(user_id)
+                                           ON DELETE CASCADE
+) COMMENT='투자 뱃지'
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------
+-- 데모 기본 사용자
+-- ---------------------------------------------
+INSERT INTO users (user_id, social_type, social_id, nickname)
+VALUES (1, 'DEMO', 'codef-demo-1', 'CODEF 데모 사용자');

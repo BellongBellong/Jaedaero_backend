@@ -12,7 +12,7 @@
 <main class="page-shell dashboard-shell">
     <header class="dashboard-header">
         <div>
-            <p class="eyebrow">${bank.displayName} · 최근 3개월</p>
+            <p class="eyebrow"><c:out value="${institutionDisplayName}"/> · 최근 3개월</p>
             <h1>${transactionKind == 'INSTALLMENT_SAVINGS' ? '적금 납입내역' : '입출금 거래내역'}</h1>
             <p class="account-number"><c:out value="${accountDisplay}"/></p>
         </div>

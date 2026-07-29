@@ -21,7 +21,7 @@ public class KookminBankAccountCreateTestRequest {
     private String bankPassword;
 
     @ApiModelProperty(value = "생년월일(기관에서 요구하는 경우 YYMMDD)", example = "990101")
-    private String birthday;
+    private String birthDate;
 
     public String getBankLoginId() {
         return bankLoginId;
@@ -39,21 +39,20 @@ public class KookminBankAccountCreateTestRequest {
         this.bankPassword = bankPassword;
     }
 
-    public String getBirthday() {
-        return birthday;
+    public String getBirthDate() {
+        return birthDate;
     }
 
-    public void setBirthday(String birthday) {
-        this.birthday = birthday;
+    public void setBirthDate(String birthDate) {
+        this.birthDate = birthDate;
     }
 
     public CodefAccountCreateRequest toCodefRequest() {
         CodefAccountCreateRequest request = new CodefAccountCreateRequest();
         request.setOrganization("0004"); // CODEF KB국민은행 기관코드
-        request.setLoginType("1"); // ID/PW
         request.setLoginId(bankLoginId);
         request.setPassword(bankPassword);
-        request.setBirthday(birthday);
+        request.setBirthDate(birthDate);
         return request;
     }
 }

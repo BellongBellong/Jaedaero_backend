@@ -65,7 +65,11 @@ public class CodefAccountClient {
             String message = result.path("message").asText("CODEF 계정 등록 요청이 거절되었습니다.");
             String extraMessage = result.path("extraMessage").asText();
             String detail = extraMessage.isBlank() ? message : message + " (" + extraMessage + ")";
-            throw new CodefApiException("CODEF 계정 등록 실패 [" + code + "]: " + detail, 422);
+            String transactionId = result.path("transactionId").asText();
+            String requestReference = transactionId.isBlank() ? "" : " [거래 ID: " + transactionId + "]";
+            throw new CodefApiException(
+                    "CODEF 계정 등록 실패 [" + code + "]: " + detail + requestReference,
+                    422);
         }
 
         JsonNode data = response.path("data");
@@ -85,9 +89,7 @@ public class CodefAccountClient {
         account.put("password", rsaEncryptor.encrypt(request.getPassword(), publicKey));
 
         putIfPresent(account, "id", request.getLoginId());
-        putIfPresent(account, "birthday", request.getBirthday());
-        putIfPresent(account, "keyFile", request.getKeyFile());
-        putIfPresent(account, "derFile", request.getDerFile());
+        putIfPresent(account, "birthDate", request.getBirthDate());
         return account;
     }
 
@@ -95,12 +97,9 @@ public class CodefAccountClient {
         if (isBlank(request.getOrganization()) || isBlank(request.getLoginType()) || isBlank(request.getPassword())) {
             throw new IllegalArgumentException("organization, loginType, and password are required.");
         }
-        if ("1".equals(request.getLoginType()) && isBlank(request.getLoginId())) {
-            throw new IllegalArgumentException("loginId is required for ID/PW login.");
-        }
-        if ("0".equals(request.getLoginType())
-                && (isBlank(request.getKeyFile()) || isBlank(request.getDerFile()))) {
-            throw new IllegalArgumentException("keyFile and derFile are required for certificate login.");
+        if (!CodefAccountCreateRequest.ID_PASSWORD_LOGIN_TYPE.equals(request.getLoginType())
+                || isBlank(request.getLoginId())) {
+            throw new IllegalArgumentException("ID/PW 로그인 방식의 loginId가 필요합니다.");
         }
     }
 

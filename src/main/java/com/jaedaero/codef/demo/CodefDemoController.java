@@ -2,6 +2,8 @@ package com.jaedaero.codef.demo;
 
 import com.jaedaero.codef.common.CodefApiException;
 import com.jaedaero.codef.institution.CodefBankInstitution;
+import com.jaedaero.codef.institution.CodefBusinessType;
+import com.jaedaero.codef.institution.CodefSecuritiesInstitution;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -27,6 +29,7 @@ public class CodefDemoController {
 
     private static final String ACTIVE_KEY = "codef.demo.active";
     private static final String ORGANIZATION_KEY = "codef.demo.organization";
+    private static final String BUSINESS_TYPE_KEY = "codef.demo.business-type";
     private static final Logger LOGGER = Logger.getLogger(CodefDemoController.class.getName());
 
     private final CodefDemoService codefDemoService;
@@ -45,7 +48,7 @@ public class CodefDemoController {
     @GetMapping
     public String loginPage(Model model) {
         assertEnabled();
-        model.addAttribute("banks", Arrays.asList(CodefBankInstitution.values()));
+        addInstitutionCatalogues(model);
         model.addAttribute("loginForm", new CodefDemoLoginForm());
         return "codef-demo/login";
     }
@@ -58,7 +61,7 @@ public class CodefDemoController {
             Model model) {
         assertEnabled();
         if (bindingResult.hasErrors()) {
-            model.addAttribute("banks", Arrays.asList(CodefBankInstitution.values()));
+            addInstitutionCatalogues(model);
             return "codef-demo/login";
         }
 
@@ -66,15 +69,16 @@ public class CodefDemoController {
             codefDemoService.connect(demoUserId, loginForm);
             session.setAttribute(ACTIVE_KEY, Boolean.TRUE);
             session.setAttribute(ORGANIZATION_KEY, loginForm.getOrganizationCode());
+            session.setAttribute(BUSINESS_TYPE_KEY, loginForm.getBusinessType());
             return accounts(session, model);
         } catch (CodefApiException exception) {
             LOGGER.log(Level.WARNING, "CODEF demo account connection failed: {0}", exception.getMessage());
-            model.addAttribute("banks", Arrays.asList(CodefBankInstitution.values()));
+            addInstitutionCatalogues(model);
             model.addAttribute("errorMessage", exception.getMessage());
             return "codef-demo/login";
         } catch (RuntimeException exception) {
             LOGGER.log(Level.WARNING, "CODEF demo account connection failed", exception);
-            model.addAttribute("banks", Arrays.asList(CodefBankInstitution.values()));
+            addInstitutionCatalogues(model);
             model.addAttribute("errorMessage", "은행 연결에 실패했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
             return "codef-demo/login";
         }
@@ -84,19 +88,23 @@ public class CodefDemoController {
     public String accounts(HttpSession session, Model model) {
         assertEnabled();
         String organizationCode = getSessionValue(session, ORGANIZATION_KEY);
-        if (!isActive(session) || organizationCode == null) {
+        String businessType = getSessionValue(session, BUSINESS_TYPE_KEY);
+        if (!isActive(session) || organizationCode == null || businessType == null) {
             return "redirect:/codef-demo";
         }
 
         try {
-            CodefDemoAccountOverview overview = codefDemoService.getAccountOverview(demoUserId, organizationCode);
+            CodefDemoAccountOverview overview =
+                    codefDemoService.getAccountOverview(demoUserId, organizationCode, businessType);
             model.addAttribute("accounts", overview.getAccounts());
             model.addAttribute("militarySavingsStatus", overview.getMilitarySavingsStatus());
-            model.addAttribute("bank", CodefBankInstitution.fromOrganizationCode(organizationCode));
+            model.addAttribute("institutionDisplayName", institutionDisplayName(organizationCode, businessType));
+            model.addAttribute("securitiesInstitution", CodefBusinessType.SECURITIES.getCode().equals(businessType));
             return "codef-demo/accounts";
         } catch (RuntimeException exception) {
             session.removeAttribute(ACTIVE_KEY);
             session.removeAttribute(ORGANIZATION_KEY);
+            session.removeAttribute(BUSINESS_TYPE_KEY);
             return "redirect:/codef-demo";
         }
     }
@@ -112,7 +120,8 @@ public class CodefDemoController {
             RedirectAttributes redirectAttributes) {
         assertEnabled();
         String organizationCode = getSessionValue(session, ORGANIZATION_KEY);
-        if (!isActive(session) || organizationCode == null) {
+        String businessType = getSessionValue(session, BUSINESS_TYPE_KEY);
+        if (!isActive(session) || organizationCode == null || businessType == null) {
             return "redirect:/codef-demo";
         }
 
@@ -131,7 +140,7 @@ public class CodefDemoController {
             model.addAttribute("transactionKind", transactionKind);
             model.addAttribute("startDate", queryStartDate);
             model.addAttribute("endDate", queryEndDate);
-            model.addAttribute("bank", CodefBankInstitution.fromOrganizationCode(organizationCode));
+            model.addAttribute("institutionDisplayName", institutionDisplayName(organizationCode, businessType));
             return "codef-demo/transactions";
         } catch (RuntimeException exception) {
             LOGGER.log(Level.WARNING, "CODEF demo transaction lookup failed", exception);
@@ -145,6 +154,7 @@ public class CodefDemoController {
     public String disconnect(HttpSession session) {
         session.removeAttribute(ACTIVE_KEY);
         session.removeAttribute(ORGANIZATION_KEY);
+        session.removeAttribute(BUSINESS_TYPE_KEY);
         return "redirect:/codef-demo";
     }
 
@@ -178,5 +188,17 @@ public class CodefDemoController {
     private String findAccountDisplay(long accountId) {
         // The service verifies ownership before rendering. This avoids placing a real account number in the session.
         return codefDemoService.getAccountDisplay(demoUserId, accountId);
+    }
+
+    private String institutionDisplayName(String organizationCode, String businessType) {
+        if (CodefBusinessType.BANK.getCode().equals(businessType)) {
+            return CodefBankInstitution.fromOrganizationCode(organizationCode).getDisplayName();
+        }
+        return CodefSecuritiesInstitution.fromOrganizationCode(organizationCode).getDisplayName();
+    }
+
+    private void addInstitutionCatalogues(Model model) {
+        model.addAttribute("banks", Arrays.asList(CodefBankInstitution.values()));
+        model.addAttribute("securities", Arrays.asList(CodefSecuritiesInstitution.values()));
     }
 }

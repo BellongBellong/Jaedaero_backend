@@ -1,7 +1,11 @@
 package com.jaedaero.codef.connection;
 
 import com.jaedaero.codef.account.CodefAccountSyncService;
+import com.jaedaero.codef.common.CodefApiException;
+import com.jaedaero.codef.common.CodefUserNotFoundException;
+import com.jaedaero.codef.institution.CodefBusinessType;
 import com.jaedaero.codef.institution.CodefBankInstitution;
+import com.jaedaero.codef.institution.CodefSecuritiesInstitution;
 import com.jaedaero.codef.persistence.CodefPersistenceRepository;
 import com.jaedaero.codef.persistence.StoredCodefConnection;
 import com.jaedaero.codef.security.SensitiveValueCipher;
@@ -28,17 +32,65 @@ public class CodefConnectionService {
 
     @Transactional
     public CodefConnectionResponse connect(long userId, CodefBankConnectionCreateRequest request) {
-        CodefBankInstitution.fromOrganizationCode(request.getOrganizationCode());
-        CodefAccountCreateResponse codefResponse = repository.findConnectionByUserId(userId)
-                .map(connection -> accountClient.addAccount(cipher.decrypt(connection.connectedIdEncrypted()), request.toCodefRequest()))
-                .orElseGet(() -> accountClient.createAccount(request.toCodefRequest()));
+        if (!repository.existsUser(userId)) {
+            throw new CodefUserNotFoundException(userId);
+        }
+        CodefBusinessType businessType = CodefBusinessType.fromCode(request.getBusinessType());
+        String businessTypeCode = businessType.getCode();
+        String organizationCode = request.getOrganizationCode();
+        validateInstitution(organizationCode, businessType);
+        if (repository.findInstitutionConnection(userId, organizationCode, businessTypeCode)
+                .filter(connection -> "ACTIVE".equals(connection.status()))
+                .isPresent()) {
+            int count = syncService.syncAccounts(userId, organizationCode, businessType);
+            return CodefConnectionResponse.alreadyConnected(userId, organizationCode, count);
+        }
 
-        if (codefResponse.getConnectedId() == null || codefResponse.getConnectedId().isBlank()) {
+        StoredCodefConnection existingConnection = repository.findConnectionByUserId(userId).orElse(null);
+        CodefAccountCreateResponse codefResponse = existingConnection == null
+                ? accountClient.createAccount(request.toCodefRequest())
+                : accountClient.addAccount(
+                        cipher.decrypt(existingConnection.connectedIdEncrypted()), request.toCodefRequest());
+
+        if (!codefResponse.isOrganizationRegistered(organizationCode)) {
+            throw new CodefApiException(
+                    "CODEF 기관 등록 실패 [" + organizationCode + "]: "
+                            + codefResponse.organizationErrorMessage(organizationCode),
+                    422);
+        }
+        String connectedId = codefResponse.getConnectedId();
+        if ((connectedId == null || connectedId.isBlank()) && existingConnection != null) {
+            connectedId = cipher.decrypt(existingConnection.connectedIdEncrypted());
+        }
+        if (connectedId == null || connectedId.isBlank()) {
             throw new IllegalStateException("CODEF Connected ID 발급에 실패했습니다.");
         }
-        repository.saveConnection(userId, cipher.encrypt(codefResponse.getConnectedId()), hasher.hash(codefResponse.getConnectedId()));
-        int count = syncService.syncBankAccounts(userId, request.getOrganizationCode());
-        return new CodefConnectionResponse(userId, request.getOrganizationCode(), count,
+        repository.saveConnection(userId, cipher.encrypt(connectedId), hasher.hash(connectedId));
+        StoredCodefConnection connection = repository.findConnectionByUserId(userId)
+                .orElseThrow(() -> new IllegalStateException("CODEF 연결 저장에 실패했습니다."));
+        repository.saveInstitutionConnection(
+                connection.connectionId(), organizationCode, businessTypeCode,
+                CodefAccountCreateRequest.ID_PASSWORD_LOGIN_TYPE);
+        int count = syncService.syncAccounts(userId, organizationCode, businessType);
+        return new CodefConnectionResponse(userId, organizationCode, count,
                 codefResponse.getSuccessList(), codefResponse.getErrorList());
+    }
+
+    @Transactional
+    public int syncRegisteredInstitution(long userId, String organizationCode, String businessTypeCode) {
+        CodefBusinessType businessType = CodefBusinessType.fromCode(businessTypeCode);
+        validateInstitution(organizationCode, businessType);
+        repository.findInstitutionConnection(userId, organizationCode, businessType.getCode())
+                .filter(connection -> "ACTIVE".equals(connection.status()))
+                .orElseThrow(() -> new IllegalStateException("먼저 해당 금융기관을 CODEF에 연결해야 합니다."));
+        return syncService.syncAccounts(userId, organizationCode, businessType);
+    }
+
+    private void validateInstitution(String organizationCode, CodefBusinessType businessType) {
+        if (businessType == CodefBusinessType.SECURITIES) {
+            CodefSecuritiesInstitution.fromOrganizationCode(organizationCode);
+            return;
+        }
+        CodefBankInstitution.fromOrganizationCode(organizationCode);
     }
 }

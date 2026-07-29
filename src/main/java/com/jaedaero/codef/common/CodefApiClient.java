@@ -60,6 +60,22 @@ public class CodefApiClient {
         return response;
     }
 
+    /** Calls a CODEF product API and rejects a business-level failure response. */
+    public JsonNode postProduct(String path, Object requestBody) {
+        JsonNode response = post(path, requestBody);
+        JsonNode result = response.path("result");
+        if (!"CF-00000".equals(result.path("code").asText())) {
+            String code = result.path("code").asText("UNKNOWN");
+            String message = result.path("message").asText("CODEF 상품 조회 요청이 거절되었습니다.");
+            String extraMessage = result.path("extraMessage").asText();
+            throw new CodefApiException(
+                    "CODEF 상품 조회 실패 [" + code + "]: "
+                            + (extraMessage.isBlank() ? message : message + " (" + extraMessage + ")"),
+                    422);
+        }
+        return response;
+    }
+
     private String encodeRequestBody(Object requestBody) {
         try {
             String json = objectMapper.writeValueAsString(requestBody);

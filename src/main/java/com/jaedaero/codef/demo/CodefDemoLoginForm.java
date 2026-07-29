@@ -1,6 +1,7 @@
 package com.jaedaero.codef.demo;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 
 /** ID/PW-only login form used by the local JSP demonstration. */
 public class CodefDemoLoginForm {
@@ -9,12 +10,16 @@ public class CodefDemoLoginForm {
     private String organizationCode;
 
     @NotBlank
+    @Pattern(regexp = "BK|ST", message = "연결 구분은 은행 또는 증권이어야 합니다.")
+    private String businessType = "BK";
+
+    @NotBlank
     private String loginId;
 
     @NotBlank
     private String password;
 
-    private String birthday;
+    private String birthDate;
 
     public String getOrganizationCode() {
         return organizationCode;
@@ -22,6 +27,14 @@ public class CodefDemoLoginForm {
 
     public void setOrganizationCode(String organizationCode) {
         this.organizationCode = organizationCode;
+    }
+
+    public String getBusinessType() {
+        return businessType;
+    }
+
+    public void setBusinessType(String businessType) {
+        this.businessType = businessType;
     }
 
     public String getLoginId() {
@@ -40,11 +53,11 @@ public class CodefDemoLoginForm {
         this.password = password;
     }
 
-    public String getBirthday() {
-        return birthday;
+    public String getBirthDate() {
+        return birthDate;
     }
 
-    public void setBirthday(String birthday) {
-        this.birthday = birthday;
+    public void setBirthDate(String birthDate) {
+        this.birthDate = birthDate;
     }
 }

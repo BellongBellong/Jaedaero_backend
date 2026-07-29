@@ -28,6 +28,12 @@ public class CodefPersistenceRepository {
                 "codef-demo-" + userId);
     }
 
+    public boolean existsUser(long userId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE user_id = ?", Integer.class, userId);
+        return count != null && count > 0;
+    }
+
     public Optional<StoredCodefConnection> findConnectionByUserId(long userId) {
         List<StoredCodefConnection> rows = jdbcTemplate.query(
                 "SELECT connection_id, user_id, connected_id_encrypted FROM codef_connection "
@@ -61,9 +67,50 @@ public class CodefPersistenceRepository {
                 truncate(message, 500), connectionId);
     }
 
+    public Optional<StoredInstitutionConnection> findInstitutionConnection(
+            long userId, String institutionCode, String businessType) {
+        List<StoredInstitutionConnection> rows = jdbcTemplate.query(
+                "SELECT cic.institution_connection_id, cic.connection_id, cic.institution_code, cic.business_type, cic.status "
+                        + "FROM codef_institution_connection cic JOIN codef_connection cc "
+                        + "ON cc.connection_id = cic.connection_id "
+                        + "WHERE cc.user_id = ? AND cic.institution_code = ? AND cic.business_type = ?",
+                (rs, rowNum) -> new StoredInstitutionConnection(
+                        rs.getLong("institution_connection_id"), rs.getLong("connection_id"),
+                        rs.getString("institution_code"), rs.getString("business_type"), rs.getString("status")),
+                userId, institutionCode, businessType);
+        return rows.stream().findFirst();
+    }
+
+    public void saveInstitutionConnection(
+            long connectionId, String institutionCode, String businessType, String loginType) {
+        jdbcTemplate.update(
+                "INSERT INTO codef_institution_connection "
+                        + "(connection_id, institution_code, business_type, login_type, status, last_sync_error_message) "
+                        + "VALUES (?, ?, ?, ?, 'ACTIVE', NULL) "
+                        + "ON DUPLICATE KEY UPDATE login_type = VALUES(login_type), status = 'ACTIVE', "
+                        + "last_sync_error_message = NULL",
+                connectionId, institutionCode, businessType, loginType);
+    }
+
+    public void updateInstitutionSyncSuccess(long connectionId, String institutionCode, String businessType) {
+        jdbcTemplate.update(
+                "UPDATE codef_institution_connection SET status = 'ACTIVE', last_sync_at = CURRENT_TIMESTAMP, "
+                        + "last_sync_error_message = NULL WHERE connection_id = ? AND institution_code = ? AND business_type = ?",
+                connectionId, institutionCode, businessType);
+    }
+
+    public void updateInstitutionSyncError(
+            long connectionId, String institutionCode, String businessType, String message) {
+        jdbcTemplate.update(
+                "UPDATE codef_institution_connection SET last_sync_error_message = ? "
+                        + "WHERE connection_id = ? AND institution_code = ? AND business_type = ?",
+                truncate(message, 500), connectionId, institutionCode, businessType);
+    }
+
     public void upsertAccount(
             long connectionId,
             String institutionCode,
+            String businessType,
             String institutionName,
             String encryptedAccountNumber,
             String accountNumberHash,
@@ -75,16 +122,16 @@ public class CodefPersistenceRepository {
             LocalDate accountOpenedDate,
             LocalDate maturityDate) {
         jdbcTemplate.update(
-                "INSERT INTO connected_account (connection_id, institution_code, institution_name, "
+                "INSERT INTO connected_account (connection_id, institution_code, business_type, institution_name, "
                         + "account_number_encrypted, account_number_hash, account_masked, account_type, product_name, "
                         + "current_balance, available_balance, account_opened_date, maturity_date, last_synced_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP) "
                         + "ON DUPLICATE KEY UPDATE institution_name = VALUES(institution_name), "
                         + "account_masked = VALUES(account_masked), account_type = VALUES(account_type), "
                         + "product_name = VALUES(product_name), current_balance = VALUES(current_balance), "
                         + "available_balance = VALUES(available_balance), account_opened_date = VALUES(account_opened_date), "
                         + "maturity_date = VALUES(maturity_date), last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'",
-                connectionId, institutionCode, institutionName, encryptedAccountNumber, accountNumberHash,
+                connectionId, institutionCode, businessType, institutionName, encryptedAccountNumber, accountNumberHash,
                 accountMasked, accountType, productName, currentBalance, availableBalance,
                 toSqlDate(accountOpenedDate), toSqlDate(maturityDate));
     }
@@ -103,6 +150,17 @@ public class CodefPersistenceRepository {
                 institutionCode);
     }
 
+    public List<StoredConnectedAccount> findAccountsByUserIdAndInstitution(
+            long userId, String institutionCode, String businessType) {
+        return jdbcTemplate.query(
+                accountSelect() + " WHERE cc.user_id = ? AND ca.institution_code = ? AND ca.business_type = ? "
+                        + "AND ca.status = 'ACTIVE' ORDER BY ca.account_id",
+                this::mapAccount,
+                userId,
+                institutionCode,
+                businessType);
+    }
+
     public List<StoredConnectedAccount> findSavingsByUserId(long userId) {
         return jdbcTemplate.query(accountSelect()
                         + " WHERE cc.user_id = ? AND ca.status = 'ACTIVE' "
@@ -110,12 +168,13 @@ public class CodefPersistenceRepository {
                 this::mapAccount, userId);
     }
 
-    public List<String> findInstitutionCodesByUserId(long userId) {
-        return jdbcTemplate.queryForList(
-                "SELECT DISTINCT ca.institution_code FROM connected_account ca "
-                        + "JOIN codef_connection cc ON cc.connection_id = ca.connection_id "
-                        + "WHERE cc.user_id = ? AND ca.status = 'ACTIVE'",
-                String.class,
+    public List<StoredInstitutionSyncTarget> findInstitutionSyncTargetsByUserId(long userId) {
+        return jdbcTemplate.query(
+                "SELECT cic.institution_code, cic.business_type FROM codef_institution_connection cic "
+                        + "JOIN codef_connection cc ON cc.connection_id = cic.connection_id "
+                        + "WHERE cc.user_id = ? AND cic.status = 'ACTIVE'",
+                (rs, rowNum) -> new StoredInstitutionSyncTarget(
+                        rs.getString("institution_code"), rs.getString("business_type")),
                 userId);
     }
 
@@ -200,7 +259,7 @@ public class CodefPersistenceRepository {
     }
 
     private String accountSelect() {
-        return "SELECT ca.account_id, cc.user_id, ca.connection_id, ca.institution_code, ca.institution_name, "
+        return "SELECT ca.account_id, cc.user_id, ca.connection_id, ca.institution_code, ca.business_type, ca.institution_name, "
                 + "ca.account_number_encrypted, ca.account_masked, ca.account_type, ca.product_name, "
                 + "ca.current_balance, ca.available_balance, ca.maturity_date "
                 + "FROM connected_account ca JOIN codef_connection cc ON cc.connection_id = ca.connection_id";
@@ -211,7 +270,7 @@ public class CodefPersistenceRepository {
         Long availableBalance = rs.getObject("available_balance", Long.class);
         return new StoredConnectedAccount(
                 rs.getLong("account_id"), rs.getLong("user_id"), rs.getLong("connection_id"),
-                rs.getString("institution_code"), rs.getString("institution_name"),
+                rs.getString("institution_code"), rs.getString("business_type"), rs.getString("institution_name"),
                 rs.getString("account_number_encrypted"), rs.getString("account_masked"),
                 rs.getString("account_type"), rs.getString("product_name"), rs.getLong("current_balance"),
                 availableBalance, maturityDate == null ? null : maturityDate.toLocalDate().toString());

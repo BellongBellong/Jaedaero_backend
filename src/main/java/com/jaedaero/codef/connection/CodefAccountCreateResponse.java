@@ -29,4 +29,17 @@ public class CodefAccountCreateResponse {
     public List<CodefAccountRegistrationResult> getErrorList() {
         return errorList;
     }
+
+    public boolean isOrganizationRegistered(String organizationCode) {
+        return successList.stream().anyMatch(result -> organizationCode.equals(result.getOrganization())
+                && "CF-00000".equals(result.getCode()));
+    }
+
+    public String organizationErrorMessage(String organizationCode) {
+        return errorList.stream()
+                .filter(result -> organizationCode.equals(result.getOrganization()))
+                .map(CodefAccountRegistrationResult::getMessage)
+                .findFirst()
+                .orElse("CODEF가 기관 계정 등록을 완료하지 않았습니다.");
+    }
 }

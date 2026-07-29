@@ -2,8 +2,10 @@ package com.jaedaero.codef.account;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jaedaero.codef.common.CodefApiClient;
+import com.jaedaero.codef.institution.CodefBusinessType;
 import com.jaedaero.codef.persistence.CodefPersistenceRepository;
 import com.jaedaero.codef.persistence.StoredCodefConnection;
+import com.jaedaero.codef.persistence.StoredInstitutionSyncTarget;
 import com.jaedaero.codef.security.SensitiveValueCipher;
 import com.jaedaero.codef.security.Sha256Hasher;
 import java.time.LocalDate;
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CodefAccountSyncService {
     private static final String ACCOUNT_LIST_PATH = "/v1/kr/bank/p/account/account-list";
+    // CODEF 증권 전계좌 API는 개인/법인 구분 없이 공통(a) 엔드포인트를 사용한다.
+    private static final String SECURITIES_ACCOUNT_LIST_PATH = "/v1/kr/stock/a/account/account-list";
     private static final DateTimeFormatter BASIC_DATE = DateTimeFormatter.BASIC_ISO_DATE;
 
     private final CodefApiClient codefApiClient;
@@ -36,36 +40,85 @@ public class CodefAccountSyncService {
 
     @Transactional
     public int syncBankAccounts(long userId, String organizationCode) {
+        return syncAccounts(userId, organizationCode, CodefBusinessType.BANK);
+    }
+
+    @Transactional
+    public int syncAccounts(long userId, String organizationCode, CodefBusinessType businessType) {
         StoredCodefConnection connection = repository.findConnectionByUserId(userId)
                 .orElseThrow(() -> new IllegalStateException("연결된 CODEF 계정이 없습니다."));
         try {
             Map<String, String> body = new LinkedHashMap<>();
             body.put("connectedId", cipher.decrypt(connection.connectedIdEncrypted()));
             body.put("organization", organizationCode);
-            JsonNode data = codefApiClient.post(ACCOUNT_LIST_PATH, body).path("data");
-            int count = 0;
-            count += saveAccounts(connection, organizationCode, data.path("resDepositTrust"), "예금·적금");
-            count += saveAccounts(connection, organizationCode, data.path("resLoan"), "대출");
-            count += saveAccounts(connection, organizationCode, data.path("resFund"), "펀드");
-            count += saveAccounts(connection, organizationCode, data.path("resForeignCurrency"), "외화");
-            count += saveAccounts(connection, organizationCode, data.path("resInsurance"), "보험");
+            JsonNode data = codefApiClient.postProduct(
+                    businessType == CodefBusinessType.SECURITIES ? SECURITIES_ACCOUNT_LIST_PATH : ACCOUNT_LIST_PATH,
+                    body).path("data");
+            int count = businessType == CodefBusinessType.SECURITIES
+                    ? saveSecuritiesAccounts(connection, organizationCode, data)
+                    : saveBankAccounts(connection, organizationCode, data);
             repository.updateConnectionSyncSuccess(connection.connectionId());
+            repository.updateInstitutionSyncSuccess(
+                    connection.connectionId(), organizationCode, businessType.getCode());
             return count;
         } catch (RuntimeException exception) {
             repository.updateConnectionSyncError(connection.connectionId(), exception.getMessage());
+            repository.updateInstitutionSyncError(
+                    connection.connectionId(), organizationCode, businessType.getCode(), exception.getMessage());
             throw exception;
         }
     }
 
     @Transactional
     public int refreshAllAccounts(long userId) {
-        List<String> organizationCodes = repository.findInstitutionCodesByUserId(userId);
-        if (organizationCodes.isEmpty()) {
+        List<StoredInstitutionSyncTarget> syncTargets = repository.findInstitutionSyncTargetsByUserId(userId);
+        if (syncTargets.isEmpty()) {
             throw new IllegalStateException("동기화할 연결 계좌가 없습니다.");
         }
         int count = 0;
-        for (String organizationCode : organizationCodes) {
-            count += syncBankAccounts(userId, organizationCode);
+        for (StoredInstitutionSyncTarget syncTarget : syncTargets) {
+            count += syncAccounts(
+                    userId,
+                    syncTarget.institutionCode(),
+                    CodefBusinessType.fromCode(syncTarget.businessType()));
+        }
+        return count;
+    }
+
+    private int saveBankAccounts(StoredCodefConnection connection, String organizationCode, JsonNode data) {
+        int count = 0;
+        count += saveAccounts(connection, organizationCode, data.path("resDepositTrust"), "예금·적금");
+        count += saveAccounts(connection, organizationCode, data.path("resLoan"), "대출");
+        count += saveAccounts(connection, organizationCode, data.path("resFund"), "펀드");
+        count += saveAccounts(connection, organizationCode, data.path("resForeignCurrency"), "외화");
+        count += saveAccounts(connection, organizationCode, data.path("resInsurance"), "보험");
+        return count;
+    }
+
+    private int saveSecuritiesAccounts(StoredCodefConnection connection, String organizationCode, JsonNode data) {
+        JsonNode accounts = firstArray(data, "resAccountList", "resAccount", "resAccountInfoList");
+        if (!accounts.isArray()) {
+            return 0;
+        }
+        int count = 0;
+        for (JsonNode account : accounts) {
+            String accountNumber = firstText(account, "resAccount", "resAccountNo", "resAccountNumber");
+            if (accountNumber.isBlank()) {
+                continue;
+            }
+            String productName = firstText(account, "resAccountName", "resAccountProductName", "resAccountTypeName");
+            String masked = firstText(account, "resAccountDisplay", "resAccountNoDisplay");
+            String institutionName = firstText(account, "resAccountBankName", "resCompanyName", "resOrganizationName");
+            repository.upsertAccount(
+                    connection.connectionId(), organizationCode, CodefBusinessType.SECURITIES.getCode(),
+                    institutionName.isBlank() ? organizationCode : institutionName,
+                    cipher.encrypt(accountNumber), hasher.hash(accountNumber),
+                    masked.isBlank() ? mask(accountNumber) : masked, "SECURITIES",
+                    productName.isBlank() ? "증권 계좌" : productName,
+                    number(firstNode(account, "resAccountBalance", "resTotalBalance", "resTotalAsset")),
+                    nullableNumber(firstNode(account, "resAvailableBalance", "resOrderPossibleAmount")),
+                    parseDate(firstText(account, "resAccountOpenDate", "resAccountStartDate")), null);
+            count++;
         }
         return count;
     }
@@ -81,7 +134,7 @@ public class CodefAccountSyncService {
             String institutionName = textOrDefault(account, "resAccountBankName", organizationCode);
             String accountType = resolveAccountType(account, fallbackType);
             repository.upsertAccount(
-                    connection.connectionId(), organizationCode, institutionName,
+                    connection.connectionId(), organizationCode, CodefBusinessType.BANK.getCode(), institutionName,
                     cipher.encrypt(accountNumber), hasher.hash(accountNumber), masked, accountType,
                     productName, number(account.path("resAccountBalance")), nullableNumber(account.path("resAccountAvailBalance")),
                     parseDate(account.path("resAccountOpenDate").asText()), parseDate(account.path("resAccountEndDate").asText()));
@@ -106,6 +159,30 @@ public class CodefAccountSyncService {
         String value = node.asText().replaceAll("[^0-9-]", "");
         if (value.isBlank() || "-".equals(value)) return null;
         try { return Long.parseLong(value); } catch (NumberFormatException exception) { return null; }
+    }
+
+    private JsonNode firstArray(JsonNode node, String... fields) {
+        for (String field : fields) {
+            JsonNode value = node.path(field);
+            if (value.isArray()) {
+                return value;
+            }
+        }
+        return com.fasterxml.jackson.databind.node.MissingNode.getInstance();
+    }
+
+    private JsonNode firstNode(JsonNode node, String... fields) {
+        for (String field : fields) {
+            JsonNode value = node.path(field);
+            if (!value.isMissingNode() && !value.isNull() && !value.asText().isBlank()) {
+                return value;
+            }
+        }
+        return com.fasterxml.jackson.databind.node.MissingNode.getInstance();
+    }
+
+    private String firstText(JsonNode node, String... fields) {
+        return firstNode(node, fields).asText();
     }
 
     private LocalDate parseDate(String value) {
