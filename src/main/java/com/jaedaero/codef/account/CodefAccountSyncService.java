@@ -96,7 +96,14 @@ public class CodefAccountSyncService {
     }
 
     private int saveSecuritiesAccounts(StoredCodefConnection connection, String organizationCode, JsonNode data) {
-        JsonNode accounts = firstArray(data, "resAccountList", "resAccount", "resAccountInfoList");
+        // CODEF는 기관에 따라 단일 계좌는 객체로, 복수 계좌는 data 배열로 반환한다.
+        JsonNode accounts = data.isArray()
+                ? data
+                : firstArray(data, "resAccountList", "resAccount", "resAccountInfoList");
+        if (!accounts.isArray() && data.isObject()
+                && !firstText(data, "resAccount", "resAccountNo", "resAccountNumber").isBlank()) {
+            accounts = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode().add(data);
+        }
         if (!accounts.isArray()) {
             return 0;
         }
@@ -115,8 +122,8 @@ public class CodefAccountSyncService {
                     cipher.encrypt(accountNumber), hasher.hash(accountNumber),
                     masked.isBlank() ? mask(accountNumber) : masked, "SECURITIES",
                     productName.isBlank() ? "증권 계좌" : productName,
-                    number(firstNode(account, "resAccountBalance", "resTotalBalance", "resTotalAsset")),
-                    nullableNumber(firstNode(account, "resAvailableBalance", "resOrderPossibleAmount")),
+                    number(firstNode(account, "resAccountBalance", "resTotalBalance", "resTotalAsset", "resValuationAmt")),
+                    nullableNumber(firstNode(account, "resAvailableBalance", "resOrderPossibleAmount", "resDepositReceived")),
                     parseDate(firstText(account, "resAccountOpenDate", "resAccountStartDate")), null);
             count++;
         }

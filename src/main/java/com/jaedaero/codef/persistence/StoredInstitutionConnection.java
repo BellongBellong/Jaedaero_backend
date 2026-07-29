@@ -6,4 +6,7 @@ public record StoredInstitutionConnection(
         long connectionId,
         String institutionCode,
         String businessType,
-        String status) {}
+        String status,
+        String loginIdEncrypted,
+        String loginPasswordEncrypted,
+        String birthDateEncrypted) {}

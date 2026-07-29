@@ -26,18 +26,21 @@ public class CodefAccountController {
     private final CodefTransactionSyncService transactionSyncService;
     private final CodefSavingsTransactionSyncService savingsTransactionSyncService;
     private final CodefConnectionService connectionService;
+    private final CodefSecuritiesInquiryService securitiesInquiryService;
 
     public CodefAccountController(
             CodefPersistenceRepository repository,
             CodefAccountSyncService syncService,
             CodefTransactionSyncService transactionSyncService,
             CodefSavingsTransactionSyncService savingsTransactionSyncService,
-            CodefConnectionService connectionService) {
+            CodefConnectionService connectionService,
+            CodefSecuritiesInquiryService securitiesInquiryService) {
         this.repository = repository;
         this.syncService = syncService;
         this.transactionSyncService = transactionSyncService;
         this.savingsTransactionSyncService = savingsTransactionSyncService;
         this.connectionService = connectionService;
+        this.securitiesInquiryService = securitiesInquiryService;
     }
 
     @ApiOperation(
@@ -76,6 +79,28 @@ public class CodefAccountController {
                 .filter(account -> "SECURITIES".equals(account.accountType()))
                 .map(ConnectedAccountResponse::new)
                 .collect(Collectors.toList());
+    }
+
+    @ApiOperation(
+            value = "증권 계좌 종합자산 조회",
+            notes = "증권 계좌의 예수금과 주식·펀드 등 상품별 평가 정보를 CODEF에서 실시간으로 조회합니다.")
+    @GetMapping("/securities/accounts/{accountId}/assets")
+    public SecuritiesAssetResponse getSecuritiesAssets(
+            @ApiParam(value = "증권 계좌 ID", required = true, example = "10")
+                    @org.springframework.web.bind.annotation.PathVariable long accountId,
+            @ApiParam(value = "사용자 ID", required = true, example = "1") @RequestParam long userId) {
+        return securitiesInquiryService.getFinancialAssets(userId, accountId);
+    }
+
+    @ApiOperation(
+            value = "증권 계좌 주식 잔고 조회",
+            notes = "증권 계좌에서 보유 중인 주식 종목의 수량, 평가금액, 평가손익을 CODEF에서 실시간으로 조회합니다.")
+    @GetMapping("/securities/accounts/{accountId}/holdings")
+    public SecuritiesAssetResponse getSecuritiesHoldings(
+            @ApiParam(value = "증권 계좌 ID", required = true, example = "10")
+                    @org.springframework.web.bind.annotation.PathVariable long accountId,
+            @ApiParam(value = "사용자 ID", required = true, example = "1") @RequestParam long userId) {
+        return securitiesInquiryService.getStockHoldings(userId, accountId);
     }
 
     @ApiOperation(

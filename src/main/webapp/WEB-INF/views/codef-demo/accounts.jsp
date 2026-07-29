@@ -9,15 +9,20 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/codef-demo.css">
 </head>
 <body>
-<main class="page-shell dashboard-shell">
-    <header class="dashboard-header">
-        <div>
-            <p class="eyebrow"><c:out value="${institutionDisplayName}"/></p>
-            <h1>연결된 보유계좌</h1>
-            <p>입출금 계좌 카드를 선택하면 최근 3개월 거래내역을 확인할 수 있습니다.</p>
+<main class="page-shell dashboard-shell ${securitiesInstitution ? 'securities-dashboard' : ''}">
+    <header class="dashboard-header account-dashboard-header">
+        <div class="dashboard-title">
+            <p class="eyebrow"><c:out value="${institutionDisplayName}"/> 연동 완료</p>
+            <h1>${securitiesInstitution ? '내 증권 자산' : '연결된 보유계좌'}</h1>
+            <p>
+                <c:choose>
+                    <c:when test="${securitiesInstitution}">계좌별 전체 자산과 보유 주식의 평가 현황을 확인하세요.</c:when>
+                    <c:otherwise>입출금·적금 계좌의 잔액과 최근 거래내역을 확인하세요.</c:otherwise>
+                </c:choose>
+            </p>
         </div>
         <form action="${pageContext.request.contextPath}/codef-demo/disconnect" method="post">
-            <button class="secondary-button" type="submit">연결 해제</button>
+            <button class="secondary-button disconnect-button" type="submit">다른 기관 연결</button>
         </form>
     </header>
 
@@ -60,12 +65,13 @@
             <section class="empty-card">조회된 보유계좌가 없습니다.</section>
         </c:when>
         <c:otherwise>
-            <section class="account-grid">
+            <section class="account-grid ${securitiesInstitution ? 'securities-account-grid' : ''}">
                 <c:forEach var="item" items="${accounts}">
-                    <article class="account-card ${item.transactionSupported ? 'clickable' : 'disabled'}">
+                    <article class="account-card ${securitiesInstitution ? 'securities-account-card' : item.transactionSupported ? 'clickable' : 'disabled'}">
                         <div class="card-topline">
-                            <span class="category"><c:out value="${item.category}"/></span>
+                            <span class="category"><c:out value="${securitiesInstitution ? '증권 계좌' : item.category}"/></span>
                             <c:choose>
+                                <c:when test="${securitiesInstitution}"><span class="available">증권 조회</span></c:when>
                                 <c:when test="${item.savingsTransaction}"><span class="available">납입 조회</span></c:when>
                                 <c:when test="${item.transactionSupported}"><span class="available">거래 조회</span></c:when>
                                 <c:otherwise><span class="unavailable">조회 준비 중</span></c:otherwise>
@@ -73,8 +79,22 @@
                         </div>
                         <h2><c:out value="${item.accountName}"/></h2>
                         <p class="account-number"><c:out value="${item.accountDisplay}"/></p>
-                        <p class="balance"><c:out value="${item.balance}"/></p>
-                        <c:if test="${item.transactionSupported}">
+                        <div class="account-balance-block">
+                            <span>${securitiesInstitution ? '평가 자산' : '현재 잔액'}</span>
+                            <p class="balance"><c:out value="${item.balance}"/></p>
+                        </div>
+                        <c:choose>
+                        <c:when test="${securitiesInstitution}">
+                            <div class="securities-actions">
+                                <a class="card-button link-button" href="${pageContext.request.contextPath}/codef-demo/securities/assets?accountId=${item.accountId}">
+                                    전체 자산 보기 →
+                                </a>
+                                <a class="card-button secondary-card-button link-button" href="${pageContext.request.contextPath}/codef-demo/securities/holdings?accountId=${item.accountId}">
+                                    주식 잔고 보기 →
+                                </a>
+                            </div>
+                        </c:when>
+                        <c:when test="${item.transactionSupported}">
                             <form action="${pageContext.request.contextPath}/codef-demo/transactions" method="post">
                                 <input type="hidden" name="accountId" value="${item.accountId}">
                                 <input type="hidden" name="transactionKind" value="${item.transactionKind}">
@@ -85,7 +105,8 @@
                                     </c:choose>
                                 </button>
                             </form>
-                        </c:if>
+                        </c:when>
+                        </c:choose>
                     </article>
                 </c:forEach>
             </section>

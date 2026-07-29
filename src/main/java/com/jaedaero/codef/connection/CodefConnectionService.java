@@ -41,6 +41,14 @@ public class CodefConnectionService {
         validateInstitution(organizationCode, businessType);
         if (repository.findInstitutionConnection(userId, organizationCode, businessTypeCode)
                 .filter(connection -> "ACTIVE".equals(connection.status()))
+                .map(connection -> {
+                    repository.saveInstitutionConnection(
+                            connection.connectionId(), organizationCode, businessTypeCode,
+                            CodefAccountCreateRequest.ID_PASSWORD_LOGIN_TYPE,
+                            cipher.encrypt(request.getLoginId()), cipher.encrypt(request.getPassword()),
+                            encryptIfPresent(request.getBirthDate()));
+                    return connection;
+                })
                 .isPresent()) {
             int count = syncService.syncAccounts(userId, organizationCode, businessType);
             return CodefConnectionResponse.alreadyConnected(userId, organizationCode, count);
@@ -70,7 +78,9 @@ public class CodefConnectionService {
                 .orElseThrow(() -> new IllegalStateException("CODEF 연결 저장에 실패했습니다."));
         repository.saveInstitutionConnection(
                 connection.connectionId(), organizationCode, businessTypeCode,
-                CodefAccountCreateRequest.ID_PASSWORD_LOGIN_TYPE);
+                CodefAccountCreateRequest.ID_PASSWORD_LOGIN_TYPE,
+                cipher.encrypt(request.getLoginId()), cipher.encrypt(request.getPassword()),
+                encryptIfPresent(request.getBirthDate()));
         int count = syncService.syncAccounts(userId, organizationCode, businessType);
         return new CodefConnectionResponse(userId, organizationCode, count,
                 codefResponse.getSuccessList(), codefResponse.getErrorList());
@@ -92,5 +102,9 @@ public class CodefConnectionService {
             return;
         }
         CodefBankInstitution.fromOrganizationCode(organizationCode);
+    }
+
+    private String encryptIfPresent(String value) {
+        return value == null || value.isBlank() ? null : cipher.encrypt(value);
     }
 }

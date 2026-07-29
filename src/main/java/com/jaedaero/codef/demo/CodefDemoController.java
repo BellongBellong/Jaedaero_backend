@@ -49,6 +49,7 @@ public class CodefDemoController {
     public String loginPage(Model model) {
         assertEnabled();
         addInstitutionCatalogues(model);
+        model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
         model.addAttribute("loginForm", new CodefDemoLoginForm());
         return "codef-demo/login";
     }
@@ -62,6 +63,7 @@ public class CodefDemoController {
         assertEnabled();
         if (bindingResult.hasErrors()) {
             addInstitutionCatalogues(model);
+            model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
             return "codef-demo/login";
         }
 
@@ -74,12 +76,37 @@ public class CodefDemoController {
         } catch (CodefApiException exception) {
             LOGGER.log(Level.WARNING, "CODEF demo account connection failed: {0}", exception.getMessage());
             addInstitutionCatalogues(model);
+            model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
             model.addAttribute("errorMessage", exception.getMessage());
             return "codef-demo/login";
         } catch (RuntimeException exception) {
             LOGGER.log(Level.WARNING, "CODEF demo account connection failed", exception);
             addInstitutionCatalogues(model);
+            model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
             model.addAttribute("errorMessage", "은행 연결에 실패했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
+            return "codef-demo/login";
+        }
+    }
+
+    @PostMapping("/saved-connect")
+    public String connectSaved(
+            @RequestParam String organizationCode,
+            @RequestParam String businessType,
+            HttpSession session,
+            Model model) {
+        assertEnabled();
+        try {
+            codefDemoService.loadSavedInstitution(demoUserId, organizationCode, businessType);
+            session.setAttribute(ACTIVE_KEY, Boolean.TRUE);
+            session.setAttribute(ORGANIZATION_KEY, organizationCode);
+            session.setAttribute(BUSINESS_TYPE_KEY, businessType);
+            return accounts(session, model);
+        } catch (RuntimeException exception) {
+            LOGGER.log(Level.WARNING, "CODEF demo saved institution refresh failed", exception);
+            addInstitutionCatalogues(model);
+            model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
+            model.addAttribute("errorMessage", "저장된 기관의 계좌를 불러오지 못했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
+            model.addAttribute("loginForm", new CodefDemoLoginForm());
             return "codef-demo/login";
         }
     }
@@ -99,8 +126,9 @@ public class CodefDemoController {
             model.addAttribute("accounts", overview.getAccounts());
             model.addAttribute("militarySavingsStatus", overview.getMilitarySavingsStatus());
             model.addAttribute("institutionDisplayName", institutionDisplayName(organizationCode, businessType));
-            model.addAttribute("securitiesInstitution", CodefBusinessType.SECURITIES.getCode().equals(businessType));
-            return "codef-demo/accounts";
+            boolean securitiesInstitution = CodefBusinessType.SECURITIES.getCode().equals(businessType);
+            model.addAttribute("securitiesInstitution", securitiesInstitution);
+            return securitiesInstitution ? "codef-demo/securities-accounts" : "codef-demo/bank-accounts";
         } catch (RuntimeException exception) {
             session.removeAttribute(ACTIVE_KEY);
             session.removeAttribute(ORGANIZATION_KEY);
@@ -150,6 +178,34 @@ public class CodefDemoController {
         }
     }
 
+    @PostMapping("/all-assets")
+    public String allAssets(HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+        assertEnabled();
+        if (!isActive(session)) {
+            return "redirect:/codef-demo";
+        }
+        try {
+            model.addAttribute("unifiedAssets", codefDemoService.getUnifiedAssets(demoUserId));
+            return "codef-demo/all-assets";
+        } catch (RuntimeException exception) {
+            LOGGER.log(Level.WARNING, "CODEF demo unified asset lookup failed", exception);
+            redirectAttributes.addFlashAttribute("errorMessage", "전체 자산을 불러오지 못했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
+            return "redirect:/codef-demo/accounts";
+        }
+    }
+
+    @GetMapping("/securities/assets")
+    public String securitiesAssets(
+            @RequestParam long accountId, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+        return renderSecuritiesPortfolio(accountId, session, model, redirectAttributes, false);
+    }
+
+    @GetMapping("/securities/holdings")
+    public String securitiesHoldings(
+            @RequestParam long accountId, HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+        return renderSecuritiesPortfolio(accountId, session, model, redirectAttributes, true);
+    }
+
     @PostMapping("/disconnect")
     public String disconnect(HttpSession session) {
         session.removeAttribute(ACTIVE_KEY);
@@ -188,6 +244,33 @@ public class CodefDemoController {
     private String findAccountDisplay(long accountId) {
         // The service verifies ownership before rendering. This avoids placing a real account number in the session.
         return codefDemoService.getAccountDisplay(demoUserId, accountId);
+    }
+
+    private String renderSecuritiesPortfolio(
+            long accountId,
+            HttpSession session,
+            Model model,
+            RedirectAttributes redirectAttributes,
+            boolean stockOnly) {
+        assertEnabled();
+        String organizationCode = getSessionValue(session, ORGANIZATION_KEY);
+        String businessType = getSessionValue(session, BUSINESS_TYPE_KEY);
+        if (!isActive(session) || organizationCode == null || !CodefBusinessType.SECURITIES.getCode().equals(businessType)) {
+            return "redirect:/codef-demo";
+        }
+        try {
+            model.addAttribute("portfolio", stockOnly
+                    ? codefDemoService.getStockHoldings(demoUserId, accountId)
+                    : codefDemoService.getSecuritiesAssets(demoUserId, accountId));
+            model.addAttribute("stockOnly", stockOnly);
+            model.addAttribute("institutionDisplayName", institutionDisplayName(organizationCode, businessType));
+            return "codef-demo/securities-portfolio";
+        } catch (RuntimeException exception) {
+            LOGGER.log(Level.WARNING, "CODEF demo securities lookup failed", exception);
+            redirectAttributes.addFlashAttribute(
+                    "errorMessage", "증권 정보를 불러오지 못했습니다. CODEF 응답과 서버 로그를 확인해주세요.");
+            return "redirect:/codef-demo/accounts";
+        }
     }
 
     private String institutionDisplayName(String organizationCode, String businessType) {

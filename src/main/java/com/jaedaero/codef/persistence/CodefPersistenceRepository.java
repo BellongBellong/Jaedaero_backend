@@ -70,26 +70,51 @@ public class CodefPersistenceRepository {
     public Optional<StoredInstitutionConnection> findInstitutionConnection(
             long userId, String institutionCode, String businessType) {
         List<StoredInstitutionConnection> rows = jdbcTemplate.query(
-                "SELECT cic.institution_connection_id, cic.connection_id, cic.institution_code, cic.business_type, cic.status "
+                "SELECT cic.institution_connection_id, cic.connection_id, cic.institution_code, cic.business_type, cic.status, "
+                        + "cic.login_id_encrypted, cic.login_password_encrypted, cic.birth_date_encrypted "
                         + "FROM codef_institution_connection cic JOIN codef_connection cc "
                         + "ON cc.connection_id = cic.connection_id "
                         + "WHERE cc.user_id = ? AND cic.institution_code = ? AND cic.business_type = ?",
                 (rs, rowNum) -> new StoredInstitutionConnection(
                         rs.getLong("institution_connection_id"), rs.getLong("connection_id"),
-                        rs.getString("institution_code"), rs.getString("business_type"), rs.getString("status")),
+                        rs.getString("institution_code"), rs.getString("business_type"), rs.getString("status"),
+                        rs.getString("login_id_encrypted"), rs.getString("login_password_encrypted"),
+                        rs.getString("birth_date_encrypted")),
                 userId, institutionCode, businessType);
         return rows.stream().findFirst();
     }
 
     public void saveInstitutionConnection(
-            long connectionId, String institutionCode, String businessType, String loginType) {
+            long connectionId, String institutionCode, String businessType, String loginType,
+            String encryptedLoginId, String encryptedPassword, String encryptedBirthDate) {
         jdbcTemplate.update(
                 "INSERT INTO codef_institution_connection "
-                        + "(connection_id, institution_code, business_type, login_type, status, last_sync_error_message) "
-                        + "VALUES (?, ?, ?, ?, 'ACTIVE', NULL) "
+                        + "(connection_id, institution_code, business_type, login_type, login_id_encrypted, "
+                        + "login_password_encrypted, birth_date_encrypted, status, last_sync_error_message) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE', NULL) "
                         + "ON DUPLICATE KEY UPDATE login_type = VALUES(login_type), status = 'ACTIVE', "
+                        + "login_id_encrypted = VALUES(login_id_encrypted), "
+                        + "login_password_encrypted = VALUES(login_password_encrypted), "
+                        + "birth_date_encrypted = VALUES(birth_date_encrypted), "
                         + "last_sync_error_message = NULL",
-                connectionId, institutionCode, businessType, loginType);
+                connectionId, institutionCode, businessType, loginType,
+                encryptedLoginId, encryptedPassword, encryptedBirthDate);
+    }
+
+    public List<StoredInstitutionConnection> findActiveInstitutionConnectionsByUserId(long userId) {
+        return jdbcTemplate.query(
+                "SELECT cic.institution_connection_id, cic.connection_id, cic.institution_code, cic.business_type, cic.status, "
+                        + "cic.login_id_encrypted, cic.login_password_encrypted, cic.birth_date_encrypted "
+                        + "FROM codef_institution_connection cic JOIN codef_connection cc "
+                        + "ON cc.connection_id = cic.connection_id "
+                        + "WHERE cc.user_id = ? AND cc.status = 'ACTIVE' AND cic.status = 'ACTIVE' "
+                        + "ORDER BY cic.updated_at DESC",
+                (rs, rowNum) -> new StoredInstitutionConnection(
+                        rs.getLong("institution_connection_id"), rs.getLong("connection_id"),
+                        rs.getString("institution_code"), rs.getString("business_type"), rs.getString("status"),
+                        rs.getString("login_id_encrypted"), rs.getString("login_password_encrypted"),
+                        rs.getString("birth_date_encrypted")),
+                userId);
     }
 
     public void updateInstitutionSyncSuccess(long connectionId, String institutionCode, String businessType) {

@@ -13,8 +13,28 @@
     <section class="hero-card">
         <p class="eyebrow">제대로 · CODEF DEMO</p>
         <h1>은행·증권 계좌를 연결하고<br>보유 자산을 확인하세요.</h1>
-        <p class="hero-description">입력한 인증정보는 CODEF 연결 요청에만 사용하며, 비밀번호는 저장하지 않습니다.</p>
+        <p class="hero-description">한 번 연결한 기관은 다음부터 비밀번호 입력 없이 계좌를 다시 불러올 수 있습니다.</p>
     </section>
+
+    <c:if test="${not empty savedInstitutions}">
+        <section class="form-card saved-institutions-card">
+            <h2>저장된 기관</h2>
+            <p class="form-note">CODEF Connected ID로 최신 계좌를 다시 조회합니다. 비밀번호는 화면에 표시하지 않습니다.</p>
+            <div class="saved-institution-list">
+                <c:forEach var="institution" items="${savedInstitutions}">
+                    <form class="saved-institution" action="${pageContext.request.contextPath}/codef-demo/saved-connect" method="post">
+                        <input type="hidden" name="organizationCode" value="${institution.organizationCode}">
+                        <input type="hidden" name="businessType" value="${institution.businessType}">
+                        <div>
+                            <strong><c:out value="${institution.institutionName}"/></strong>
+                            <span><c:out value="${institution.loginIdDisplay}"/></span>
+                        </div>
+                        <button class="secondary-button" type="submit">계좌 불러오기</button>
+                    </form>
+                </c:forEach>
+            </div>
+        </section>
+    </c:if>
 
     <section class="form-card">
         <h2>금융기관 연결</h2>
@@ -59,7 +79,7 @@
 
             <button class="primary-button" type="submit">계좌 연결 및 조회</button>
         </form>
-        <p class="form-note">ID/PW 로그인 방식만 지원합니다.</p>
+        <p class="form-note">ID/PW 로그인 방식만 지원합니다. 연결에 성공하면 로그인 정보는 암호화해 저장합니다.</p>
     </section>
 </main>
 <script>
