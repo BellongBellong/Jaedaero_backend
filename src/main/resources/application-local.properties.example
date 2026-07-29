@@ -8,4 +8,14 @@ kakao.client-id=your_kakao_client_id
 google.client-id=your_google_client_id
 codef.client-id=your_codef_client_id
 codef.client-secret=your_codef_client_secret
+codef.public-key=your_codef_rsa_public_key
 llm.api-key=your_llm_api_key
+
+# Generate once with: openssl rand -base64 32
+# Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
+app.crypto.master-key-base64=your_32_byte_aes256_key_base64
+
+# JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
+codef.demo.user-id=1
+# KRX Open API 인증키
+krx.api.auth-key=YOUR_KRX_AUTH_KEY
