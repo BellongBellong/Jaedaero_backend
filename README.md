@@ -20,3 +20,25 @@
 ```
 
 `application-local.properties`와 API 키는 Git에 커밋하지 않습니다.
+
+## 패키지 구조
+
+```text
+com.jaedaero
+├── global
+│   ├── config       # DB, Swagger 등 전역 설정
+│   └── security     # 암호화·해시 등 공통 보안 기능
+└── domain
+    ├── codef        # 금융기관 연결, 계좌, 증권, 토큰, 데모 화면
+    │   ├── account
+    │   ├── client
+    │   ├── connection
+    │   ├── demo
+    │   ├── exception
+    │   ├── institution
+    │   ├── persistence
+    │   └── token
+    └── investment
+        ├── etf      # KRX ETF 시세·수익률 조회
+        └── exception
+```
