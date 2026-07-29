@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/etf-demo")
 public class KrxEtfDemoController {
 
-    @GetMapping
-    public String page(Model model) {
-        model.addAttribute("defaultDate", LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE));
-        return "etf-demo/index";
-    }
+  @GetMapping
+  public String page(Model model) {
+    model.addAttribute("defaultDate", LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE));
+    return "etf-demo/index";
+  }
 }

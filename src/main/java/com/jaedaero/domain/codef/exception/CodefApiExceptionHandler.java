@@ -11,24 +11,25 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(basePackages = "com.jaedaero")
 public class CodefApiExceptionHandler {
 
-    @ExceptionHandler(CodefApiException.class)
-    public ResponseEntity<Map<String, String>> handleCodefApiException(CodefApiException exception) {
-        HttpStatus status = HttpStatus.resolve(exception.getStatusCode());
-        if (status == null) {
-            status = HttpStatus.BAD_GATEWAY;
-        }
-
-        Map<String, String> response = new LinkedHashMap<>();
-        response.put("code", "CODEF_REQUEST_FAILED");
-        response.put("message", exception.getMessage());
-        return ResponseEntity.status(status).body(response);
+  @ExceptionHandler(CodefApiException.class)
+  public ResponseEntity<Map<String, String>> handleCodefApiException(CodefApiException exception) {
+    HttpStatus status = HttpStatus.resolve(exception.getStatusCode());
+    if (status == null) {
+      status = HttpStatus.BAD_GATEWAY;
     }
 
-    @ExceptionHandler(CodefUserNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleUserNotFound(CodefUserNotFoundException exception) {
-        Map<String, String> response = new LinkedHashMap<>();
-        response.put("code", "USER_NOT_FOUND");
-        response.put("message", exception.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
+    Map<String, String> response = new LinkedHashMap<>();
+    response.put("code", "CODEF_REQUEST_FAILED");
+    response.put("message", exception.getMessage());
+    return ResponseEntity.status(status).body(response);
+  }
+
+  @ExceptionHandler(CodefUserNotFoundException.class)
+  public ResponseEntity<Map<String, String>> handleUserNotFound(
+      CodefUserNotFoundException exception) {
+    Map<String, String> response = new LinkedHashMap<>();
+    response.put("code", "USER_NOT_FOUND");
+    response.put("message", exception.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+  }
 }

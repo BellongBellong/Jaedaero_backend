@@ -11,30 +11,30 @@ import org.springframework.stereotype.Component;
 @Component
 public class CodefAccessTokenProvider {
 
-    private static final long REFRESH_BUFFER_SECONDS = 300L;
+  private static final long REFRESH_BUFFER_SECONDS = 300L;
 
-    private final CodefTokenClient codefTokenClient;
-    private CachedToken cachedToken;
+  private final CodefTokenClient codefTokenClient;
+  private CachedToken cachedToken;
 
-    public CodefAccessTokenProvider(CodefTokenClient codefTokenClient) {
-        this.codefTokenClient = codefTokenClient;
+  public CodefAccessTokenProvider(CodefTokenClient codefTokenClient) {
+    this.codefTokenClient = codefTokenClient;
+  }
+
+  public synchronized String getAccessToken() {
+    if (cachedToken == null || cachedToken.expiresAt().isBefore(Instant.now())) {
+      CodefTokenResponse tokenResponse = codefTokenClient.publishToken();
+      long expiresIn = tokenResponse.getExpiresIn() == null ? 0L : tokenResponse.getExpiresIn();
+      long cacheSeconds = Math.max(0L, expiresIn - REFRESH_BUFFER_SECONDS);
+      cachedToken =
+          new CachedToken(tokenResponse.getAccessToken(), Instant.now().plusSeconds(cacheSeconds));
     }
 
-    public synchronized String getAccessToken() {
-        if (cachedToken == null || cachedToken.expiresAt().isBefore(Instant.now())) {
-            CodefTokenResponse tokenResponse = codefTokenClient.publishToken();
-            long expiresIn = tokenResponse.getExpiresIn() == null ? 0L : tokenResponse.getExpiresIn();
-            long cacheSeconds = Math.max(0L, expiresIn - REFRESH_BUFFER_SECONDS);
-            cachedToken = new CachedToken(
-                    tokenResponse.getAccessToken(), Instant.now().plusSeconds(cacheSeconds));
-        }
+    return cachedToken.accessToken();
+  }
 
-        return cachedToken.accessToken();
-    }
+  public synchronized void invalidate() {
+    cachedToken = null;
+  }
 
-    public synchronized void invalidate() {
-        cachedToken = null;
-    }
-
-    private record CachedToken(String accessToken, Instant expiresAt) {}
+  private record CachedToken(String accessToken, Instant expiresAt) {}
 }
