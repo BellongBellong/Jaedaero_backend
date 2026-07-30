@@ -8,6 +8,7 @@ import com.jaedaero.domain.auth.exception.SocialAuthenticationException;
 import com.jaedaero.domain.auth.vo.AuthUserVo;
 import java.net.URI;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
+@DependsOn("dotenv")
 public class SocialProfileClient {
 
   private static final URI GOOGLE_USER_INFO_URI =

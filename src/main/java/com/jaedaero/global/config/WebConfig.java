@@ -5,6 +5,7 @@ import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatche
 import javax.servlet.Filter;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
+import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
 /**
@@ -60,7 +61,17 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
 //          characterEncodingFilter.setForceEncoding(true);     // 응답 데이터도 UTF-8 강제 인코딩
 //
 //          return new Filter[]{characterEncodingFilter};
-        return new Filter[]{new DelegatingFilterProxy("springSecurityFilterChain")};
+        return new Filter[]{
+                characterEncodingFilter(),
+                new DelegatingFilterProxy("springSecurityFilterChain")
+        };
+    }
+
+    private CharacterEncodingFilter characterEncodingFilter() {
+        CharacterEncodingFilter filter = new CharacterEncodingFilter();
+        filter.setEncoding("UTF-8");
+        filter.setForceEncoding(true);
+        return filter;
     }
 
     @Override

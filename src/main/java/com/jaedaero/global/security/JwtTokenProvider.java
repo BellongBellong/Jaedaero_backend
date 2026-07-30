@@ -26,7 +26,7 @@ public class JwtTokenProvider {
   private final SecureRandom secureRandom = new SecureRandom();
 
   public JwtTokenProvider(
-      @Value("${JWT_SECRET:}") String base64Secret,
+      @Value("${JWT_SECRET:${jwt.secret:}}") String base64Secret,
       @Value("${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:3600}") long accessTokenExpirationSeconds,
       @Value("${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}") long refreshTokenExpirationSeconds,
       Dotenv dotenv,

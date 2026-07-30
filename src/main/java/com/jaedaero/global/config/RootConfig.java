@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -32,7 +33,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Configuration
 @EnableTransactionManagement
-@MapperScan(basePackages = "com.jaedaero.domain")
+@MapperScan(basePackages = "com.jaedaero.domain.auth.mapper")
 @ComponentScan(
         basePackages = {"com.jaedaero.domain", "com.jaedaero.global.security"},
         excludeFilters = @ComponentScan.Filter(
@@ -130,6 +131,11 @@ public class RootConfig {
     @Bean
     public DataSourceTransactionManager transactionManager(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
     }
 
     @Bean
