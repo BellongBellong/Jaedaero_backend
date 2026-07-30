@@ -6,13 +6,19 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
  * 🌱 Root Application Context 설정 클래스
@@ -21,14 +27,35 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
  */
 @Slf4j
 @Configuration
-@PropertySource({"classpath:/application.properties"})
-//@MapperScan(basePackages = {
-// mybatis 매퍼 스캔
-//})
-//@ComponentScan(basePackages = {
-// 서비스 매퍼 스캔
-//})
+@EnableTransactionManagement
+@MapperScan(basePackages = "com.jaedaero.domain")
+@ComponentScan(
+        basePackages = "com.jaedaero.domain",
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ANNOTATION,
+                classes = Controller.class
+        )
+)
 public class RootConfig {
+
+    /**
+     * @PropertySource에 등록한 속성을 @Value 표현식에서 해석한다.
+     * static 빈으로 등록해야 설정 클래스 초기화 이전에도 적용된다.
+     */
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+        PropertySourcesPlaceholderConfigurer configurer =
+                new PropertySourcesPlaceholderConfigurer();
+
+        configurer.setLocations(
+                new ClassPathResource("application.properties"),
+                new ClassPathResource("application-local.properties")
+        );
+        configurer.setIgnoreResourceNotFound(true);
+        configurer.setLocalOverride(true);
+
+        return configurer;
+    }
 
     @Value("${db.driver}")
     String driver;
@@ -82,6 +109,9 @@ public class RootConfig {
         // MyBatis 설정 파일 위치 지정
         sqlSessionFactory.setConfigLocation(applicationContext.getResource("classpath:/mybatis-config.xml"));
 
+        // src/main/resources/mapper/** 아래의 Mapper XML을 MyBatis에 등록
+        sqlSessionFactory.setMapperLocations(applicationContext.getResources("classpath*:mapper/**/*.xml"));
+
         // 데이터베이스 연결 설정
         sqlSessionFactory.setDataSource(dataSource);
 
@@ -93,9 +123,8 @@ public class RootConfig {
      * - 데이터베이스 트랜잭션을 스프링이 관리하도록 설정
      */
     @Bean
-    public DataSourceTransactionManager transactionManager() {
-        DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSource());
-        return manager;
+    public DataSourceTransactionManager transactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
     }
 
 }
