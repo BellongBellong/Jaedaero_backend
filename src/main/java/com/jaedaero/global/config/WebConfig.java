@@ -5,6 +5,7 @@ import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatche
 import javax.servlet.Filter;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
+import org.springframework.web.filter.DelegatingFilterProxy;
 
 /**
  * 🚀 웹 애플리케이션 부트스트래핑 설정 클래스
@@ -25,7 +26,8 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
     @Override
     protected Class<?>[] getRootConfigClasses() {
         return new Class[]{
-                RootConfig.class
+                RootConfig.class,
+                SecurityConfig.class
         };
     }
 
@@ -58,7 +60,7 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
 //          characterEncodingFilter.setForceEncoding(true);     // 응답 데이터도 UTF-8 강제 인코딩
 //
 //          return new Filter[]{characterEncodingFilter};
-        return new Filter[]{};
+        return new Filter[]{new DelegatingFilterProxy("springSecurityFilterChain")};
     }
 
     @Override

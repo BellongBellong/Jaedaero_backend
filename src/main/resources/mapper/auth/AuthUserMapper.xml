@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.auth.mapper.AuthUserMapper">
+    <sql id="authUserColumns">
+        u.user_id,
+        u.social_id,
+        u.nickname,
+        u.profile_image,
+        u.profile_source,
+        EXISTS (SELECT 1 FROM soldier_profile sp WHERE sp.user_id = u.user_id) AS onboarding_completed
+    </sql>
+
+    <resultMap id="authUserResultMap" type="com.jaedaero.domain.auth.vo.AuthUserVo">
+        <id property="userId" column="user_id"/>
+        <result property="socialId" column="social_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImage" column="profile_image"
+            javaType="com.jaedaero.domain.auth.common.enums.ProfileImage"/>
+        <result property="profileSource" column="profile_source"
+            javaType="com.jaedaero.domain.auth.common.enums.ProfileSource"/>
+        <result property="onboardingCompleted" column="onboarding_completed"/>
+    </resultMap>
+
+    <!--  로그인 시 기존 회원 확인  -->
+    <select id="findActiveBySocialIdentity" parameterType="map" resultMap="authUserResultMap">
+        SELECT
+        <include refid="authUserColumns"/>
+        FROM users u
+        WHERE u.social_type = #{socialType}
+        AND u.social_id = #{socialId}
+        AND u.is_withdrawn = FALSE
+    </select>
+
+    <!-- 닉네임 설정 전의 신규 소셜 사용자를 생성 -->
+    <insert id="insert" parameterType="map">
+        INSERT INTO users (social_type, social_id)
+        VALUES (#{socialType}, #{socialId})
+    </insert>
+
+    <!-- 만료되지 않은 refresh token 해시로 활성 사용자를 조회 -->
+    <select id="findActiveByRefreshTokenHash" parameterType="map" resultMap="authUserResultMap">
+        SELECT
+        <include refid="authUserColumns"/>
+        FROM refresh_token rt
+        JOIN users u ON u.user_id = rt.user_id
+        WHERE rt.token_hash = #{tokenHash}
+        AND rt.expires_at > CURRENT_TIMESTAMP
+        AND u.is_withdrawn = FALSE
+    </select>
+
+    <!-- 평문을 저장하지 않고 SHA-256 해시 형태의 refresh token을 저장 -->
+    <insert id="insertRefreshToken" parameterType="map">
+        INSERT INTO refresh_token (user_id, token_hash, expires_at)
+        VALUES (#{userId}, #{tokenHash}, #{expiresAt})
+    </insert>
+
+    <!-- 토큰 재발급 시 기존 refresh token을 제거 -->
+    <delete id="deleteRefreshTokenByHash" parameterType="map">
+        DELETE
+        FROM refresh_token
+        WHERE token_hash = #{tokenHash}
+    </delete>
+
+    <!-- 로그아웃한 사용자의 모든 refresh token을 제거 -->
+    <delete id="deleteRefreshTokensByUserId" parameterType="map">
+        DELETE
+        FROM refresh_token
+        WHERE user_id = #{userId}
+    </delete>
+</mapper>

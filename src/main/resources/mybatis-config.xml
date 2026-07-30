@@ -11,6 +11,6 @@
 
     <typeAliases>
         <!-- domain 별칭 example -->
-        <typeAlias alias="ExampleVo" type="com.jaedaero.example.domain.ExampleVO"/>
+        <typeAlias alias="AuthUserVo" type="com.jaedaero.domain.auth.vo.AuthUserVo"/>
     </typeAliases>
 </configuration>
