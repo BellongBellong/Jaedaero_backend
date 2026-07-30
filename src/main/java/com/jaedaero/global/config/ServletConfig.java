@@ -1,6 +1,10 @@
 package com.jaedaero.global.config;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -13,10 +17,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * - Spring MVC의 웹 계층(Presentation Layer)을 담당하는 컨텍스트 설정 클래스
  * - 사용자 요청 처리와 관련된 모든 웹 컴포넌트들을 관리하고 설정함
  */
+@Configuration
 @EnableWebMvc
-//@ComponentScan(basePackages = {
-//
-//}) // Spring MVC용 컴포넌트 등록을 위한 스캔 패키지
+@ComponentScan(
+  basePackages = "com.jaedaero.domain",
+  useDefaultFilters = false,
+  includeFilters = @ComponentScan.Filter(
+    type = FilterType.ANNOTATION,
+    classes = Controller.class
+  )
+)
 public class ServletConfig implements WebMvcConfigurer {
 
     /**
