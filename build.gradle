@@ -16,16 +16,32 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    junitVersion = '5.10.2'       // JUnit 5 테스팅 프레임워크
+    springVersion = '5.3.39'       // Spring Framework 5.3.x 마지막 버전 (보안 패치 포함)
+    lombokVersion = '1.18.38'      // Lombok 라이브러리 최신 버전 (2025년 기준)
+    aspectjVersion = '1.9.20.1'    // AspectJ 최신 마이너 버전
+    jacksonVersion = '2.12.7'      // Spring 5.3.x와 호환되는 Jackson 최신 안정 버전
+    springSecurityVersion = '5.8.15' // Spring Security 버전
+}
+
 dependencies {
     // Spring Framework
-    implementation 'org.springframework:spring-context:5.3.39'
-    implementation 'org.springframework:spring-webmvc:5.3.39'
-    implementation 'org.springframework:spring-jdbc:5.3.39'
+    implementation "org.springframework:spring-context:${springVersion}"
+    implementation "org.springframework:spring-webmvc:${springVersion}"
+    implementation "org.springframework:spring-jdbc:${springVersion}"
 
     // Spring Security
-    implementation 'org.springframework.security:spring-security-web:5.8.15'
-    implementation 'org.springframework.security:spring-security-config:5.8.15'
-    implementation 'org.springframework.security:spring-security-oauth2-client:5.8.15'
+    implementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-config:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-oauth2-client:${springSecurityVersion}"
+
+    // 스프링 데이터베이스 지원
+    implementation "org.springframework:spring-tx:${springSecurityVersion}"
+
+    // 데이터베이스 관련 의존성
+    implementation 'com.mysql:mysql-connector-j:9.3.0'     // MySQL JDBC 드라이버
+    implementation 'com.zaxxer:HikariCP:3.4.5'             // 커넥션 풀 라이브러리
 
     // Tomcat 9 / Servlet 4.0
     compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
@@ -63,8 +79,11 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.5'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
-    testImplementation 'org.springframework:spring-test:5.3.39'
+    testImplementation "org.springframework:spring-test:${springVersion}"
     testImplementation 'org.hamcrest:hamcrest:2.2'
+
+    // Xerces XML 파서 - XML 내 한글 문자 처리 개선 (안정 버전 유지)
+    implementation 'xerces:xercesImpl:2.12.2'
 }
 
 tasks.named('test') {
