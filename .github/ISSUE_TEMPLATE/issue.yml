@@ -1,5 +1,5 @@
-qname: ISSUE TEMPLATE
-description: 작업 이슈를 등록합니다.
+name: "작업 이슈"
+description: "작업 이슈를 등록합니다."
 title: "✨ Feat: "
 
 body:
@@ -17,7 +17,7 @@ body:
         ⛑️ Qa: QA
 
   - type: textarea
-    id: title
+    id: work-summary
     attributes:
       label: ✨ 작업 내용
       description: 해야 할 작업을 간단히 작성해 주세요.
@@ -25,7 +25,7 @@ body:
       required: true
 
   - type: textarea
-    id: content
+    id: work-details
     attributes:
       label: ⚙ 상세 작업 내용
       description: 상세 작업을 체크리스트로 작성해 주세요.
