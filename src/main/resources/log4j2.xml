@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    - Log4j2 설정 파일
+    - Spring MVC 애플리케이션의 로깅 시스템 설정
+    - Log4j2는 고성능, 비동기 로깅을 지원하는 로깅 프레임워크
+
+    설정 구조:
+    1. Appenders: 로그 출력 대상과 형식을 정의
+    2. Loggers: 로거별 레벨과 출력 대상을 설정
+
+    =====================================================
+
+    📊 Log4j2 로그 레벨 계층구조 (높은 순서 → 낮은 순서)
+
+    FATAL (치명적)  ⚠️  - 애플리케이션이 중단될 수 있는 심각한 오류
+    ERROR (오류)    ❌  - 처리 가능하지만 주의가 필요한 오류 상황
+    WARN  (경고)    ⚡  - 잠재적 문제나 예상치 못한 상황
+    INFO  (정보)    ℹ️   - 일반적인 정보성 메시지 (기본 운영 로그)
+    DEBUG (디버그)  🔍  - 개발/디버깅용 상세 정보
+    TRACE (추적)    🔬  - 매우 상세한 실행 흐름 정보
+
+    ✅ 레벨 설정 원칙:
+    - 설정된 레벨 이상의 모든 로그가 출력됨
+    - 예: INFO 설정 시 → FATAL, ERROR, WARN, INFO 출력
+    - 예: DEBUG 설정 시 → FATAL, ERROR, WARN, INFO, DEBUG 출력
+
+    🎯 권장 레벨:
+    - 개발환경: DEBUG 또는 INFO
+    - 테스트환경: INFO 또는 WARN
+    - 운영환경: WARN 또는 ERROR
+-->
+<Configuration>
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout charset="UTF-8" pattern=" %-5level %c(%M:%L) - %m%n"/>
+        </Console>
+    </Appenders>
+
+    <!--
+        📝 LOGGERS 설정 (로거별 레벨과 출력 대상 정의)
+        - Logger : 특정 패키지나 클래스에 대한 로깅 규칙을 정의
+        계층적 구조를 가지며, 상위 Logger의 설정을 상속받을 수 있음
+    -->
+    <Loggers>
+
+        <!--
+            Root Logger: 모든 로거의 최상위 부모 로거
+            - 모든 Logger의 기본 설정을 제공
+            - 다른 Logger에서 명시적으로 처리되지 않은 모든 로그를 처리
+            - 반드시 하나만 존재해야 함
+        -->
+        <Root level="INFO">
+            <AppenderRef ref="console"/>
+        </Root>
+
+        <!--
+            애플리케이션 전용 Logger
+            - level="INFO": 애플리케이션 주요 동작 정보를 출력
+            - additivity="false": 상위 Logger(Root)로 로그 전파 방지 (중복 출력 방지)
+        -->
+        <Logger name="org.scoula" level="INFO" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!--
+            Spring Framework Logger
+
+            - name="org.springframework": Spring 프레임워크 관련 로그 제어
+            - level="INFO": Spring의 주요 동작 정보만 출력
+            - additivity="false": Root Logger로의 전파 방지
+         -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- JDBC 관련 로거: 대부분 WARN 레벨로 제한 -->
+        <Logger name="jdbc" level="WARN" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- SQL만 INFO 레벨로 출력 (핵심 로그) -->
+        <Logger name="jdbc.sqlonly" level="INFO" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+    </Loggers>
+</Configuration>
