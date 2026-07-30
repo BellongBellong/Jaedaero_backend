@@ -40,6 +40,9 @@ dependencies {
     // JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
 
+    // Environment variables (.env)
+    implementation 'io.github.cdimascio:dotenv-java:3.2.0'
+
     // API documentation (Spring MVC / non-Boot)
     implementation 'io.springfox:springfox-swagger2:3.0.0'
     implementation 'io.springfox:springfox-swagger-ui:3.0.0'
