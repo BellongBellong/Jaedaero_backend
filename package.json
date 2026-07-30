@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "./gradlew test",
+    "commit": "node scripts/commit.js",
     "prepare": "husky"
   },
   "repository": {
