@@ -8,10 +8,12 @@ import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 /** Supplies the bank-button catalogue to the frontend. */
 @Api(tags = "CODEF 연결 가능 금융기관")
 @RestController
+@ApiIgnore
 @RequestMapping("/api/v1/codef/institutions")
 public class CodefBankInstitutionController {
 

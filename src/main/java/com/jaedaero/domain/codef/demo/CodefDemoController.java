@@ -1,6 +1,5 @@
 package com.jaedaero.domain.codef.demo;
 
-import com.jaedaero.domain.codef.exception.CodefApiException;
 import com.jaedaero.domain.codef.institution.CodefBankInstitution;
 import com.jaedaero.domain.codef.institution.CodefBusinessType;
 import com.jaedaero.domain.codef.institution.CodefSecuritiesInstitution;
@@ -10,20 +9,15 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /** Server-rendered local demonstration of CODEF login, account cards, and transaction history. */
-@Controller
 @RequestMapping("/codef-demo")
 public class CodefDemoController {
 
@@ -38,7 +32,7 @@ public class CodefDemoController {
 
   public CodefDemoController(
       CodefDemoService codefDemoService,
-      @Value("${codef.debug.account-create-enabled:false}") boolean enabled,
+      @Value("${codef.debug.account-create-enabled:true}") boolean enabled,
       @Value("${codef.demo.user-id:1}") long demoUserId) {
     this.codefDemoService = codefDemoService;
     this.enabled = enabled;
@@ -51,92 +45,35 @@ public class CodefDemoController {
     addInstitutionCatalogues(model);
     model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
     model.addAttribute("loginForm", new CodefDemoLoginForm());
+    model.addAttribute("demoUserId", demoUserId);
     return "codef-demo/login";
   }
 
-  @PostMapping("/connect")
-  public String connect(
-      @Valid @ModelAttribute("loginForm") CodefDemoLoginForm loginForm,
-      BindingResult bindingResult,
+  @GetMapping("/accounts")
+  public String accounts(
+      @RequestParam(required = false) String organizationCode,
+      @RequestParam(required = false) String businessType,
+      @RequestParam(defaultValue = "false") boolean refresh,
       HttpSession session,
       Model model) {
     assertEnabled();
-    if (bindingResult.hasErrors()) {
-      addInstitutionCatalogues(model);
-      model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
-      return "codef-demo/login";
-    }
-
-    try {
-      codefDemoService.connect(demoUserId, loginForm);
-      session.setAttribute(ACTIVE_KEY, Boolean.TRUE);
-      session.setAttribute(ORGANIZATION_KEY, loginForm.getOrganizationCode());
-      session.setAttribute(BUSINESS_TYPE_KEY, loginForm.getBusinessType());
-      return accounts(session, model);
-    } catch (CodefApiException exception) {
-      LOGGER.log(
-          Level.WARNING, "CODEF demo account connection failed: {0}", exception.getMessage());
-      addInstitutionCatalogues(model);
-      model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
-      model.addAttribute("errorMessage", exception.getMessage());
-      return "codef-demo/login";
-    } catch (RuntimeException exception) {
-      LOGGER.log(Level.WARNING, "CODEF demo account connection failed", exception);
-      addInstitutionCatalogues(model);
-      model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
-      model.addAttribute("errorMessage", "은행 연결에 실패했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
-      return "codef-demo/login";
-    }
-  }
-
-  @PostMapping("/saved-connect")
-  public String connectSaved(
-      @RequestParam String organizationCode,
-      @RequestParam String businessType,
-      HttpSession session,
-      Model model) {
-    assertEnabled();
-    try {
-      codefDemoService.loadSavedInstitution(demoUserId, organizationCode, businessType);
+    if (organizationCode != null && businessType != null) {
+      institutionDisplayName(organizationCode, businessType);
       session.setAttribute(ACTIVE_KEY, Boolean.TRUE);
       session.setAttribute(ORGANIZATION_KEY, organizationCode);
       session.setAttribute(BUSINESS_TYPE_KEY, businessType);
-      return accounts(session, model);
-    } catch (RuntimeException exception) {
-      LOGGER.log(Level.WARNING, "CODEF demo saved institution refresh failed", exception);
-      addInstitutionCatalogues(model);
-      model.addAttribute("savedInstitutions", codefDemoService.getSavedInstitutions(demoUserId));
-      model.addAttribute("errorMessage", "저장된 기관의 계좌를 불러오지 못했습니다. 서버 로그에서 상세 원인을 확인해주세요.");
-      model.addAttribute("loginForm", new CodefDemoLoginForm());
-      return "codef-demo/login";
     }
-  }
-
-  @GetMapping("/accounts")
-  public String accounts(HttpSession session, Model model) {
-    assertEnabled();
-    String organizationCode = getSessionValue(session, ORGANIZATION_KEY);
-    String businessType = getSessionValue(session, BUSINESS_TYPE_KEY);
+    organizationCode = getSessionValue(session, ORGANIZATION_KEY);
+    businessType = getSessionValue(session, BUSINESS_TYPE_KEY);
     if (!isActive(session) || organizationCode == null || businessType == null) {
       return "redirect:/codef-demo";
     }
-
-    try {
-      CodefDemoAccountOverview overview =
-          codefDemoService.getAccountOverview(demoUserId, organizationCode, businessType);
-      model.addAttribute("accounts", overview.getAccounts());
-      model.addAttribute("militarySavingsStatus", overview.getMilitarySavingsStatus());
-      model.addAttribute(
-          "institutionDisplayName", institutionDisplayName(organizationCode, businessType));
-      boolean securitiesInstitution = CodefBusinessType.SECURITIES.getCode().equals(businessType);
-      model.addAttribute("securitiesInstitution", securitiesInstitution);
-      return securitiesInstitution ? "codef-demo/securities-accounts" : "codef-demo/bank-accounts";
-    } catch (RuntimeException exception) {
-      session.removeAttribute(ACTIVE_KEY);
-      session.removeAttribute(ORGANIZATION_KEY);
-      session.removeAttribute(BUSINESS_TYPE_KEY);
-      return "redirect:/codef-demo";
-    }
+    model.addAttribute("demoUserId", demoUserId);
+    model.addAttribute("organizationCode", organizationCode);
+    model.addAttribute("businessType", businessType);
+    model.addAttribute("refresh", refresh);
+    model.addAttribute("institutionDisplayName", institutionDisplayName(organizationCode, businessType));
+    return "codef-demo/accounts-api";
   }
 
   @PostMapping("/transactions")
