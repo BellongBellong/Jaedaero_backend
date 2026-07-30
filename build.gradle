@@ -37,7 +37,7 @@ dependencies {
     implementation "org.springframework.security:spring-security-oauth2-client:${springSecurityVersion}"
 
     // 스프링 데이터베이스 지원
-    implementation "org.springframework:spring-tx:${springSecurityVersion}"
+    implementation "org.springframework:spring-tx:${springVersion}"
 
     // 데이터베이스 관련 의존성
     implementation 'com.mysql:mysql-connector-j:9.3.0'     // MySQL JDBC 드라이버
