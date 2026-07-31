@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 @Api(tags = "CODEF 금융기관 연결")
 @RestController
+@ApiIgnore
 @RequestMapping("/api/v1/codef/connections")
 public class CodefBankConnectionController {
 

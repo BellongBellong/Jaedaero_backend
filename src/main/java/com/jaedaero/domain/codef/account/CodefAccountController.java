@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import springfox.documentation.annotations.ApiIgnore;
 
 @RestController
 @Api(tags = "CODEF 금융 계좌·거래내역")
+@ApiIgnore
 @RequestMapping("/api/v1/codef")
 public class CodefAccountController {
   private final CodefPersistenceRepository repository;

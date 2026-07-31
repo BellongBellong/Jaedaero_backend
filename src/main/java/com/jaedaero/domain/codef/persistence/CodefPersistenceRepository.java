@@ -272,6 +272,19 @@ public class CodefPersistenceRepository {
     return rows.stream().findFirst();
   }
 
+  /** Finds a locally seeded account after an idempotent account upsert. */
+  public Optional<Long> findAccountIdByConnectionAndAccountHash(
+      long connectionId, String accountNumberHash) {
+    List<Long> accountIds =
+        jdbcTemplate.query(
+            "SELECT account_id FROM connected_account WHERE connection_id = ? "
+                + "AND account_number_hash = ? AND status = 'ACTIVE'",
+            (rs, rowNum) -> rs.getLong("account_id"),
+            connectionId,
+            accountNumberHash);
+    return accountIds.stream().findFirst();
+  }
+
   public boolean isTransactionPeriodCovered(
       long accountId, String inquiryType, LocalDate startDate, LocalDate endDate) {
     Integer count =
@@ -319,6 +332,17 @@ public class CodefPersistenceRepository {
         externalTransactionKey);
   }
 
+  /** Sets an initial fixture/rule category without overwriting a user-selected category. */
+  public void fillTransactionCategoryIfEmpty(
+      long accountId, String externalTransactionKey, String category) {
+    jdbcTemplate.update(
+        "UPDATE transaction_history SET category = COALESCE(category, ?) "
+            + "WHERE account_id = ? AND external_transaction_key = ?",
+        category,
+        accountId,
+        externalTransactionKey);
+  }
+
   public void upsertSoldierSaving(
       long userId,
       long accountId,
@@ -352,6 +376,7 @@ public class CodefPersistenceRepository {
         (rs, rowNum) ->
             new StoredTransaction(
                 rs.getLong("transaction_id"),
+                accountId,
                 rs.getTimestamp("transaction_datetime").toLocalDateTime(),
                 rs.getLong("amount"),
                 rs.getObject("balance_after", Long.class),
@@ -361,6 +386,59 @@ public class CodefPersistenceRepository {
         accountId,
         java.sql.Timestamp.valueOf(startDate.atStartOfDay()),
         java.sql.Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+  }
+
+  /** Returns only transactions belonging to the user, optionally narrowed by account and category. */
+  public List<StoredTransaction> findTransactionsByUser(
+      long userId, Long accountId, LocalDate startDate, LocalDate endDate, String category) {
+    StringBuilder query =
+        new StringBuilder(
+            "SELECT th.transaction_id, th.account_id, th.transaction_datetime, th.amount, "
+                + "th.balance_after, th.transaction_type, th.category, th.transaction_description "
+                + "FROM transaction_history th "
+                + "JOIN connected_account ca ON ca.account_id = th.account_id "
+                + "JOIN codef_connection cc ON cc.connection_id = ca.connection_id "
+                + "WHERE cc.user_id = ? AND ca.status = 'ACTIVE' "
+                + "AND th.transaction_datetime >= ? AND th.transaction_datetime < ?");
+    java.util.List<Object> parameters = new java.util.ArrayList<>();
+    parameters.add(userId);
+    parameters.add(java.sql.Timestamp.valueOf(startDate.atStartOfDay()));
+    parameters.add(java.sql.Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+    if (accountId != null) {
+      query.append(" AND th.account_id = ?");
+      parameters.add(accountId);
+    }
+    if (category != null && !category.isBlank()) {
+      query.append(" AND th.category = ?");
+      parameters.add(category);
+    }
+    query.append(" ORDER BY th.transaction_datetime DESC, th.transaction_id DESC");
+    return jdbcTemplate.query(
+        query.toString(),
+        (rs, rowNum) ->
+            new StoredTransaction(
+                rs.getLong("transaction_id"),
+                rs.getLong("account_id"),
+                rs.getTimestamp("transaction_datetime").toLocalDateTime(),
+                rs.getLong("amount"),
+                rs.getObject("balance_after", Long.class),
+                rs.getString("transaction_type"),
+                rs.getString("category"),
+                rs.getString("transaction_description")),
+        parameters.toArray());
+  }
+
+  /** Updates a transaction only when it belongs to the requesting user. */
+  public int updateTransactionCategoryByUser(long transactionId, long userId, String category) {
+    return jdbcTemplate.update(
+        "UPDATE transaction_history th "
+            + "JOIN connected_account ca ON ca.account_id = th.account_id "
+            + "JOIN codef_connection cc ON cc.connection_id = ca.connection_id "
+            + "SET th.category = ? "
+            + "WHERE th.transaction_id = ? AND cc.user_id = ? AND ca.status = 'ACTIVE'",
+        category,
+        transactionId,
+        userId);
   }
 
   private String accountSelect() {

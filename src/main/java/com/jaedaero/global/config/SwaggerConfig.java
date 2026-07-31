@@ -20,7 +20,7 @@ public class SwaggerConfig {
         .apiInfo(apiInfo())
         .select()
         .apis(RequestHandlerSelectors.basePackage("com.jaedaero"))
-        .paths(PathSelectors.ant("/api/**"))
+        .paths(PathSelectors.any())
         .build();
   }
 

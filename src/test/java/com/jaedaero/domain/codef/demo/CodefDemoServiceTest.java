@@ -67,7 +67,7 @@ class CodefDemoServiceTest {
       CodefSecuritiesInquiryService inquiry,
       int refreshedCount) {
     return new CodefDemoService(
-        repository, null, null, null, inquiry, new StubAccountSync(refreshedCount), null);
+        repository, null, null, null, inquiry, new StubAccountSync(refreshedCount), null, null);
   }
 
   private static StoredConnectedAccount account(
