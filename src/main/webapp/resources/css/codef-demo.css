@@ -120,3 +120,50 @@ th { color: #64748b; background: #fafbfe; font-size: 12px; }
 .period-filter label { margin: 0 2px 0 0; }
 .period-filter input { width: auto; min-width: 150px; padding: 10px 12px; }
 @media (max-width: 720px) { .period-filter { align-items: stretch; }.period-filter input { width: 100%; }.period-filter .secondary-button { width: 100%; } }
+
+/* 전체 자산 화면 */
+.asset-overview-shell { max-width: 1120px; }
+.asset-overview-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.asset-overview-header .eyebrow { margin: 0 0 8px; color: #5570a8; letter-spacing: .04em; }
+.asset-overview-header h1 { margin: 0; font-size: clamp(30px, 4vw, 42px); letter-spacing: -.05em; }
+.asset-overview-header p:not(.eyebrow) { margin: 10px 0 0; color: #6e7f97; font-size: 15px; }
+.back-button { display: inline-flex; align-items: center; min-height: 42px; text-decoration: none; }
+.asset-summary-card { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; margin-bottom: 44px; padding: 32px 34px; overflow: hidden; border-radius: 24px; color: #fff; background: radial-gradient(circle at 90% 10%, rgba(166, 202, 255, .42), transparent 25%), linear-gradient(135deg, #153c8a, #386fe0); box-shadow: 0 18px 38px rgba(31, 82, 180, .25); }
+.asset-summary-copy > span, .asset-summary-copy p, .asset-summary-meta > span { color: rgba(255, 255, 255, .75); }
+.asset-summary-copy > span, .asset-summary-meta > span { font-size: 14px; font-weight: 700; }
+.asset-summary-copy > strong { display: block; margin: 8px 0; font-size: clamp(34px, 5vw, 52px); letter-spacing: -.06em; line-height: 1; }
+.asset-summary-copy p { margin: 0; font-size: 13px; }
+.asset-summary-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 130px; padding: 14px 16px; border: 1px solid rgba(255,255,255,.22); border-radius: 14px; background: rgba(255,255,255,.1); }
+.asset-summary-meta strong { font-size: 18px; }
+.institution-asset-groups { gap: 40px; }
+.institution-group-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.institution-group-heading h2 { color: #1d3150; font-size: 22px; letter-spacing: -.035em; }
+.institution-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; color: #315eaf; background: #e9f0ff; font-weight: 800; }
+.unified-account-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.unified-account-card { min-height: 270px; gap: 0; padding: 22px; border: 1px solid #e0e8f4; border-radius: 20px; transition: transform .18s ease, box-shadow .18s ease; }
+.unified-account-card:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(18, 32, 59, .1); }
+.unified-account-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.account-kind, .asset-status { display: inline-flex; align-items: center; min-height: 25px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.account-kind { padding: 4px 9px; color: #4c607e; background: #eef2f7; }
+.account-kind.securities { color: #68539b; background: #f2edff; }
+.asset-status { max-width: 140px; overflow: hidden; color: #74839a; text-overflow: ellipsis; white-space: nowrap; }
+.unified-account-info { margin-top: 22px; }
+.unified-account-card h3 { margin: 0 0 8px; color: #192b47; font-size: 19px; letter-spacing: -.035em; }
+.unified-account-card .account-number { margin: 0; }
+.unified-amount { margin: auto 0 18px; padding-top: 22px; text-align: left; }
+.unified-amount span { color: #8190a4; font-size: 13px; font-weight: 700; }
+.unified-amount strong { margin-top: 5px; color: #152846; font-size: 27px; letter-spacing: -.045em; }
+.card-detail-button { justify-content: space-between; padding: 0 16px; }
+.card-detail-button span { font-size: 18px; }
+.card-detail-unavailable { padding: 14px; text-align: center; }
+
+@media (max-width: 720px) {
+  .asset-overview-header { flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .asset-overview-header h1 { font-size: 32px; }
+  .back-button { width: 100%; justify-content: center; }
+  .asset-summary-card { flex-direction: column; align-items: stretch; gap: 22px; padding: 26px 22px; margin-bottom: 32px; }
+  .asset-summary-meta { align-items: flex-start; }
+  .institution-group-heading h2 { font-size: 20px; }
+  .unified-account-grid { grid-template-columns: 1fr; }
+  .unified-account-card { min-height: 250px; }
+}

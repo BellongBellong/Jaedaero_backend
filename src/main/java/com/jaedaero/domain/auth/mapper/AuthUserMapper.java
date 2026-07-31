@@ -2,8 +2,10 @@ package com.jaedaero.domain.auth.mapper;
 
 import com.jaedaero.domain.auth.vo.AuthUserVo;
 import java.sql.Timestamp;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+@Mapper
 public interface AuthUserMapper {
 
   AuthUserVo findActiveBySocialIdentity(
