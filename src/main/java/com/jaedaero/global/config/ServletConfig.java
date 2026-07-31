@@ -12,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 /**
  * 🌐 Spring MVC Web Context 설정 클래스
@@ -38,6 +39,10 @@ public class ServletConfig implements WebMvcConfigurer {
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/")
                 .setViewName("forward:/resources/index.html");
+
+        // Springfox 3 Swagger UI entry point.
+        registry.addViewController("/swagger-ui.html")
+                .setViewName("redirect:/swagger-ui/index.html");
     }
 
     /**
@@ -55,8 +60,9 @@ public class ServletConfig implements WebMvcConfigurer {
                 .addResourceLocations("/resources/assets/");
 
         // Swagger UI 리소스 핸들러
-        registry.addResourceHandler("/swagger-ui.html")
-                .addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/swagger-ui/**")
+                .addResourceLocations(
+                        "classpath:/META-INF/resources/webjars/springfox-swagger-ui/");
 
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/");
@@ -73,6 +79,15 @@ public class ServletConfig implements WebMvcConfigurer {
     public MultipartResolver multipartResolver() {
         StandardServletMultipartResolver resolver =
                 new StandardServletMultipartResolver();
+        return resolver;
+    }
+
+    /** JSP view name (for example, codef-demo/login) to WEB-INF JSP path mapping. */
+    @Bean
+    public InternalResourceViewResolver jspViewResolver() {
+        InternalResourceViewResolver resolver = new InternalResourceViewResolver();
+        resolver.setPrefix("/WEB-INF/views/");
+        resolver.setSuffix(".jsp");
         return resolver;
     }
 }

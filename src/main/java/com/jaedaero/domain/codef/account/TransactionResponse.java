@@ -10,6 +10,9 @@ public class TransactionResponse {
   @ApiModelProperty(value = "거래내역 ID", example = "100")
   private final long transactionId;
 
+  @ApiModelProperty(value = "연결 계좌 ID", example = "10")
+  private final long accountId;
+
   @ApiModelProperty(value = "거래 일시", example = "2026-07-29T10:30:00")
   private final LocalDateTime transactionAt;
 
@@ -22,7 +25,7 @@ public class TransactionResponse {
   @ApiModelProperty(value = "거래 구분(DEPOSIT: 입금, WITHDRAW: 출금)", example = "DEPOSIT")
   private final String transactionType;
 
-  @ApiModelProperty(value = "거래 분류", example = "입금")
+  @ApiModelProperty(value = "거래 분류 코드", example = "FOOD")
   private final String category;
 
   @ApiModelProperty(value = "거래 설명", example = "급여 입금")
@@ -30,6 +33,7 @@ public class TransactionResponse {
 
   public TransactionResponse(StoredTransaction transaction) {
     this.transactionId = transaction.transactionId();
+    this.accountId = transaction.accountId();
     this.transactionAt = transaction.transactionAt();
     this.amount = transaction.amount();
     this.balanceAfter = transaction.balanceAfter();
@@ -40,6 +44,10 @@ public class TransactionResponse {
 
   public long getTransactionId() {
     return transactionId;
+  }
+
+  public long getAccountId() {
+    return accountId;
   }
 
   public LocalDateTime getTransactionAt() {

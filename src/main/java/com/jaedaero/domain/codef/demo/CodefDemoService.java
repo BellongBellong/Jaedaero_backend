@@ -6,6 +6,7 @@ import com.jaedaero.domain.codef.account.CodefSecuritiesInquiryService;
 import com.jaedaero.domain.codef.account.CodefTransactionSyncService;
 import com.jaedaero.domain.codef.account.SecuritiesAssetResponse;
 import com.jaedaero.domain.codef.account.SecuritiesHoldingResponse;
+import com.jaedaero.domain.codef.account.TransactionCategory;
 import com.jaedaero.domain.codef.connection.CodefBankConnectionCreateRequest;
 import com.jaedaero.domain.codef.connection.CodefConnectionService;
 import com.jaedaero.domain.codef.institution.CodefBankInstitution;
@@ -16,8 +17,11 @@ import com.jaedaero.domain.codef.persistence.StoredConnectedAccount;
 import com.jaedaero.domain.codef.persistence.StoredInstitutionConnection;
 import com.jaedaero.domain.codef.persistence.StoredTransaction;
 import com.jaedaero.global.security.SensitiveValueCipher;
+import com.jaedaero.global.security.Sha256Hasher;
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -35,6 +39,9 @@ public class CodefDemoService {
   private static final DateTimeFormatter BASIC_DATE = DateTimeFormatter.BASIC_ISO_DATE;
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
   private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
+  private static final String MOCK_SAVING_ACCOUNT_NUMBER = "999-00-000001";
+  private static final String MOCK_SAVING_ACCOUNT_MASKED = "999-00-000001";
+  private static final String MOCK_SAVING_PRODUCT_NAME = "장병내일준비적금 (데모)";
 
   private final CodefPersistenceRepository repository;
   private final CodefConnectionService connectionService;
@@ -43,6 +50,7 @@ public class CodefDemoService {
   private final CodefSecuritiesInquiryService securitiesInquiryService;
   private final CodefAccountSyncService accountSyncService;
   private final SensitiveValueCipher cipher;
+  private final Sha256Hasher hasher;
 
   public CodefDemoService(
       CodefPersistenceRepository repository,
@@ -51,7 +59,8 @@ public class CodefDemoService {
       CodefSavingsTransactionSyncService savingsTransactionSyncService,
       CodefSecuritiesInquiryService securitiesInquiryService,
       CodefAccountSyncService accountSyncService,
-      SensitiveValueCipher cipher) {
+      SensitiveValueCipher cipher,
+      Sha256Hasher hasher) {
     this.repository = repository;
     this.connectionService = connectionService;
     this.transactionSyncService = transactionSyncService;
@@ -59,6 +68,7 @@ public class CodefDemoService {
     this.securitiesInquiryService = securitiesInquiryService;
     this.accountSyncService = accountSyncService;
     this.cipher = cipher;
+    this.hasher = hasher;
   }
 
   /** Uses cached accounts when this demo user already connected the selected institution. */
@@ -88,6 +98,7 @@ public class CodefDemoService {
 
   public List<CodefDemoSavedInstitution> getSavedInstitutions(long userId) {
     repository.createDemoUserIfAbsent(userId);
+    seedMockMilitarySavingsIfConnected(userId);
     List<CodefDemoSavedInstitution> savedInstitutions = new ArrayList<>();
     for (StoredInstitutionConnection connection :
         repository.findActiveInstitutionConnectionsByUserId(userId)) {
@@ -220,6 +231,7 @@ public class CodefDemoService {
 
   public List<CodefDemoTransaction> getRecentTransactions(
       long userId, long accountId, String transactionKind, LocalDate startDate, LocalDate endDate) {
+    seedMockMilitarySavingsIfConnected(userId);
     String inquiryType =
         "INSTALLMENT_SAVINGS".equals(transactionKind) ? "INSTALLMENT_SAVINGS" : "DEMAND_DEPOSIT";
     StoredConnectedAccount account =
@@ -229,7 +241,8 @@ public class CodefDemoService {
     if (!inquiryType.equals(account.accountType())) {
       throw new IllegalArgumentException("선택한 계좌의 거래 유형이 올바르지 않습니다.");
     }
-    if (!repository.isTransactionPeriodCovered(accountId, inquiryType, startDate, endDate)) {
+    if (!isMockMilitarySaving(account)
+        && !repository.isTransactionPeriodCovered(accountId, inquiryType, startDate, endDate)) {
       String startDateText = startDate.format(DateTimeFormatter.BASIC_ISO_DATE);
       String endDateText = endDate.format(DateTimeFormatter.BASIC_ISO_DATE);
       if ("INSTALLMENT_SAVINGS".equals(inquiryType)) {
@@ -245,12 +258,14 @@ public class CodefDemoService {
       boolean deposit = "DEPOSIT".equals(transaction.transactionType());
       transactions.add(
           new CodefDemoTransaction(
+              transaction.transactionId(),
               DATE_FORMAT.format(transaction.transactionAt().toLocalDate()),
               TIME_FORMAT.format(transaction.transactionAt().toLocalTime()),
               transaction.description(),
               formatAmount(transaction.amount()),
               transaction.balanceAfter() == null ? "-" : formatAmount(transaction.balanceAfter()),
-              deposit));
+              deposit,
+              normalizedCategory(transaction.category())));
     }
     return transactions;
   }
@@ -312,6 +327,80 @@ public class CodefDemoService {
       case "보험" -> "보험";
       default -> "기타";
     };
+  }
+
+  private String normalizedCategory(String category) {
+    try {
+      TransactionCategory resolved = TransactionCategory.from(category);
+      return resolved == null ? TransactionCategory.ETC.name() : resolved.name();
+    } catch (IllegalArgumentException exception) {
+      return TransactionCategory.ETC.name();
+    }
+  }
+
+  /**
+   * Adds deterministic local-only data after the demo user has at least one real CODEF connection.
+   * It is tied to the existing connection so foreign keys and ownership checks follow production flow.
+   */
+  public void seedMockMilitarySavingsIfConnected(long userId) {
+    var connection = repository.findConnectionByUserId(userId);
+    if (connection.isEmpty()) {
+      return;
+    }
+
+    LocalDate today = LocalDate.now(KOREA_ZONE);
+    String accountHash = hasher.hash(MOCK_SAVING_ACCOUNT_NUMBER);
+    repository.upsertAccount(
+        connection.get().connectionId(),
+        "0301",
+        CodefBusinessType.BANK.getCode(),
+        "KB국민은행",
+        cipher.encrypt(MOCK_SAVING_ACCOUNT_NUMBER),
+        accountHash,
+        MOCK_SAVING_ACCOUNT_MASKED,
+        "INSTALLMENT_SAVINGS",
+        MOCK_SAVING_PRODUCT_NAME,
+        1_650_000L,
+        1_650_000L,
+        today.minusMonths(3),
+        today.plusMonths(15));
+
+    long accountId =
+        repository
+            .findAccountIdByConnectionAndAccountHash(connection.get().connectionId(), accountHash)
+            .orElseThrow(() -> new IllegalStateException("데모 적금 계좌를 저장하지 못했습니다."));
+    repository.upsertSoldierSaving(
+        userId,
+        accountId,
+        "KB국민은행",
+        550_000L,
+        new BigDecimal("5.00"),
+        today.minusMonths(3),
+        today.plusMonths(15));
+
+    insertMockSavingTransaction(accountId, today.minusMonths(2).withDayOfMonth(25), 550_000L);
+    insertMockSavingTransaction(accountId, today.minusMonths(1).withDayOfMonth(25), 1_100_000L);
+    insertMockSavingTransaction(accountId, today.withDayOfMonth(25), 1_650_000L);
+  }
+
+  private void insertMockSavingTransaction(long accountId, LocalDate date, long balanceAfter) {
+    String externalKey = "demo-military-saving-" + date;
+    String externalKeyHash = hasher.hash(externalKey);
+    repository.insertTransactionIfAbsent(
+        accountId,
+        LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(), 9, 0),
+        550_000L,
+        balanceAfter,
+        "DEPOSIT",
+        "장병내일준비적금 월 납입",
+        externalKeyHash);
+    repository.fillTransactionCategoryIfEmpty(
+        accountId, externalKeyHash, TransactionCategory.ASSET.name());
+  }
+
+  private boolean isMockMilitarySaving(StoredConnectedAccount account) {
+    return MOCK_SAVING_PRODUCT_NAME.equals(account.productName())
+        && MOCK_SAVING_ACCOUNT_MASKED.equals(account.accountMasked());
   }
 
   private String institutionName(String organizationCode, String businessType) {

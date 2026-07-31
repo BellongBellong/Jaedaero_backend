@@ -32,7 +32,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .accessDeniedHandler(jwtAccessDeniedHandler)
         .and()
         .authorizeRequests()
-        .antMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/swagger-ui.html", "/swagger-resources/**", "/v2/api-docs", "/webjars/**")
+        .antMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/v2/api-docs", "/webjars/**")
         .permitAll()
         .anyRequest()
         .permitAll()

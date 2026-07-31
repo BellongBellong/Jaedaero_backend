@@ -22,9 +22,10 @@
             <p class="form-note">CODEF Connected ID로 최신 계좌를 다시 조회합니다. 비밀번호는 화면에 표시하지 않습니다.</p>
             <div class="saved-institution-list">
                 <c:forEach var="institution" items="${savedInstitutions}">
-                    <form class="saved-institution" action="${pageContext.request.contextPath}/codef-demo/saved-connect" method="post">
+                    <form class="saved-institution" action="${pageContext.request.contextPath}/codef-demo/accounts" method="get">
                         <input type="hidden" name="organizationCode" value="${institution.organizationCode}">
                         <input type="hidden" name="businessType" value="${institution.businessType}">
+                        <input type="hidden" name="refresh" value="true">
                         <div>
                             <strong><c:out value="${institution.institutionName}"/></strong>
                             <span><c:out value="${institution.loginIdDisplay}"/></span>
@@ -41,7 +42,7 @@
         <c:if test="${not empty errorMessage}">
             <p class="alert error"><c:out value="${errorMessage}"/></p>
         </c:if>
-        <form action="${pageContext.request.contextPath}/codef-demo/connect" method="post">
+        <form id="accountConnectForm">
             <label for="businessType">기관 구분</label>
             <select id="businessType" name="businessType" required>
                 <option value="BK">은행</option>
@@ -84,6 +85,9 @@
 </main>
 <script>
     (function () {
+        const contextPath = '${pageContext.request.contextPath}';
+        const demoUserId = ${demoUserId};
+        const connectForm = document.getElementById('accountConnectForm');
         const businessType = document.getElementById('businessType');
         const bankField = document.getElementById('bankInstitutionField');
         const securitiesField = document.getElementById('securitiesInstitutionField');
@@ -102,6 +106,47 @@
 
         businessType.addEventListener('change', updateInstitutionField);
         updateInstitutionField();
+
+        connectForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const submitButton = connectForm.querySelector('button[type="submit"]');
+            const errorMessage = document.querySelector('.alert.error');
+            if (errorMessage) errorMessage.remove();
+            submitButton.disabled = true;
+            submitButton.textContent = '계좌 연결 중...';
+
+            const organizationCode = businessType.value === 'ST'
+                ? securitiesSelect.value
+                : bankSelect.value;
+            try {
+                const response = await fetch(contextPath + '/api/v1/accounts/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        userId: demoUserId,
+                        organizationCode: organizationCode,
+                        businessType: businessType.value,
+                        loginId: document.getElementById('loginId').value,
+                        password: document.getElementById('password').value,
+                        birthDate: document.getElementById('birthDate').value || null
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error((await response.text()) || '계좌 연결에 실패했습니다.');
+                }
+                window.location.assign(
+                    contextPath + '/codef-demo/accounts?organizationCode='
+                    + encodeURIComponent(organizationCode)
+                    + '&businessType=' + encodeURIComponent(businessType.value));
+            } catch (error) {
+                const alert = document.createElement('p');
+                alert.className = 'alert error';
+                alert.textContent = error.message;
+                connectForm.parentNode.insertBefore(alert, connectForm);
+                submitButton.disabled = false;
+                submitButton.textContent = '계좌 연결 및 조회';
+            }
+        });
     }());
 </script>
 </body>
