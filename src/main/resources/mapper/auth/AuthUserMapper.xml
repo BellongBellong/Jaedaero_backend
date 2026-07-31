@@ -47,6 +47,14 @@
         AND is_withdrawn = FALSE
     </update>
 
+    <update id="updateProfileAppearance" parameterType="map">
+        UPDATE users
+        SET profile_image = #{profileImage},
+            profile_source = #{profileSource}
+        WHERE user_id = #{userId}
+        AND is_withdrawn = FALSE
+    </update>
+
     <insert id="insert" parameterType="map">
         INSERT INTO users (social_type, social_id)
         VALUES (#{socialType}, #{socialId})

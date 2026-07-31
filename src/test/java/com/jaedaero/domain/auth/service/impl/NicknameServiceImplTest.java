@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.NicknameException;
+import com.jaedaero.domain.auth.common.enums.ProfileImage;
+import com.jaedaero.domain.auth.common.enums.ProfileSource;
 import com.jaedaero.domain.auth.mapper.AuthUserMapper;
 import com.jaedaero.domain.auth.vo.AuthUserVo;
 import java.sql.Timestamp;
@@ -105,6 +107,12 @@ class NicknameServiceImplTest {
       }
       updatedNickname = nickname;
       return 1;
+    }
+
+    @Override
+    public int updateProfileAppearance(
+        long userId, ProfileImage profileImage, ProfileSource profileSource) {
+      return userExists ? 1 : 0;
     }
 
     @Override

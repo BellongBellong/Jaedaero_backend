@@ -2,9 +2,11 @@ package com.jaedaero.domain.auth.controller;
 
 import com.jaedaero.domain.auth.dto.NicknameAvailabilityResponse;
 import com.jaedaero.domain.auth.dto.NicknameRequest;
+import com.jaedaero.domain.auth.dto.ProfileAppearanceRequest;
 import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.NicknameException;
 import com.jaedaero.domain.auth.service.NicknameService;
+import com.jaedaero.domain.auth.service.ProfileAppearanceService;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private final NicknameService nicknameService;
+  private final ProfileAppearanceService profileAppearanceService;
 
   @GetMapping("/nickname/availability")
   public ResponseEntity<NicknameAvailabilityResponse> checkNicknameAvailability(
@@ -43,6 +46,14 @@ public class UserController {
   public ResponseEntity<Void> updateNickname(
       Authentication authentication, @Valid @RequestBody NicknameRequest request) {
     nicknameService.updateNickname(getAuthenticatedUserId(authentication), request.getNickname());
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("/profile-appearance")
+  public ResponseEntity<Void> updateProfileAppearance(
+      Authentication authentication, @Valid @RequestBody ProfileAppearanceRequest request) {
+    profileAppearanceService.updateProfileAppearance(
+        getAuthenticatedUserId(authentication), request.getProfileImage(), request.getProfileSource());
     return ResponseEntity.noContent().build();
   }
 
