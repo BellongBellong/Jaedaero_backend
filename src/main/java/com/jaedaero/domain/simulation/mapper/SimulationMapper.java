@@ -13,5 +13,8 @@ public interface SimulationMapper {
   SimulationVo findByIdAndUserId(
       @Param("simulationId") long simulationId, @Param("userId") long userId);
 
-  List<SimulationVo> findByUserId(@Param("userId") long userId);
+  List<SimulationVo> findByUserId(
+      @Param("userId") long userId, @Param("offset") int offset, @Param("limit") int limit);
+
+  long countByUserId(@Param("userId") long userId);
 }

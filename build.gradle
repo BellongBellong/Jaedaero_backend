@@ -55,6 +55,7 @@ dependencies {
 
     // JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.1'
 
     // Logging (SLF4J + Log4j2 console)
     implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
