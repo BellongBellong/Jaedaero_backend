@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>제대로 · 거래내역</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/codef-demo.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/codef-demo.css?v=20260731">
 </head>
 <body>
 <main class="page-shell dashboard-shell">
@@ -57,11 +57,68 @@
                             <span><c:out value="${transaction.time}"/></span>
                             <span>거래 후 잔액 <strong><c:out value="${transaction.balance}"/></strong></span>
                         </div>
+                        <div class="transaction-category-editor">
+                            <label for="category-${transaction.transactionId}">카테고리</label>
+                            <select id="category-${transaction.transactionId}" class="transaction-category-select"
+                                    data-transaction-id="${transaction.transactionId}" data-current-value="${transaction.category}">
+                                <option value="SALARY" ${transaction.category == 'SALARY' ? 'selected' : ''}>급여</option>
+                                <option value="ASSET" ${transaction.category == 'ASSET' ? 'selected' : ''}>자산</option>
+                                <option value="PX" ${transaction.category == 'PX' ? 'selected' : ''}>PX</option>
+                                <option value="FOOD" ${transaction.category == 'FOOD' ? 'selected' : ''}>식비</option>
+                                <option value="SHOPPING" ${transaction.category == 'SHOPPING' ? 'selected' : ''}>쇼핑</option>
+                                <option value="TRANSPORT" ${transaction.category == 'TRANSPORT' ? 'selected' : ''}>교통</option>
+                                <option value="LEISURE" ${transaction.category == 'LEISURE' ? 'selected' : ''}>여가</option>
+                                <option value="MEDICAL" ${transaction.category == 'MEDICAL' ? 'selected' : ''}>의료</option>
+                                <option value="ETC" ${transaction.category == 'ETC' ? 'selected' : ''}>기타</option>
+                            </select>
+                            <span class="category-save-status" aria-live="polite"></span>
+                        </div>
                     </article>
                 </c:forEach>
             </c:otherwise>
         </c:choose>
     </section>
 </main>
+<script>
+    (function () {
+        const contextPath = '${pageContext.request.contextPath}';
+        const demoUserId = ${demoUserId};
+
+        document.querySelectorAll('.transaction-category-select').forEach(function (select) {
+            select.addEventListener('change', async function () {
+                const status = select.parentElement.querySelector('.category-save-status');
+                const previousValue = select.dataset.currentValue;
+                select.disabled = true;
+                status.className = 'category-save-status';
+                status.textContent = '저장 중…';
+                try {
+                    const response = await fetch(
+                        contextPath + '/api/v1/transactions/' + encodeURIComponent(select.dataset.transactionId) + '/category',
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-Id': String(demoUserId)
+                            },
+                            body: JSON.stringify({category: select.value})
+                        }
+                    );
+                    if (!response.ok) {
+                        throw new Error((await response.text()) || '카테고리를 저장하지 못했습니다.');
+                    }
+                    select.dataset.currentValue = select.value;
+                    status.classList.add('success');
+                    status.textContent = '저장됨';
+                } catch (error) {
+                    select.value = previousValue;
+                    status.classList.add('error');
+                    status.textContent = '저장 실패';
+                } finally {
+                    select.disabled = false;
+                }
+            });
+        });
+    }());
+</script>
 </body>
 </html>

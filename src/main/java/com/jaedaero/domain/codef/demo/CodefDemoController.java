@@ -70,6 +70,7 @@ public class CodefDemoController {
     if (!isActive(session) || organizationCode == null || businessType == null) {
       return "redirect:/codef-demo";
     }
+    codefDemoService.seedMockMilitarySavingsIfConnected(demoUserId);
     model.addAttribute("demoUserId", demoUserId);
     model.addAttribute("organizationCode", organizationCode);
     model.addAttribute("businessType", businessType);
@@ -106,6 +107,7 @@ public class CodefDemoController {
           codefDemoService.getRecentTransactions(
               demoUserId, accountId, transactionKind, queryStartDate, queryEndDate));
       model.addAttribute("accountId", accountId);
+      model.addAttribute("demoUserId", demoUserId);
       model.addAttribute("accountDisplay", findAccountDisplay(accountId));
       model.addAttribute("transactionKind", transactionKind);
       model.addAttribute("startDate", queryStartDate);
@@ -128,6 +130,7 @@ public class CodefDemoController {
       return "redirect:/codef-demo";
     }
     try {
+      codefDemoService.seedMockMilitarySavingsIfConnected(demoUserId);
       model.addAttribute("unifiedAssets", codefDemoService.getUnifiedAssets(demoUserId));
       return "codef-demo/all-assets";
     } catch (RuntimeException exception) {

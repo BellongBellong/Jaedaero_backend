@@ -13,8 +13,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -73,7 +73,7 @@ public class TransactionController {
         .collect(Collectors.toList());
   }
 
-  @PatchMapping("/{transactionId}/category")
+  @PutMapping("/{transactionId}/category")
   @ApiOperation(
       value = "거래내역 카테고리 수정",
       notes = "본인 소유의 거래내역만 수정할 수 있습니다. 카테고리는 9개 고정값 중 하나여야 합니다.")

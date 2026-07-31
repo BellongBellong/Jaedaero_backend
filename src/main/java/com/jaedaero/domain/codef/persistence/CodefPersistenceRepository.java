@@ -272,6 +272,19 @@ public class CodefPersistenceRepository {
     return rows.stream().findFirst();
   }
 
+  /** Finds a locally seeded account after an idempotent account upsert. */
+  public Optional<Long> findAccountIdByConnectionAndAccountHash(
+      long connectionId, String accountNumberHash) {
+    List<Long> accountIds =
+        jdbcTemplate.query(
+            "SELECT account_id FROM connected_account WHERE connection_id = ? "
+                + "AND account_number_hash = ? AND status = 'ACTIVE'",
+            (rs, rowNum) -> rs.getLong("account_id"),
+            connectionId,
+            accountNumberHash);
+    return accountIds.stream().findFirst();
+  }
+
   public boolean isTransactionPeriodCovered(
       long accountId, String inquiryType, LocalDate startDate, LocalDate endDate) {
     Integer count =
@@ -316,6 +329,17 @@ public class CodefPersistenceRepository {
         balanceAfter,
         transactionType,
         description,
+        externalTransactionKey);
+  }
+
+  /** Sets an initial fixture/rule category without overwriting a user-selected category. */
+  public void fillTransactionCategoryIfEmpty(
+      long accountId, String externalTransactionKey, String category) {
+    jdbcTemplate.update(
+        "UPDATE transaction_history SET category = COALESCE(category, ?) "
+            + "WHERE account_id = ? AND external_transaction_key = ?",
+        category,
+        accountId,
         externalTransactionKey);
   }
 
