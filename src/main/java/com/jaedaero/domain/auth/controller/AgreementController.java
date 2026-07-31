@@ -11,6 +11,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -24,6 +25,7 @@ import springfox.documentation.annotations.ApiIgnore;
 @RequestMapping("/api/v1/agreements")
 @RequiredArgsConstructor
 @Api(tags = "회원가입")
+@Log4j2
 public class AgreementController {
 
   private final AgreementService agreementService;

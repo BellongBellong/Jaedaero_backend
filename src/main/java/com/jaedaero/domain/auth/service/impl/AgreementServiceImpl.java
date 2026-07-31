@@ -30,9 +30,7 @@ public class AgreementServiceImpl implements AgreementService {
     insertAgreement(userId, AgreementType.PERSONAL_INFORMATION_COLLECTION, true);
     insertAgreement(userId, AgreementType.FINANCIAL_INFORMATION_INQUIRY, true);
     insertAgreement(userId, AgreementType.AI_SERVICE_USE, true);
-    if (request.getMarketingInformationReceiptAgreed()) {
-      insertAgreement(userId, AgreementType.MARKETING_INFORMATION_RECEIPT, false);
-    }
+    insertAgreement(userId, AgreementType.MARKETING_INFORMATION_RECEIPT, request.getMarketingInformationReceiptAgreed());
 
     return new UserAgreementResponse(
         true,
