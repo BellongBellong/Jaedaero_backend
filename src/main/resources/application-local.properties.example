@@ -4,8 +4,11 @@ db.url=jdbc:mysql://localhost:3306/jaedaero?serverTimezone=Asia/Seoul&characterE
 db.username=your_username
 db.password=your_password
 
-kakao.client-id=your_kakao_client_id
-google.client-id=your_google_client_id
+# Social login credentials are read from Jaedaero_backend/.env.
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+KAKAO_CLIENT_ID=your_kakao_rest_api_key
+KAKAO_CLIENT_SECRET=your_kakao_client_secret_optional
 codef.client-id=your_codef_client_id
 codef.client-secret=your_codef_client_secret
 codef.public-key=your_codef_rsa_public_key

@@ -46,7 +46,12 @@ public class SocialLoginServiceImpl implements SocialLoginService {
         tokenResponse.getRefreshToken(),
         tokenResponse.getExpiresIn(),
         new LoginUserResponse(
-            user.getUserId(), user.getNickname(), socialType, user.isOnboardingCompleted()));
+            user.getUserId(),
+            user.getNickname(),
+            socialType,
+            user.getProfileImage(),
+            user.getProfileSource(),
+            user.isOnboardingCompleted()));
   }
 
   @Override
