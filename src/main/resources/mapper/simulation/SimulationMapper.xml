@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.simulation.mapper.SimulationMapper">
+
+    <sql id="simulationColumns">
+        simulation_id, user_id, scenario_name, monthly_saving_amount, investment_ratio,
+        expected_return_rate, monthly_spending_amount, expected_asset,
+        financial_discharge_date, is_saved, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.jaedaero.domain.simulation.vo.SimulationVo"
+            useGeneratedKeys="true" keyProperty="simulationId">
+        INSERT INTO simulation (
+            user_id, scenario_name, monthly_saving_amount, investment_ratio,
+            expected_return_rate, monthly_spending_amount, expected_asset,
+            financial_discharge_date, is_saved
+        ) VALUES (
+            #{userId}, #{scenarioName}, #{monthlySavingAmount}, #{investmentRatio},
+            #{expectedReturnRate}, #{monthlySpendingAmount}, #{expectedAsset},
+            #{financialDischargeDate}, #{isSaved}
+        )
+    </insert>
+
+    <select id="findByIdAndUserId" resultType="com.jaedaero.domain.simulation.vo.SimulationVo">
+        SELECT <include refid="simulationColumns"/>
+        FROM simulation
+        WHERE simulation_id = #{simulationId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="findByUserId" resultType="com.jaedaero.domain.simulation.vo.SimulationVo">
+        SELECT <include refid="simulationColumns"/>
+        FROM simulation
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, simulation_id DESC
+    </select>
+</mapper>

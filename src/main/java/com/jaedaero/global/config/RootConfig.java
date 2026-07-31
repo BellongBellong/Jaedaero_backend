@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
@@ -33,7 +34,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Configuration
 @EnableTransactionManagement
-@MapperScan(basePackages = "com.jaedaero.domain.auth.mapper")
+@MapperScan(basePackages = "com.jaedaero.domain", annotationClass = Mapper.class)
 @ComponentScan(
         basePackages = {"com.jaedaero.domain", "com.jaedaero.global.security"},
         excludeFilters = @ComponentScan.Filter(

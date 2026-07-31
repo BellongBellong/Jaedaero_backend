@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper">
+
+    <sql id="dailyMarketReportColumns">
+        report_id, report_date, content, valid_from, valid_until, created_at
+    </sql>
+
+    <insert id="upsert" parameterType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+        INSERT INTO daily_market_report (
+            report_date, content, valid_from, valid_until
+        ) VALUES (
+            #{reportDate}, #{content}, #{validFrom}, #{validUntil}
+        ) ON DUPLICATE KEY UPDATE
+            content = VALUES(content),
+            valid_from = VALUES(valid_from),
+            valid_until = VALUES(valid_until)
+    </insert>
+
+    <select id="findActiveAt" resultType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+        SELECT <include refid="dailyMarketReportColumns"/>
+        FROM daily_market_report
+        WHERE valid_from &lt;= #{now}
+          AND valid_until &gt;= #{now}
+        ORDER BY report_date DESC
+        LIMIT 1
+    </select>
+</mapper>

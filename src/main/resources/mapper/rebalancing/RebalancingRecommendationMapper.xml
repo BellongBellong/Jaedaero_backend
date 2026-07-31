@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.rebalancing.mapper.RebalancingRecommendationMapper">
+
+    <sql id="rebalancingColumns">
+        rebalancing_id, user_id, remaining_service_days,
+        recommended_safe_ratio, recommended_balanced_ratio, recommended_aggressive_ratio,
+        recommend_reason, created_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.jaedaero.domain.rebalancing.vo.RebalancingRecommendationVo"
+            useGeneratedKeys="true" keyProperty="rebalancingId">
+        INSERT INTO rebalancing_recommendation (
+            user_id, remaining_service_days, recommended_safe_ratio,
+            recommended_balanced_ratio, recommended_aggressive_ratio, recommend_reason
+        ) VALUES (
+            #{userId}, #{remainingServiceDays}, #{recommendedSafeRatio},
+            #{recommendedBalancedRatio}, #{recommendedAggressiveRatio}, #{recommendReason}
+        )
+    </insert>
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.rebalancing.vo.RebalancingRecommendationVo">
+        SELECT <include refid="rebalancingColumns"/>
+        FROM rebalancing_recommendation
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, rebalancing_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByIdAndUserId"
+            resultType="com.jaedaero.domain.rebalancing.vo.RebalancingRecommendationVo">
+        SELECT <include refid="rebalancingColumns"/>
+        FROM rebalancing_recommendation
+        WHERE rebalancing_id = #{rebalancingId}
+          AND user_id = #{userId}
+    </select>
+</mapper>
