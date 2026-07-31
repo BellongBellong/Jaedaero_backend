@@ -67,16 +67,19 @@ class NicknameServiceImplTest {
   }
 
   @Test
-  void throwsBadRequestForBlankOrTooLongNickname() {
+  void throwsBadRequestForBlankInvalidOrTooLongNickname() {
     NicknameServiceImpl service = new NicknameServiceImpl(new StubAuthUserMapper());
 
     NicknameException blankException =
         assertThrows(NicknameException.class, () -> service.updateNickname(1L, "   "));
     NicknameException tooLongException =
-        assertThrows(NicknameException.class, () -> service.updateNickname(1L, "a".repeat(51)));
+        assertThrows(NicknameException.class, () -> service.updateNickname(1L, "a".repeat(13)));
+    NicknameException invalidCharacterException =
+        assertThrows(NicknameException.class, () -> service.updateNickname(1L, "jaedaero1"));
 
     assertEquals(AuthErrorCode.INVALID_NICKNAME, blankException.getErrorCode());
     assertEquals(AuthErrorCode.INVALID_NICKNAME, tooLongException.getErrorCode());
+    assertEquals(AuthErrorCode.INVALID_NICKNAME, invalidCharacterException.getErrorCode());
   }
 
   private static class StubAuthUserMapper implements AuthUserMapper {

@@ -7,6 +7,7 @@ import com.jaedaero.domain.auth.exception.NicknameException;
 import com.jaedaero.domain.auth.service.NicknameService;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,8 @@ public class UserController {
   @GetMapping("/nickname/availability")
   public ResponseEntity<NicknameAvailabilityResponse> checkNicknameAvailability(
       Authentication authentication,
-      @RequestParam @NotBlank @Size(max = 50) String nickname) {
+      @RequestParam @NotBlank @Size(max = 12) @Pattern(regexp = "[가-힣a-zA-Z]+")
+          String nickname) {
     long userId = getAuthenticatedUserId(authentication);
     return ResponseEntity.ok(
         new NicknameAvailabilityResponse(nicknameService.isAvailable(userId, nickname)));

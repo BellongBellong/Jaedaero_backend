@@ -1,6 +1,7 @@
 package com.jaedaero.domain.auth.dto;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,6 +11,7 @@ import lombok.Setter;
 public class NicknameRequest {
 
   @NotBlank
-  @Size(max = 50)
+  @Size(max = 12)
+  @Pattern(regexp = "[가-힣a-zA-Z]+")
   private String nickname;
 }
