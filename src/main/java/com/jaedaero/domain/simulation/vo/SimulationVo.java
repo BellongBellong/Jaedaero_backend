@@ -1,0 +1,31 @@
+package com.jaedaero.domain.simulation.vo;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SimulationVo {
+
+  private Long simulationId;
+  private Long userId;
+  private String scenarioName;
+  private Long monthlySavingAmount;
+  private BigDecimal investmentRatio;
+  private BigDecimal expectedReturnRate;
+  private Long monthlySpendingAmount;
+  private Long expectedAsset;
+  private LocalDate financialDischargeDate;
+  private Boolean isSaved;
+  private LocalDateTime createdAt;
+  private LocalDateTime updatedAt;
+}
