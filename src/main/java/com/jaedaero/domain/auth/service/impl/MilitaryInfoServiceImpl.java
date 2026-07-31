@@ -37,6 +37,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
     soldierProfile.setDischargeDate(dischargeDate);
     soldierProfile.setSavingJoinYn(savingJoinYn);
     militaryInfoMapper.upsertSoldierProfile(soldierProfile);
+    registerChallengeMember(userId, soldierProfile.getSoldierType(), soldierProfile.getEnlistmentDate());
 
     return new SoldierProfileResponse(
         soldierProfile.getSoldierType(),
@@ -72,5 +73,20 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
         || request.getRankName().trim().length() > 20) {
       throw new MilitaryInfoException(AuthErrorCode.INVALID_MILITARY_INFO, "현재 계급이 올바르지 않습니다.");
     }
+  }
+
+  private void registerChallengeMember(
+      long userId, SoldierType soldierType, LocalDate enlistmentDate) {
+    int enlistmentYear = enlistmentDate.getYear();
+    int enlistmentMonth = enlistmentDate.getMonthValue();
+    militaryInfoMapper.insertChallengeGroupIgnore(
+        soldierType.name(), enlistmentYear, enlistmentMonth);
+    Long groupId =
+        militaryInfoMapper.findChallengeGroupId(soldierType.name(), enlistmentYear, enlistmentMonth);
+    if (groupId == null) {
+      throw new MilitaryInfoException(
+          AuthErrorCode.INVALID_MILITARY_INFO, "입대 동기 챌린지 그룹을 생성할 수 없습니다.");
+    }
+    militaryInfoMapper.insertChallengeMemberIgnore(groupId, userId);
   }
 }

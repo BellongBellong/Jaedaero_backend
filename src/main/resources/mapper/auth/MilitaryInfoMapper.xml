@@ -40,4 +40,36 @@
             discharge_date = VALUES(discharge_date),
             saving_join_yn = VALUES(saving_join_yn)
     </insert>
+
+    <insert id="insertChallengeGroupIgnore" parameterType="map">
+        INSERT IGNORE INTO challenge_group (
+            soldier_type,
+            enlistment_year,
+            enlistment_month
+        )
+        VALUES (
+            #{soldierType},
+            #{enlistmentYear},
+            #{enlistmentMonth}
+        )
+    </insert>
+
+    <select id="findChallengeGroupId" parameterType="map" resultType="long">
+        SELECT cg.group_id
+        FROM challenge_group cg
+        WHERE cg.soldier_type = #{soldierType}
+        AND cg.enlistment_year = #{enlistmentYear}
+        AND cg.enlistment_month = #{enlistmentMonth}
+    </select>
+
+    <insert id="insertChallengeMemberIgnore" parameterType="map">
+        INSERT IGNORE INTO challenge_member (
+            group_id,
+            user_id
+        )
+        VALUES (
+            #{groupId},
+            #{userId}
+        )
+    </insert>
 </mapper>
