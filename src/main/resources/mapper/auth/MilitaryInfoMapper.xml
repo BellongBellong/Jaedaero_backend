@@ -72,4 +72,12 @@
             #{userId}
         )
     </insert>
+
+    <select id="findChallengeGroupTargetAmountAverage" parameterType="long"
+        resultType="java.math.BigDecimal">
+        SELECT AVG(g.target_amount)
+        FROM challenge_member cm
+        JOIN goal g ON g.user_id = cm.user_id
+        WHERE cm.group_id = #{groupId}
+    </select>
 </mapper>

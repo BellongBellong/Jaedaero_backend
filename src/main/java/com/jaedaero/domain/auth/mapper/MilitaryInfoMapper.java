@@ -1,6 +1,7 @@
 package com.jaedaero.domain.auth.mapper;
 
 import com.jaedaero.domain.auth.vo.SoldierProfileVo;
+import java.math.BigDecimal;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -31,4 +32,7 @@ public interface MilitaryInfoMapper {
   /** 사용자를 챌린지 그룹에 연결합니다. */
   void insertChallengeMemberIgnore(
       @Param("groupId") long groupId, @Param("userId") long userId);
+
+  /** 챌린지 그룹 사용자의 목표 금액 평균을 조회합니다. */
+  BigDecimal findChallengeGroupTargetAmountAverage(@Param("groupId") long groupId);
 }

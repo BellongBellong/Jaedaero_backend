@@ -8,6 +8,7 @@ import com.jaedaero.domain.auth.exception.MilitaryInfoException;
 import com.jaedaero.domain.auth.mapper.MilitaryInfoMapper;
 import com.jaedaero.domain.auth.service.MilitaryInfoService;
 import com.jaedaero.domain.auth.vo.SoldierProfileVo;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,14 +38,19 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
     soldierProfile.setDischargeDate(dischargeDate);
     soldierProfile.setSavingJoinYn(savingJoinYn);
     militaryInfoMapper.upsertSoldierProfile(soldierProfile);
-    registerChallengeMember(userId, soldierProfile.getSoldierType(), soldierProfile.getEnlistmentDate());
+    long challengeGroupId =
+        registerChallengeMember(userId, soldierProfile.getSoldierType(), soldierProfile.getEnlistmentDate());
+    BigDecimal challengeGroupTargetAmountAverage =
+        militaryInfoMapper.findChallengeGroupTargetAmountAverage(challengeGroupId);
 
     return new SoldierProfileResponse(
+        true,
         soldierProfile.getSoldierType(),
         soldierProfile.getRankName(),
         soldierProfile.getEnlistmentDate(),
         soldierProfile.getDischargeDate(),
-        soldierProfile.isSavingJoinYn());
+        soldierProfile.isSavingJoinYn(),
+        challengeGroupTargetAmountAverage);
   }
 
   // 군종별 전역일 계산 로직
@@ -75,7 +81,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
     }
   }
 
-  private void registerChallengeMember(
+  private long registerChallengeMember(
       long userId, SoldierType soldierType, LocalDate enlistmentDate) {
     int enlistmentYear = enlistmentDate.getYear();
     int enlistmentMonth = enlistmentDate.getMonthValue();
@@ -88,5 +94,6 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
           AuthErrorCode.INVALID_MILITARY_INFO, "입대 동기 챌린지 그룹을 생성할 수 없습니다.");
     }
     militaryInfoMapper.insertChallengeMemberIgnore(groupId, userId);
+    return groupId;
   }
 }
