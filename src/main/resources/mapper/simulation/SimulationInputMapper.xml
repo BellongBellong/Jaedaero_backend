@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.simulation.mapper.SimulationInputMapper">
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.simulation.vo.SimulationInputSourceVo">
+        SELECT
+            forecast.base_asset,
+            forecast.expected_salary,
+            goal.target_amount,
+            profile.discharge_date,
+            COALESCE(saving.monthly_amount, 0) AS mandatory_saving_amount,
+            COALESCE(saving.interest_rate, 0) AS saving_interest_rate,
+            COALESCE(saving.government_support_expected, 0) AS government_support_expected
+        FROM cashflow_forecast forecast
+        INNER JOIN soldier_profile profile ON profile.user_id = forecast.user_id
+        INNER JOIN goal ON goal.user_id = forecast.user_id AND goal.status = 'ACTIVE'
+        LEFT JOIN soldier_saving saving ON saving.user_id = forecast.user_id
+        WHERE forecast.forecast_id = (
+            SELECT latest.forecast_id
+            FROM cashflow_forecast latest
+            WHERE latest.user_id = #{userId}
+            ORDER BY latest.generated_at DESC, latest.forecast_id DESC
+            LIMIT 1
+        )
+    </select>
+</mapper>

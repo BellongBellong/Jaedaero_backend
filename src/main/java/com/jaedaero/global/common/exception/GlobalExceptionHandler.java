@@ -18,7 +18,11 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValidException(
       MethodArgumentNotValidException exception) {
+    String message =
+        exception.getBindingResult().getFieldErrors().isEmpty()
+            ? "요청 값이 올바르지 않습니다."
+            : exception.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
     return ResponseEntity.badRequest()
-        .body(new ApiErrorResponse("INVALID_REQUEST", "social_type and token are required."));
+        .body(new ApiErrorResponse("INVALID_REQUEST", message));
   }
 }
