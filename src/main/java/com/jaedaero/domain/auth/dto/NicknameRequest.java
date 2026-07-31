@@ -12,6 +12,6 @@ public class NicknameRequest {
 
   @NotBlank
   @Size(max = 12)
-  @Pattern(regexp = "[가-힣a-zA-Z]+")
+  @Pattern(regexp = "[가-힣a-zA-Z]{2,12}")
   private String nickname;
 }
