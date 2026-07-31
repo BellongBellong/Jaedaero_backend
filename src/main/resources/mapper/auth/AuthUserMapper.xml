@@ -22,7 +22,6 @@
         <result property="onboardingCompleted" column="onboarding_completed"/>
     </resultMap>
 
-    <!--  로그인 시 기존 회원 확인  -->
     <select id="findActiveBySocialIdentity" parameterType="map" resultMap="authUserResultMap">
         SELECT
         <include refid="authUserColumns"/>
@@ -32,7 +31,6 @@
         AND u.is_withdrawn = FALSE
     </select>
 
-    <!-- 닉네임 설정 전의 신규 소셜 사용자를 생성 -->
     <select id="availabilityNickname" parameterType="map" resultType="int">
         SELECT COUNT(1)
         FROM users u
@@ -55,12 +53,33 @@
         AND is_withdrawn = FALSE
     </update>
 
+    <select id="countActiveByUserId" parameterType="map" resultType="int">
+        SELECT COUNT(1)
+        FROM users u
+        WHERE u.user_id = #{userId}
+        AND u.is_withdrawn = FALSE
+    </select>
+
+    <insert id="insertAgreement" parameterType="map">
+        INSERT IGNORE INTO user_agreement (
+            user_id,
+            agreement_type,
+            agreement_version,
+            is_required
+        )
+        VALUES (
+            #{userId},
+            #{agreementType},
+            #{agreementVersion},
+            #{required}
+        )
+    </insert>
+
     <insert id="insert" parameterType="map">
         INSERT INTO users (social_type, social_id)
         VALUES (#{socialType}, #{socialId})
     </insert>
 
-    <!-- 만료되지 않은 refresh token 해시로 활성 사용자를 조회 -->
     <select id="findActiveByRefreshTokenHash" parameterType="map" resultMap="authUserResultMap">
         SELECT
         <include refid="authUserColumns"/>
@@ -71,20 +90,17 @@
         AND u.is_withdrawn = FALSE
     </select>
 
-    <!-- 평문을 저장하지 않고 SHA-256 해시 형태의 refresh token을 저장 -->
     <insert id="insertRefreshToken" parameterType="map">
         INSERT INTO refresh_token (user_id, token_hash, expires_at)
         VALUES (#{userId}, #{tokenHash}, #{expiresAt})
     </insert>
 
-    <!-- 토큰 재발급 시 기존 refresh token을 제거 -->
     <delete id="deleteRefreshTokenByHash" parameterType="map">
         DELETE
         FROM refresh_token
         WHERE token_hash = #{tokenHash}
     </delete>
 
-    <!-- 로그아웃한 사용자의 모든 refresh token을 제거 -->
     <delete id="deleteRefreshTokensByUserId" parameterType="map">
         DELETE
         FROM refresh_token

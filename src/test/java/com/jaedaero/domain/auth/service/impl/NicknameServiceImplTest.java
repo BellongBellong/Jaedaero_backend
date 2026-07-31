@@ -116,6 +116,15 @@ class NicknameServiceImplTest {
     }
 
     @Override
+    public int countActiveByUserId(long userId) {
+      return userExists ? 1 : 0;
+    }
+
+    @Override
+    public void insertAgreement(
+        long userId, String agreementType, String agreementVersion, boolean required) {}
+
+    @Override
     public void insert(String socialType, String socialId) {}
 
     @Override
