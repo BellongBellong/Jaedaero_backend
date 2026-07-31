@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper">
+
+    <sql id="analysisColumns">
+        analysis_id, user_id, snapshot_id, simulation_id, analysis_type, result_json,
+        input_data_hash, model_name, prompt_version, created_at
+    </sql>
+
+    <sql id="recommendedScenarioColumns">
+        scenario_id, user_id, monthly_saving_amount, investment_ratio,
+        expected_return_rate, monthly_spending_amount, expected_asset,
+        financial_discharge_date, recommend_reason, created_at
+    </sql>
+
+    <insert id="insertAnalysis" parameterType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo"
+            useGeneratedKeys="true" keyProperty="analysisId">
+        INSERT INTO ai_analysis (
+            user_id, snapshot_id, simulation_id, analysis_type, result_json,
+            input_data_hash, model_name, prompt_version
+        ) VALUES (
+            #{userId}, #{snapshotId}, #{simulationId}, #{analysisType}, #{resultJson},
+            #{inputDataHash}, #{modelName}, #{promptVersion}
+        )
+    </insert>
+
+    <select id="findAnalysisByIdAndUserId" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
+        SELECT <include refid="analysisColumns"/>
+        FROM ai_analysis
+        WHERE analysis_id = #{analysisId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="findLatestByUserIdAndInputDataHash" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
+        SELECT <include refid="analysisColumns"/>
+        FROM ai_analysis
+        WHERE user_id = #{userId}
+          AND input_data_hash = #{inputDataHash}
+        ORDER BY created_at DESC, analysis_id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertRecommendedScenario"
+            parameterType="com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo"
+            useGeneratedKeys="true" keyProperty="scenarioId">
+        INSERT INTO ai_recommended_scenario (
+            user_id, monthly_saving_amount, investment_ratio, expected_return_rate,
+            monthly_spending_amount, expected_asset, financial_discharge_date, recommend_reason
+        ) VALUES (
+            #{userId}, #{monthlySavingAmount}, #{investmentRatio}, #{expectedReturnRate},
+            #{monthlySpendingAmount}, #{expectedAsset}, #{financialDischargeDate}, #{recommendReason}
+        )
+    </insert>
+
+    <select id="findRecommendedScenarioByIdAndUserId"
+            resultType="com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo">
+        SELECT <include refid="recommendedScenarioColumns"/>
+        FROM ai_recommended_scenario
+        WHERE scenario_id = #{scenarioId}
+          AND user_id = #{userId}
+    </select>
+</mapper>

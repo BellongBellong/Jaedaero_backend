@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper">
+
+    <sql id="strategyApplicationColumns">
+        application_id, user_id, source_type, simulation_id, ai_scenario_id, rebalancing_id,
+        applied_monthly_saving_amount, applied_investment_ratio,
+        applied_expected_return_rate, applied_monthly_spending_amount,
+        before_expected_asset, after_expected_asset, applied_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo"
+            useGeneratedKeys="true" keyProperty="applicationId">
+        INSERT INTO strategy_application (
+            user_id, source_type, simulation_id, ai_scenario_id, rebalancing_id,
+            applied_monthly_saving_amount, applied_investment_ratio,
+            applied_expected_return_rate, applied_monthly_spending_amount,
+            before_expected_asset, after_expected_asset
+        ) VALUES (
+            #{userId}, #{sourceType}, #{simulationId}, #{aiScenarioId}, #{rebalancingId},
+            #{appliedMonthlySavingAmount}, #{appliedInvestmentRatio},
+            #{appliedExpectedReturnRate}, #{appliedMonthlySpendingAmount},
+            #{beforeExpectedAsset}, #{afterExpectedAsset}
+        )
+    </insert>
+
+    <select id="findByUserId"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE user_id = #{userId}
+        ORDER BY applied_at DESC, application_id DESC
+    </select>
+</mapper>
