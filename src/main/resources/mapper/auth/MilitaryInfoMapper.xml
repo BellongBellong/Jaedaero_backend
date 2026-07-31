@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.auth.mapper.MilitaryInfoMapper">
+    <select id="countActiveUserByUserId" parameterType="long" resultType="int">
+        SELECT COUNT(1)
+        FROM users u
+        WHERE u.user_id = #{userId}
+        AND u.is_withdrawn = FALSE
+    </select>
+
+    <select id="countSoldierSavingByUserId" parameterType="long" resultType="int">
+        SELECT COUNT(1)
+        FROM soldier_saving ss
+        WHERE ss.user_id = #{userId}
+    </select>
+
+    <insert id="upsertSoldierProfile"
+        parameterType="com.jaedaero.domain.auth.vo.SoldierProfileVo">
+        INSERT INTO soldier_profile (
+            user_id,
+            soldier_type,
+            rank_name,
+            enlistment_date,
+            discharge_date,
+            saving_join_yn
+        )
+        VALUES (
+            #{userId},
+            #{soldierType},
+            #{rankName},
+            #{enlistmentDate},
+            #{dischargeDate},
+            #{savingJoinYn}
+        )
+        ON DUPLICATE KEY UPDATE
+            soldier_type = VALUES(soldier_type),
+            rank_name = VALUES(rank_name),
+            enlistment_date = VALUES(enlistment_date),
+            discharge_date = VALUES(discharge_date),
+            saving_join_yn = VALUES(saving_join_yn)
+    </insert>
+</mapper>
