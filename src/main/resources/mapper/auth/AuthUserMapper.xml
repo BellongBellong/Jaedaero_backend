@@ -33,6 +33,20 @@
     </select>
 
     <!-- 닉네임 설정 전의 신규 소셜 사용자를 생성 -->
+    <select id="availabilityNickname" parameterType="map" resultType="int">
+        SELECT COUNT(1)
+        FROM users u
+        WHERE u.nickname = #{nickname}
+        AND u.user_id != #{userId}
+    </select>
+
+    <update id="updateNickname" parameterType="map">
+        UPDATE users
+        SET nickname = #{nickname}
+        WHERE user_id = #{userId}
+        AND is_withdrawn = FALSE
+    </update>
+
     <insert id="insert" parameterType="map">
         INSERT INTO users (social_type, social_id)
         VALUES (#{socialType}, #{socialId})

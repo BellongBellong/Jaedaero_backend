@@ -13,7 +13,7 @@ public enum SocialType {
       return SocialType.valueOf(value.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException | NullPointerException exception) {
       throw new SocialAuthenticationException(
-          AuthErrorCode.INVALID_SOCIAL_TYPE, "Unsupported social_type.");
+          AuthErrorCode.INVALID_SOCIAL_TYPE, "지원하지 않는 소셜 로그인 유형입니다.");
     }
   }
 }
