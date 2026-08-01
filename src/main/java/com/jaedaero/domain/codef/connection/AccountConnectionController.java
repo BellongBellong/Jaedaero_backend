@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Public account-connection API used by the client application. */
+/** 클라이언트 애플리케이션에서 사용하는 공개 계좌 연동 API입니다. */
 @Api(tags = "계좌 연동")
 @RestController
 @RequestMapping("/api/v1/accounts")

@@ -7,7 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-/** Browser-only demonstration page for the public ETF lookup API. */
+/** 공개 ETF 조회 API를 위한 브라우저 전용 데모 페이지입니다. */
 @Controller
 @RequestMapping("/etf-demo")
 public class KrxEtfDemoController {

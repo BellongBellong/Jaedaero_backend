@@ -5,9 +5,9 @@ import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.NotBlank;
 
 /**
- * Development-only input for registering a personal KB Kookmin Bank internet-banking account.
+ * KB국민은행 개인 인터넷뱅킹 계좌를 등록하기 위한 개발 전용 입력값입니다.
  *
- * <p>The password is used only to make the CODEF request and must never be persisted or logged.
+ * <p>비밀번호는 CODEF 요청을 보낼 때만 사용하며, 절대 저장하거나 로그에 남겨서는 안 됩니다.
  */
 @ApiModel(description = "KB국민은행 개인 인터넷뱅킹 Connected ID 발급 테스트 요청")
 public class KookminBankAccountCreateTestRequest {

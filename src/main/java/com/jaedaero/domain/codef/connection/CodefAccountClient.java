@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** CODEF Connected ID account-create client. */
+/** CODEF Connected ID 계좌 생성 클라이언트입니다. */
 @Component
 public class CodefAccountClient {
 
@@ -41,7 +41,7 @@ public class CodefAccountClient {
     return register("/v1/account/create", body);
   }
 
-  /** Adds one bank institution to an already issued Connected ID. */
+  /** 이미 발급된 Connected ID에 은행 기관 하나를 추가합니다. */
   public CodefAccountCreateResponse addAccount(
       String connectedId, CodefAccountCreateRequest accountCreateRequest) {
     if (isBlank(connectedId)) {
