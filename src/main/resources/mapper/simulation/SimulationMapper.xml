@@ -36,5 +36,12 @@
         FROM simulation
         WHERE user_id = #{userId}
         ORDER BY created_at DESC, simulation_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM simulation
+        WHERE user_id = #{userId}
     </select>
 </mapper>
