@@ -1,7 +1,7 @@
 package com.jaedaero.global.config;
 
-import com.jaedaero.global.security.DevelopmentAuthenticationFilter;
 import com.jaedaero.global.security.JwtAccessDeniedHandler;
+import com.jaedaero.global.security.JwtAuthenticationFilter;
 import com.jaedaero.global.security.JwtAuthenticationEntryPoint;
 import com.jaedaero.global.security.JwtTokenProvider;
 import org.springframework.context.annotation.Configuration;
@@ -37,10 +37,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .anyRequest()
         .permitAll()
         .and()
-        .addFilterBefore(new DevelopmentAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-    // Development is complete: replace DevelopmentAuthenticationFilter above with the production filter.
-    // .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
-    // Change .anyRequest().permitAll() above to .anyRequest().authenticated().
+        .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
   }
 }

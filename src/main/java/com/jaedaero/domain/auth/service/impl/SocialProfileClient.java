@@ -70,16 +70,16 @@ public class SocialProfileClient {
       throw exception;
     } catch (HttpStatusCodeException exception) {
       throw new SocialAuthenticationException(
-          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "Social token validation failed.", exception);
+          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "소셜 토큰 검증에 실패했습니다.", exception);
     } catch (RestClientException exception) {
       throw new SocialAuthenticationException(
           AuthErrorCode.SOCIAL_PROVIDER_UNAVAILABLE,
-          "Social login provider is unavailable.",
+          "소셜 로그인 제공자를 현재 사용할 수 없습니다.",
           exception);
     } catch (Exception exception) {
       throw new SocialAuthenticationException(
           AuthErrorCode.SOCIAL_PROVIDER_UNAVAILABLE,
-          "Social login provider is unavailable.",
+          "소셜 로그인 제공자를 현재 사용할 수 없습니다.",
           exception);
     }
   }
@@ -115,12 +115,12 @@ public class SocialProfileClient {
     } catch (HttpStatusCodeException exception) {
       throw new SocialAuthenticationException(
           AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED,
-          "Social authorization code validation failed.",
+          "소셜 인가 코드 검증에 실패했습니다.",
           exception);
     } catch (Exception exception) {
       throw new SocialAuthenticationException(
           AuthErrorCode.SOCIAL_PROVIDER_UNAVAILABLE,
-          "Social login provider is unavailable.",
+          "소셜 로그인 제공자를 현재 사용할 수 없습니다.",
           exception);
     }
   }
@@ -128,7 +128,7 @@ public class SocialProfileClient {
   private void requireClientCredentials(String clientId, String clientSecret) {
     if (clientId == null || clientId.isBlank() || (clientSecret != null && clientSecret.isBlank())) {
       throw new SocialAuthenticationException(
-          AuthErrorCode.SOCIAL_PROVIDER_UNAVAILABLE, "Social client credentials are not configured.");
+          AuthErrorCode.SOCIAL_PROVIDER_UNAVAILABLE, "소셜 로그인 클라이언트 설정이 완료되지 않았습니다.");
     }
   }
 
@@ -152,7 +152,7 @@ public class SocialProfileClient {
     String value = optionalText(node, fieldName);
     if (value == null) {
       throw new SocialAuthenticationException(
-          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "Social profile has no identifier.");
+          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "소셜 프로필에 사용자 식별자가 없습니다.");
     }
     return value;
   }
