@@ -1,0 +1,9 @@
+package com.jaedaero.domain.auth.common.enums;
+
+public enum AgreementType {
+  SERVICE_USE,
+  PERSONAL_INFORMATION_COLLECTION,
+  FINANCIAL_INFORMATION_INQUIRY,
+  AI_SERVICE_USE,
+  MARKETING_INFORMATION_RECEIPT
+}

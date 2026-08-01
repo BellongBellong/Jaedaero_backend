@@ -40,7 +40,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
             socialType, request.getAuthorizationCode(), request.getRedirectUri());
     AuthUserVo user = findOrCreateUser(socialType, profile);
     RefreshTokenResponse tokenResponse = createTokenResponse(user.getUserId());
-    log.info("Social login completed. socialType={}, userId={}", socialType, user.getUserId());
+    log.info("소셜 로그인 완료. socialType={}, userId={}", socialType, user.getUserId());
     return new LoginResponse(
         tokenResponse.getAccessToken(),
         tokenResponse.getRefreshToken(),
@@ -60,13 +60,13 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     String tokenHash = sha256Hasher.hash(request.getRefreshToken());
     AuthUserVo user = authUserMapper.findActiveByRefreshTokenHash(tokenHash);
     if (user == null) {
-      log.warn("Refresh token validation failed.");
+      log.warn("리프레시 토큰 검증에 실패했습니다.");
       throw new SocialAuthenticationException(
-          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "Refresh token is invalid or expired.");
+          AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, "리프레시 토큰이 유효하지 않거나 만료되었습니다.");
     }
     authUserMapper.deleteRefreshTokenByHash(tokenHash);
     RefreshTokenResponse tokenResponse = createTokenResponse(user.getUserId());
-    log.info("Access token refreshed. userId={}", user.getUserId());
+    log.info("액세스 토큰 재발급 완료. userId={}", user.getUserId());
     return tokenResponse;
   }
 
@@ -74,7 +74,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
   @Transactional
   public void logout(long userId) {
     authUserMapper.deleteRefreshTokensByUserId(userId);
-    log.info("User logged out. userId={}", userId);
+    log.info("로그아웃 완료. userId={}", userId);
   }
 
   private AuthUserVo findOrCreateUser(SocialType socialType, AuthUserVo profile) {
@@ -96,7 +96,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     user = authUserMapper.findActiveBySocialIdentity(socialType.name(), profile.getSocialId());
     if (user == null) {
       throw new SocialAuthenticationException(
-          AuthErrorCode.WITHDRAWN_ACCOUNT, "Withdrawn accounts cannot sign in.");
+          AuthErrorCode.WITHDRAWN_ACCOUNT, "탈퇴한 계정은 로그인할 수 없습니다.");
     }
     return user;
   }
