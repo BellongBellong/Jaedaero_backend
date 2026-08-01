@@ -28,19 +28,20 @@ class AiStrategyMapperXmlValidationTest {
     for (String resource : MAPPER_RESOURCES) {
       try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
         assertNotNull(inputStream, () -> "Mapper XML을 찾을 수 없습니다: " + resource);
-        new XMLMapperBuilder(
-                inputStream, configuration, resource, configuration.getSqlFragments())
+        new XMLMapperBuilder(inputStream, configuration, resource, configuration.getSqlFragments())
             .parse();
       }
     }
 
     assertTrue(
-        configuration.hasStatement("com.jaedaero.domain.simulation.mapper.SimulationMapper.insert"));
+        configuration.hasStatement(
+            "com.jaedaero.domain.simulation.mapper.SimulationMapper.insert"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.simulation.mapper.SimulationInputMapper.findLatestByUserId"));
     assertTrue(
-        configuration.hasStatement("com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper.insertAnalysis"));
+        configuration.hasStatement(
+            "com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper.insertAnalysis"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.insert"));

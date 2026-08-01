@@ -12,15 +12,15 @@ import com.jaedaero.domain.simulation.service.SimulationInput;
 import com.jaedaero.domain.simulation.service.SimulationInputProvider;
 import com.jaedaero.domain.simulation.service.SimulationService;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class SimulationServiceImpl implements SimulationService {
 
   private static final DateTimeFormatter SCENARIO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
@@ -28,11 +28,32 @@ public class SimulationServiceImpl implements SimulationService {
   private final SimulationMapper simulationMapper;
   private final SimulationInputProvider simulationInputProvider;
   private final SimulationCalculator simulationCalculator;
+  private final Clock clock;
+
+  @Autowired
+  public SimulationServiceImpl(
+      SimulationMapper simulationMapper,
+      SimulationInputProvider simulationInputProvider,
+      SimulationCalculator simulationCalculator) {
+    this(simulationMapper, simulationInputProvider, simulationCalculator, Clock.systemDefaultZone());
+  }
+
+  /** Constructor with a clock so date-dependent calculations can be tested deterministically. */
+  public SimulationServiceImpl(
+      SimulationMapper simulationMapper,
+      SimulationInputProvider simulationInputProvider,
+      SimulationCalculator simulationCalculator,
+      Clock clock) {
+    this.simulationMapper = simulationMapper;
+    this.simulationInputProvider = simulationInputProvider;
+    this.simulationCalculator = simulationCalculator;
+    this.clock = clock;
+  }
 
   @Override
   @Transactional
   public SimulationResponse run(long userId, SimulationRequest request) {
-    LocalDate today = LocalDate.now();
+    LocalDate today = LocalDate.now(clock);
     SimulationInput input = simulationInputProvider.load(userId);
     SimulationCalculationResult result = simulationCalculator.calculate(input, request, today);
     boolean isSaved = request.getIsSaved() == null || request.getIsSaved();

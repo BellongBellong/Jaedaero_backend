@@ -12,7 +12,10 @@ import com.jaedaero.domain.simulation.mapper.SimulationMapper;
 import com.jaedaero.domain.simulation.service.impl.SimulationServiceImpl;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -33,7 +36,12 @@ class SimulationServiceImplTest {
                 550_000L,
                 new BigDecimal("5.00"),
                 550_000L);
-    SimulationService service = new SimulationServiceImpl(mapper, provider, new SimulationCalculator());
+    SimulationService service =
+        new SimulationServiceImpl(
+            mapper,
+            provider,
+            new SimulationCalculator(),
+            Clock.fixed(Instant.parse("2026-07-31T00:00:00Z"), ZoneId.of("Asia/Seoul")));
 
     SimulationResponse preview = service.run(1L, request(false));
 

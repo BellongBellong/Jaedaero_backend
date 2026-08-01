@@ -1,0 +1,29 @@
+package com.jaedaero.domain.cashflow.vo;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CashflowForecastVo {
+  private Long forecastId;
+  private Long userId;
+  private Long baseAsset;
+  private Long expectedSalary;
+  private Long expectedSavingAmount;
+  private Long expectedAsset;
+  private Long monthlySpendingLimit;
+  private BigDecimal achievementRate;
+  private LocalDate financialDischargeDate;
+  private String policyVersion;
+  private LocalDateTime generatedAt;
+}
