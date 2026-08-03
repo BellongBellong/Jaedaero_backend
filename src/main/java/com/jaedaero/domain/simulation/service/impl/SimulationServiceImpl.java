@@ -16,7 +16,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +28,17 @@ public class SimulationServiceImpl implements SimulationService {
   private final SimulationInputProvider simulationInputProvider;
   private final SimulationCalculator simulationCalculator;
   private final Clock clock;
+
+  public SimulationServiceImpl(
+      SimulationMapper simulationMapper,
+      SimulationInputProvider simulationInputProvider,
+      SimulationCalculator simulationCalculator,
+      Clock clock) {
+    this.simulationMapper = simulationMapper;
+    this.simulationInputProvider = simulationInputProvider;
+    this.simulationCalculator = simulationCalculator;
+    this.clock = clock;
+  }
 
   @Override
   @Transactional
