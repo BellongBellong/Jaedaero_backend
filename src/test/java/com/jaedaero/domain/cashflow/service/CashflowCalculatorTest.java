@@ -4,15 +4,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.jaedaero.domain.auth.common.enums.SoldierType;
+import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class CashflowCalculatorTest {
 
-  private final CashflowCalculator calculator = new CashflowCalculator(new DefaultMilitaryPayPolicy());
+  private final CashflowCalculator calculator = new CashflowCalculator(policy());
 
   @Test
-  void uses2026BasicPayAndRankPromotionSchedule() {
+  void usesDatabasePayAndRankPromotionSchedule() {
     CashflowInput input =
         new CashflowInput(
             0L,
@@ -25,12 +29,71 @@ class CashflowCalculatorTest {
     CashflowForecastCalculation result = calculator.calculate(input, LocalDate.of(2026, 1, 10));
 
     assertEquals(18, result.months().size());
-    assertEquals("PRIVATE", result.months().get(0).expectedRank());
-    assertEquals(750_000L, result.months().get(0).expectedSalary());
-    assertEquals("PRIVATE_FIRST_CLASS", result.months().get(2).expectedRank());
-    assertEquals("CORPORAL", result.months().get(8).expectedRank());
-    assertEquals("SERGEANT", result.months().get(14).expectedRank());
-    assertEquals(20_100_000L, result.expectedSalary());
+    assertEquals("이병", result.months().get(0).expectedRank());
+    assertEquals(200_000L, result.months().get(0).expectedSalary());
+    assertEquals("일병", result.months().get(2).expectedRank());
+    assertEquals("상병", result.months().get(8).expectedRank());
+    assertEquals("병장", result.months().get(14).expectedRank());
+    assertEquals(10_200_000L, result.expectedSalary());
+  }
+
+  @Test
+  void separatesNavyAndAirForcePromotionSchedules() {
+    assertEquals(
+        "일병",
+        calculator
+            .calculate(
+                new CashflowInput(
+                    0L,
+                    0L,
+                    0L,
+                    SoldierType.NAVY,
+                    LocalDate.of(2026, 1, 1),
+                    LocalDate.of(2026, 3, 1)),
+                LocalDate.of(2026, 3, 1))
+            .months()
+            .get(0)
+            .expectedRank());
+    assertEquals(
+        "이병",
+        calculator
+            .calculate(
+                new CashflowInput(
+                    0L,
+                    0L,
+                    0L,
+                    SoldierType.AIRFORCE,
+                    LocalDate.of(2026, 1, 1),
+                    LocalDate.of(2026, 3, 1)),
+                LocalDate.of(2026, 3, 1))
+            .months()
+            .get(0)
+            .expectedRank());
+  }
+
+  @Test
+  void addsSavingInterestAndOneHundredPercentGovernmentSupportAtMaturity() {
+    CashflowForecastCalculation result =
+        calculator.calculate(
+            new CashflowInput(
+                0L,
+                10_000_000L,
+                0L,
+                SoldierType.ARMY,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 3, 31),
+                List.of(
+                    new SoldierSavingInput(
+                        1_000_000L,
+                        500_000L,
+                        BigDecimal.valueOf(12),
+                        300_000L,
+                        LocalDate.of(2026, 3, 31)))),
+            LocalDate.of(2026, 1, 1));
+
+    assertEquals(500_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(2_845_000L, result.expectedSavingAmount());
+    assertEquals(1_095_000L, result.expectedAsset());
   }
 
   @Test
@@ -42,7 +105,7 @@ class CashflowCalculatorTest {
 
     assertEquals(LocalDate.of(2026, 1, 10), result.financialDischargeDate());
     assertEquals(0L, result.months().get(0).expectedSavingAmount());
-    assertEquals(750_000L, result.monthlySpendingLimit());
+    assertEquals(200_000L, result.monthlySpendingLimit());
   }
 
   @Test
@@ -74,7 +137,7 @@ class CashflowCalculatorTest {
             LocalDate.of(2026, 1, 10));
 
     assertEquals(0L, result.monthlySpendingLimit());
-    assertEquals(-250_000L, result.months().get(0).expectedEndingAsset());
+    assertEquals(-800_000L, result.months().get(0).expectedEndingAsset());
   }
 
   @Test
@@ -84,8 +147,8 @@ class CashflowCalculatorTest {
             input(0L, 1_400_000L, 0L, LocalDate.of(2026, 2, 1)), LocalDate.of(2026, 1, 10));
 
     assertEquals(700_000L, result.months().get(0).expectedSavingAmount());
-    assertEquals(650_000L, result.months().get(1).expectedSavingAmount());
-    assertEquals(LocalDate.of(2026, 2, 1), result.financialDischargeDate());
+    assertEquals(1_200_000L, result.months().get(1).expectedSavingAmount());
+    assertNull(result.financialDischargeDate());
   }
 
   private CashflowInput input(
@@ -97,5 +160,13 @@ class CashflowCalculatorTest {
         SoldierType.ARMY,
         LocalDate.of(2026, 1, 1),
         dischargeDate);
+  }
+
+  private DefaultMilitaryPayPolicy policy() {
+    Map<String, Long> salaries =
+        Map.of("이병", 200_000L, "일병", 350_000L, "상병", 650_000L, "병장", 950_000L);
+    MilitaryPayPolicyMapper mapper =
+        (soldierType, rankName, monthStart, monthEnd) -> salaries.get(rankName);
+    return new DefaultMilitaryPayPolicy(mapper);
   }
 }

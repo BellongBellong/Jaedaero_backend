@@ -28,4 +28,19 @@ class CashflowMapperXmlValidationTest {
         configuration.hasStatement(
             "com.jaedaero.domain.cashflow.mapper.CashflowMapper.insertForecastMonths"));
   }
+
+  @Test
+  void militaryPayPolicyMapperXml_isParsedByMyBatis() throws Exception {
+    Configuration configuration = new Configuration();
+    String resource = "mapper/cashflow/MilitaryPayPolicyMapper.xml";
+
+    try (InputStream inputStream = Resources.getResourceAsStream(resource)) {
+      assertNotNull(inputStream);
+      new XMLMapperBuilder(inputStream, configuration, resource, configuration.getSqlFragments()).parse();
+    }
+
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper.findMonthlySalary"));
+  }
 }

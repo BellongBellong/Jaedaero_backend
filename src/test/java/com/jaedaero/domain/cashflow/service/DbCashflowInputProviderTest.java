@@ -9,6 +9,7 @@ import com.jaedaero.domain.cashflow.mapper.CashflowMapper;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastVo;
 import com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo;
+import com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,11 @@ class DbCashflowInputProviderTest {
     @Override
     public CashflowInputSourceVo findInputByUserId(long userId) {
       return source;
+    }
+
+    @Override
+    public List<SoldierSavingInputSourceVo> findSoldierSavingsByUserId(long userId) {
+      return List.of();
     }
 
     @Override

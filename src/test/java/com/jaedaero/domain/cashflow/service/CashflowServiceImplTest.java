@@ -7,16 +7,19 @@ import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.mapper.CashflowMapper;
+import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
 import com.jaedaero.domain.cashflow.service.impl.CashflowServiceImpl;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastVo;
 import com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo;
+import com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class CashflowServiceImplTest {
@@ -31,7 +34,7 @@ class CashflowServiceImplTest {
 
     assertEquals(1L, generated.getForecastId());
     assertEquals(18, generated.getMonths().size());
-    assertEquals(20_100_000L, generated.getExpectedSalary());
+    assertEquals(10_200_000L, generated.getExpectedSalary());
     assertEquals(1, mapper.forecasts.size());
     assertEquals(18, mapper.months.size());
     assertEquals(generated.getForecastId(), latest.getForecastId());
@@ -56,8 +59,16 @@ class CashflowServiceImplTest {
     return new CashflowServiceImpl(
         mapper,
         inputProvider,
-        new CashflowCalculator(new DefaultMilitaryPayPolicy()),
+        new CashflowCalculator(policy()),
         Clock.fixed(Instant.parse("2026-01-10T00:00:00Z"), ZoneId.of("Asia/Seoul")));
+  }
+
+  private DefaultMilitaryPayPolicy policy() {
+    Map<String, Long> salaries =
+        Map.of("이병", 200_000L, "일병", 350_000L, "상병", 650_000L, "병장", 950_000L);
+    MilitaryPayPolicyMapper mapper =
+        (soldierType, rankName, monthStart, monthEnd) -> salaries.get(rankName);
+    return new DefaultMilitaryPayPolicy(mapper);
   }
 
   private static class InMemoryCashflowMapper implements CashflowMapper {
@@ -67,6 +78,11 @@ class CashflowServiceImplTest {
     @Override
     public CashflowInputSourceVo findInputByUserId(long userId) {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<SoldierSavingInputSourceVo> findSoldierSavingsByUserId(long userId) {
+      return List.of();
     }
 
     @Override

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper">
+
+    <select id="findMonthlySalary" resultType="java.lang.Long">
+        SELECT monthly_salary
+        FROM military_pay_policy
+        WHERE soldier_type = #{soldierType}
+          AND rank_name = #{rankName}
+          AND effective_from &lt;= #{monthEnd}
+          AND (effective_to IS NULL OR effective_to >= #{monthStart})
+        ORDER BY effective_from DESC, pay_policy_id DESC
+        LIMIT 1
+    </select>
+</mapper>

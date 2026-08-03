@@ -32,6 +32,25 @@
         WHERE profile.user_id = #{userId}
     </select>
 
+    <select id="findSoldierSavingsByUserId"
+            resultType="com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo">
+        SELECT
+            account.current_balance,
+            saving.monthly_amount,
+            saving.interest_rate,
+            saving.government_support_expected,
+            saving.end_date
+        FROM soldier_saving saving
+        INNER JOIN connected_account account ON account.account_id = saving.account_id
+        INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+        WHERE saving.user_id = #{userId}
+          AND connection.status = 'ACTIVE'
+          AND account.status = 'ACTIVE'
+          AND saving.monthly_amount IS NOT NULL
+          AND saving.interest_rate IS NOT NULL
+          AND saving.end_date IS NOT NULL
+    </select>
+
     <insert id="insertForecast" parameterType="com.jaedaero.domain.cashflow.vo.CashflowForecastVo"
             useGeneratedKeys="true" keyProperty="forecastId">
         INSERT INTO cashflow_forecast (

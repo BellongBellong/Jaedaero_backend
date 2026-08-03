@@ -32,7 +32,17 @@ public class DbCashflowInputProvider implements CashflowInputProvider {
           defaultIfNull(source.getMonthlySpendingAverage()),
           SoldierType.valueOf(source.getSoldierType()),
           source.getEnlistmentDate(),
-          source.getDischargeDate());
+          source.getDischargeDate(),
+          cashflowMapper.findSoldierSavingsByUserId(userId).stream()
+              .map(
+                  saving ->
+                      new SoldierSavingInput(
+                          defaultIfNull(saving.getCurrentBalance()),
+                          saving.getMonthlyAmount(),
+                          saving.getInterestRate(),
+                          defaultIfNull(saving.getGovernmentSupportExpected()),
+                          saving.getEndDate()))
+              .toList());
     } catch (IllegalArgumentException exception) {
       throw new CashflowException(CashflowErrorCode.INPUT_NOT_READY, "저장된 군종 정보가 올바르지 않습니다.");
     }

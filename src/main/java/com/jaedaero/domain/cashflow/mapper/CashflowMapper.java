@@ -3,6 +3,7 @@ package com.jaedaero.domain.cashflow.mapper;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastVo;
 import com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo;
+import com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -11,6 +12,8 @@ import org.apache.ibatis.annotations.Param;
 public interface CashflowMapper {
 
   CashflowInputSourceVo findInputByUserId(@Param("userId") long userId);
+
+  List<SoldierSavingInputSourceVo> findSoldierSavingsByUserId(@Param("userId") long userId);
 
   void insertForecast(CashflowForecastVo forecast);
 
