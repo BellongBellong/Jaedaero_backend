@@ -1,11 +1,13 @@
 package com.jaedaero.global.config;
 
+import com.jaedaero.global.security.DevelopmentAuthenticationFilter;
 import com.jaedaero.global.security.JwtAccessDeniedHandler;
 import com.jaedaero.global.security.JwtAuthenticationFilter;
 import com.jaedaero.global.security.JwtAuthenticationEntryPoint;
 import com.jaedaero.global.security.JwtTokenProvider;
-import org.springframework.context.annotation.Configuration;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -22,6 +24,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
   private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
+  @Value("${app.environment:production}")
+  private String appEnvironment;
+
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     http.csrf().disable()
@@ -35,8 +40,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         .antMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/swagger-ui.html", "/swagger-ui/**", "/swagger-resources/**", "/v2/api-docs", "/webjars/**")
         .permitAll()
         .anyRequest()
-        .permitAll()
-        .and()
-        .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+        .permitAll();
+
+    if ("local".equalsIgnoreCase(appEnvironment)) {
+      http.addFilterBefore(
+          new DevelopmentAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+      http.addFilterBefore(
+          new JwtAuthenticationFilter(jwtTokenProvider), DevelopmentAuthenticationFilter.class);
+    } else {
+      http.addFilterBefore(
+          new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+    }
   }
 }

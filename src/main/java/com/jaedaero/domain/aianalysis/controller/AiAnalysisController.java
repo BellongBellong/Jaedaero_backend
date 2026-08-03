@@ -5,6 +5,8 @@ import com.jaedaero.domain.aianalysis.dto.AiAnalysisResponse;
 import com.jaedaero.domain.aianalysis.exception.AiAnalysisErrorCode;
 import com.jaedaero.domain.aianalysis.exception.AiAnalysisException;
 import com.jaedaero.domain.aianalysis.service.AiAnalysisService;
+import com.jaedaero.domain.strategyapplication.dto.StrategyApplicationResponse;
+import com.jaedaero.domain.strategyapplication.service.StrategyApplicationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -27,6 +29,7 @@ import springfox.documentation.annotations.ApiIgnore;
 @RequiredArgsConstructor
 public class AiAnalysisController {
   private final AiAnalysisService service;
+  private final StrategyApplicationService strategyApplicationService;
   @PostMapping
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
   @ApiOperation(value = "AI 분석 생성", notes = "목 데이터 기준 AI 분석과 추천 시나리오를 생성합니다. AI 코칭 모델은 서버 정책에 따라 gpt-4o-mini를 사용합니다.")
@@ -38,6 +41,14 @@ public class AiAnalysisController {
   @ApiOperation(value = "AI 분석 상세 조회")
   public ResponseEntity<AiAnalysisResponse> detail(@ApiIgnore Authentication auth, @PathVariable long analysisId) {
     return ResponseEntity.ok(service.getDetail(userId(auth), analysisId));
+  }
+  @PostMapping("/{analysisId}/apply")
+  @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
+  @ApiOperation(value = "AI 추천 전략 적용")
+  public ResponseEntity<StrategyApplicationResponse> apply(
+      @ApiIgnore Authentication auth, @PathVariable long analysisId) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(strategyApplicationService.applyAiRecommendation(userId(auth), analysisId));
   }
   private long userId(Authentication auth) {
     if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) throw new AiAnalysisException(AiAnalysisErrorCode.UNAUTHENTICATED, "로그인이 필요합니다.");
