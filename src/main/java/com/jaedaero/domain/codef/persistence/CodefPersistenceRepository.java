@@ -285,6 +285,23 @@ public class CodefPersistenceRepository {
     return accountIds.stream().findFirst();
   }
 
+  /** Keeps an existing mock account under the same institution as the selected bank account. */
+  public void updateAccountInstitutionByConnectionAndAccountHash(
+      long connectionId,
+      String accountNumberHash,
+      String institutionCode,
+      String businessType,
+      String institutionName) {
+    jdbcTemplate.update(
+        "UPDATE connected_account SET institution_code = ?, business_type = ?, institution_name = ? "
+            + "WHERE connection_id = ? AND account_number_hash = ?",
+        institutionCode,
+        businessType,
+        institutionName,
+        connectionId,
+        accountNumberHash);
+  }
+
   public boolean isTransactionPeriodCovered(
       long accountId, String inquiryType, LocalDate startDate, LocalDate endDate) {
     Integer count =

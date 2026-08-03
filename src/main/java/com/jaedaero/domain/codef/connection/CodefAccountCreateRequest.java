@@ -1,10 +1,9 @@
 package com.jaedaero.domain.codef.connection;
 
 /**
- * Input for one CODEF institution registration.
+ * CODEF 기관 하나를 등록하기 위한 입력값입니다.
  *
- * <p>Only ID/password login is supported. Institution-specific required fields must follow the
- * CODEF product guide.
+ * <p>ID/비밀번호 로그인만 지원합니다. 기관별 필수 입력 항목은 CODEF 상품 가이드를 따라야 합니다.
  */
 public class CodefAccountCreateRequest {
 

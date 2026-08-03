@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.cashflow.mapper.CashflowMapper">
+
+    <select id="findInputByUserId" resultType="com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo">
+        SELECT
+            COALESCE((
+                SELECT SUM(account.current_balance)
+                FROM connected_account account
+                INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+                WHERE connection.user_id = #{userId}
+                  AND connection.status = 'ACTIVE'
+                  AND account.status = 'ACTIVE'
+            ), 0) AS base_asset,
+            goal.target_amount,
+            COALESCE((
+                SELECT ROUND(SUM(history.amount) / 3)
+                FROM transaction_history history
+                INNER JOIN connected_account account ON account.account_id = history.account_id
+                INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+                WHERE connection.user_id = #{userId}
+                  AND history.transaction_type = 'WITHDRAW'
+                  AND (history.category IS NULL OR history.category != 'ASSET')
+                  AND history.transaction_datetime >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+            ), 0) AS monthly_spending_average,
+            profile.soldier_type,
+            profile.enlistment_date,
+            profile.discharge_date
+        FROM soldier_profile profile
+        INNER JOIN goal ON goal.user_id = profile.user_id AND goal.status = 'ACTIVE'
+        WHERE profile.user_id = #{userId}
+    </select>
+
+    <select id="findSoldierSavingsByUserId"
+            resultType="com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo">
+        SELECT
+            account.current_balance,
+            saving.monthly_amount,
+            saving.interest_rate,
+            saving.government_support_expected,
+            saving.end_date
+        FROM soldier_saving saving
+        INNER JOIN connected_account account ON account.account_id = saving.account_id
+        INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+        WHERE saving.user_id = #{userId}
+          AND connection.status = 'ACTIVE'
+          AND account.status = 'ACTIVE'
+          AND saving.monthly_amount IS NOT NULL
+          AND saving.interest_rate IS NOT NULL
+          AND saving.end_date IS NOT NULL
+    </select>
+
+    <insert id="insertForecast" parameterType="com.jaedaero.domain.cashflow.vo.CashflowForecastVo"
+            useGeneratedKeys="true" keyProperty="forecastId">
+        INSERT INTO cashflow_forecast (
+            user_id, base_asset, expected_salary, expected_saving_amount, expected_asset,
+            monthly_spending_limit, achievement_rate, financial_discharge_date, policy_version
+        ) VALUES (
+            #{userId}, #{baseAsset}, #{expectedSalary}, #{expectedSavingAmount}, #{expectedAsset},
+            #{monthlySpendingLimit}, #{achievementRate}, #{financialDischargeDate}, #{policyVersion}
+        )
+    </insert>
+
+    <insert id="insertForecastMonths">
+        INSERT INTO cashflow_forecast_month (
+            forecast_id, forecast_month, expected_rank, expected_salary, expected_saving_amount,
+            expected_spending_amount, expected_ending_asset
+        ) VALUES
+        <foreach collection="months" item="month" separator=",">
+            (#{forecastId}, #{month.forecastMonth}, #{month.expectedRank}, #{month.expectedSalary},
+             #{month.expectedSavingAmount}, #{month.expectedSpendingAmount}, #{month.expectedEndingAsset})
+        </foreach>
+    </insert>
+
+    <select id="findLatestForecastByUserId" resultType="com.jaedaero.domain.cashflow.vo.CashflowForecastVo">
+        SELECT forecast_id, user_id, base_asset, expected_salary, expected_saving_amount, expected_asset,
+               monthly_spending_limit, achievement_rate, financial_discharge_date, policy_version, generated_at
+        FROM cashflow_forecast
+        WHERE user_id = #{userId}
+        ORDER BY generated_at DESC, forecast_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findMonthsByForecastId" resultType="com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo">
+        SELECT forecast_month_id, forecast_id, forecast_month, expected_rank, expected_salary,
+               expected_saving_amount, expected_spending_amount, expected_ending_asset
+        FROM cashflow_forecast_month
+        WHERE forecast_id = #{forecastId}
+        ORDER BY forecast_month ASC
+    </select>
+</mapper>

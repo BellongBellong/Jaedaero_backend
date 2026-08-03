@@ -7,7 +7,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import javax.crypto.Cipher;
 
-/** Encrypts CODEF-designated password fields with the CODEF RSA public key. */
+/** CODEF가 지정한 비밀번호 필드를 CODEF RSA 공개키로 암호화합니다. */
 public class CodefRsaEncryptor {
 
   public String encrypt(String plainText, String base64PublicKey) {

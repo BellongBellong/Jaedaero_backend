@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/** Builds all ETF return summaries from one daily response per comparison date. */
+/** 비교 기준일별 일별 응답 하나로 모든 ETF 수익률 요약을 생성합니다. */
 @Service
 public class EtfMarketOverviewService {
 
@@ -119,7 +119,7 @@ public class EtfMarketOverviewService {
     return result;
   }
 
-  /** KRX can return an OutBlock_1 list filled with '-' values on non-trading days. */
+  /** KRX는 비거래일에 '-' 값으로 채워진 OutBlock_1 목록을 반환할 수 있습니다. */
   private boolean hasTradablePrice(List<EtfDailyTradingInfo> items) {
     return items.stream().anyMatch(item -> isPrice(item.tddClsprc()));
   }

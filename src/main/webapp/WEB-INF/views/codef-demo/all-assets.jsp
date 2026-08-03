@@ -14,7 +14,7 @@
         <div>
             <p class="eyebrow">자산 현황</p>
             <h1>내 전체 자산</h1>
-            <p><c:out value="${unifiedAssets.refreshedAccountCount}"/>개 연동 계좌의 최신 조회 결과예요.</p>
+            <p><c:out value="${unifiedAssets.refreshedAccountCount}"/>개 연동 계좌의 저장된 조회 결과예요.</p>
         </div>
         <a class="secondary-button link-button back-button" href="${pageContext.request.contextPath}/codef-demo/accounts">
             ← 계좌 목록

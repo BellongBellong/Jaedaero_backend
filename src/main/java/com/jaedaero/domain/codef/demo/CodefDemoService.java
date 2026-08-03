@@ -1,6 +1,5 @@
 package com.jaedaero.domain.codef.demo;
 
-import com.jaedaero.domain.codef.account.CodefAccountSyncService;
 import com.jaedaero.domain.codef.account.CodefSavingsTransactionSyncService;
 import com.jaedaero.domain.codef.account.CodefSecuritiesInquiryService;
 import com.jaedaero.domain.codef.account.CodefTransactionSyncService;
@@ -48,7 +47,6 @@ public class CodefDemoService {
   private final CodefTransactionSyncService transactionSyncService;
   private final CodefSavingsTransactionSyncService savingsTransactionSyncService;
   private final CodefSecuritiesInquiryService securitiesInquiryService;
-  private final CodefAccountSyncService accountSyncService;
   private final SensitiveValueCipher cipher;
   private final Sha256Hasher hasher;
 
@@ -58,7 +56,6 @@ public class CodefDemoService {
       CodefTransactionSyncService transactionSyncService,
       CodefSavingsTransactionSyncService savingsTransactionSyncService,
       CodefSecuritiesInquiryService securitiesInquiryService,
-      CodefAccountSyncService accountSyncService,
       SensitiveValueCipher cipher,
       Sha256Hasher hasher) {
     this.repository = repository;
@@ -66,7 +63,6 @@ public class CodefDemoService {
     this.transactionSyncService = transactionSyncService;
     this.savingsTransactionSyncService = savingsTransactionSyncService;
     this.securitiesInquiryService = securitiesInquiryService;
-    this.accountSyncService = accountSyncService;
     this.cipher = cipher;
     this.hasher = hasher;
   }
@@ -114,10 +110,11 @@ public class CodefDemoService {
 
   /** Refreshes all connected institutions and calculates each account's current asset amount. */
   public CodefDemoUnifiedAssets getUnifiedAssets(long userId) {
-    int refreshedAccountCount = accountSyncService.refreshAllAccounts(userId);
+    List<StoredConnectedAccount> accounts = repository.findAccountsByUserId(userId);
+    int refreshedAccountCount = accounts.size();
     long totalAmount = 0L;
     Map<String, List<CodefDemoUnifiedAccountAsset>> itemsByInstitution = new LinkedHashMap<>();
-    for (StoredConnectedAccount account : repository.findAccountsByUserId(userId)) {
+    for (StoredConnectedAccount account : accounts) {
       if ("대출".equals(account.accountType())) {
         continue;
       }
@@ -343,18 +340,35 @@ public class CodefDemoService {
    * It is tied to the existing connection so foreign keys and ownership checks follow production flow.
    */
   public void seedMockMilitarySavingsIfConnected(long userId) {
-    var connection = repository.findConnectionByUserId(userId);
-    if (connection.isEmpty()) {
+    Long connectionId =
+        repository.findAccountsByUserId(userId).stream()
+            .map(StoredConnectedAccount::connectionId)
+            .findFirst()
+            .orElseGet(() -> repository.findConnectionByUserId(userId).map(connection -> connection.connectionId()).orElse(null));
+    if (connectionId == null) {
       return;
     }
 
     LocalDate today = LocalDate.now(KOREA_ZONE);
     String accountHash = hasher.hash(MOCK_SAVING_ACCOUNT_NUMBER);
-    repository.upsertAccount(
-        connection.get().connectionId(),
-        "0301",
+    StoredConnectedAccount bankAccount =
+        repository.findAccountsByUserId(userId).stream()
+            .filter(account -> CodefBusinessType.BANK.getCode().equals(account.businessType()))
+            .findFirst()
+            .orElse(null);
+    String institutionCode = bankAccount == null ? "0004" : bankAccount.institutionCode();
+    String institutionName = bankAccount == null ? "KB국민은행" : bankAccount.institutionName();
+    repository.updateAccountInstitutionByConnectionAndAccountHash(
+        connectionId,
+        accountHash,
+        institutionCode,
         CodefBusinessType.BANK.getCode(),
-        "KB국민은행",
+        institutionName);
+    repository.upsertAccount(
+        connectionId,
+        institutionCode,
+        CodefBusinessType.BANK.getCode(),
+        institutionName,
         cipher.encrypt(MOCK_SAVING_ACCOUNT_NUMBER),
         accountHash,
         MOCK_SAVING_ACCOUNT_MASKED,
@@ -367,7 +381,7 @@ public class CodefDemoService {
 
     long accountId =
         repository
-            .findAccountIdByConnectionAndAccountHash(connection.get().connectionId(), accountHash)
+            .findAccountIdByConnectionAndAccountHash(connectionId, accountHash)
             .orElseThrow(() -> new IllegalStateException("데모 적금 계좌를 저장하지 못했습니다."));
     repository.upsertSoldierSaving(
         userId,

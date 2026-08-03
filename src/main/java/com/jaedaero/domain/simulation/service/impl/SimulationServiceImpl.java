@@ -16,12 +16,11 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class SimulationServiceImpl implements SimulationService {
 
   private static final DateTimeFormatter SCENARIO_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
