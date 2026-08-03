@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
 class SimulationServiceImplTest {
 
   private static final Clock FIXED_CLOCK =
-      Clock.fixed(Instant.parse("2026-07-31T00:00:00Z"), ZoneOffset.UTC);
+      Clock.fixed(
+          Instant.parse("2026-07-31T00:00:00Z"),
+          ZoneId.of("Asia/Seoul"));
 
   @Test
   void previewIsCalculatedButNotPersisted_andSavedRequestCreatesHistory() {
