@@ -2,6 +2,7 @@ package com.jaedaero.domain.mypage.vo;
 
 import com.jaedaero.domain.auth.common.enums.ProfileImage;
 import com.jaedaero.domain.auth.common.enums.ProfileSource;
+import com.jaedaero.domain.auth.common.enums.SoldierType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,5 +13,6 @@ public class MyPageProfileVo {
   private String nickname;
   private ProfileImage profileImage;
   private ProfileSource profileSource;
+  private SoldierType soldierType;
   private String militaryRank;
 }

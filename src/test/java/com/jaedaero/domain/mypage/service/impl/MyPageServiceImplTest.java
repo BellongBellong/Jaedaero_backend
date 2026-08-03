@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.jaedaero.domain.auth.common.enums.ProfileImage;
 import com.jaedaero.domain.auth.common.enums.ProfileSource;
+import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.auth.mapper.AuthUserMapper;
 import com.jaedaero.domain.auth.vo.AuthUserVo;
 import com.jaedaero.domain.mypage.dto.MyPageProfileResponse;
 import com.jaedaero.domain.mypage.exception.MyPageException;
 import com.jaedaero.domain.mypage.mapper.MyPageMapper;
 import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
+import com.jaedaero.domain.mypage.vo.InvestmentBadgeVo;
 import java.sql.Timestamp;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ class MyPageServiceImplTest {
     profile.setNickname("테스트사용자");
     profile.setProfileImage(ProfileImage.ARMY);
     profile.setProfileSource(ProfileSource.GREEN);
+    profile.setSoldierType(SoldierType.ARMY);
     profile.setMilitaryRank("병장");
     myPageMapper.profile = profile;
     myPageMapper.badgeCount = 2;
@@ -66,6 +69,7 @@ class MyPageServiceImplTest {
     @Override public MyPageProfileVo findActiveProfile(long userId) { return profile; }
     @Override public int countEarnedBadges(long userId) { return badgeCount; }
     @Override public List<String> findRecentBadgeCodes(long userId) { return badgeCodes; }
+    @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId, int offset, int size) { return List.of(); }
     @Override public int withdraw(long userId) { withdrawnUserId = userId; return 1; }
   }
 

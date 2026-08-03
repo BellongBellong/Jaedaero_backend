@@ -8,7 +8,9 @@ import com.jaedaero.domain.auth.exception.NicknameException;
 import com.jaedaero.domain.auth.service.NicknameService;
 import com.jaedaero.domain.auth.service.ProfileAppearanceService;
 import com.jaedaero.domain.mypage.dto.MyPageProfileResponse;
+import com.jaedaero.domain.mypage.dto.InvestmentBadgeResponse;
 import com.jaedaero.domain.mypage.service.MyPageService;
+import java.util.List;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -52,6 +54,17 @@ public class UserController {
   public ResponseEntity<MyPageProfileResponse> getMyPageProfile(
       @ApiIgnore Authentication authentication) {
     return ResponseEntity.ok(myPageService.getProfile(getAuthenticatedUserId(authentication)));
+  }
+
+  @GetMapping("/investment-badges")
+  @ApiOperation(value = "투자 뱃지 획득 내역 조회")
+  public ResponseEntity<List<InvestmentBadgeResponse>> getInvestmentBadges(
+      @ApiIgnore Authentication authentication,
+      @RequestParam(defaultValue = "0") @javax.validation.constraints.Min(0) int page,
+      @RequestParam(defaultValue = "20") @javax.validation.constraints.Min(1)
+          @javax.validation.constraints.Max(100) int size) {
+    return ResponseEntity.ok(
+        myPageService.getInvestmentBadges(getAuthenticatedUserId(authentication), page, size));
   }
 
   @DeleteMapping("/me")

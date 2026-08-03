@@ -6,11 +6,12 @@
         <result property="nickname" column="nickname"/>
         <result property="profileImage" column="profile_image" javaType="com.jaedaero.domain.auth.common.enums.ProfileImage"/>
         <result property="profileSource" column="profile_source" javaType="com.jaedaero.domain.auth.common.enums.ProfileSource"/>
+        <result property="soldierType" column="soldier_type" javaType="com.jaedaero.domain.auth.common.enums.SoldierType"/>
         <result property="militaryRank" column="rank_name"/>
     </resultMap>
 
     <select id="findActiveProfile" parameterType="long" resultMap="profileResultMap">
-        SELECT u.nickname, u.profile_image, u.profile_source, sp.rank_name
+        SELECT u.nickname, u.profile_image, u.profile_source, sp.soldier_type, sp.rank_name
         FROM users u
         LEFT JOIN soldier_profile sp ON sp.user_id = u.user_id
         WHERE u.user_id = #{userId} AND u.is_withdrawn = FALSE
@@ -29,6 +30,19 @@
             UNION ALL SELECT CONCAT('SAFE_', safe_grade), updated_at FROM investment_badge WHERE user_id = #{userId} AND safe_grade IS NOT NULL
             UNION ALL SELECT CONCAT('AGGRESSIVE_', aggressive_grade), updated_at FROM investment_badge WHERE user_id = #{userId} AND aggressive_grade IS NOT NULL
         ) badges ORDER BY updated_at DESC LIMIT 3
+    </select>
+
+    <select id="findInvestmentBadges" resultType="com.jaedaero.domain.mypage.vo.InvestmentBadgeVo">
+        SELECT badge_code, updated_at
+        FROM (
+            SELECT CONCAT('TIER_', badge_tier) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND badge_tier IS NOT NULL
+            UNION ALL
+            SELECT CONCAT('SAFE_', safe_grade) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND safe_grade IS NOT NULL
+            UNION ALL
+            SELECT CONCAT('AGGRESSIVE_', aggressive_grade) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND aggressive_grade IS NOT NULL
+        ) badges
+        ORDER BY updated_at DESC, badge_code ASC
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <update id="withdraw" parameterType="long">

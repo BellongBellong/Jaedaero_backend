@@ -2,12 +2,15 @@ package com.jaedaero.domain.mypage.service.impl;
 
 import com.jaedaero.domain.auth.mapper.AuthUserMapper;
 import com.jaedaero.domain.mypage.dto.BadgeSummaryResponse;
+import com.jaedaero.domain.mypage.dto.InvestmentBadgeResponse;
 import com.jaedaero.domain.mypage.dto.MyPageProfileResponse;
 import com.jaedaero.domain.mypage.exception.MyPageErrorCode;
 import com.jaedaero.domain.mypage.exception.MyPageException;
 import com.jaedaero.domain.mypage.mapper.MyPageMapper;
 import com.jaedaero.domain.mypage.service.MyPageService;
 import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +33,18 @@ public class MyPageServiceImpl implements MyPageService {
         profile.getNickname(),
         profile.getProfileImage(),
         profile.getProfileSource(),
+        profile.getSoldierType(),
         profile.getMilitaryRank(),
         new BadgeSummaryResponse(
             myPageMapper.countEarnedBadges(userId), myPageMapper.findRecentBadgeCodes(userId)));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<InvestmentBadgeResponse> getInvestmentBadges(long userId, int page, int size) {
+    return myPageMapper.findInvestmentBadges(userId, page * size, size).stream()
+        .map(badge -> new InvestmentBadgeResponse(badge.getBadgeCode(), badge.getUpdatedAt()))
+        .collect(Collectors.toList());
   }
 
   @Override
