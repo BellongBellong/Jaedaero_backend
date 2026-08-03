@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.Clock;
+import java.time.ZoneId;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.annotations.Mapper;
@@ -46,6 +48,11 @@ import org.springframework.web.client.RestTemplate;
 )
 @Import(DotenvConfig.class)
 public class RootConfig {
+
+    @Bean
+    public Clock applicationClock() {
+        return Clock.system(ZoneId.of("Asia/Seoul"));
+    }
 
     /**
      * @PropertySource에 등록한 속성을 @Value 표현식에서 해석한다.

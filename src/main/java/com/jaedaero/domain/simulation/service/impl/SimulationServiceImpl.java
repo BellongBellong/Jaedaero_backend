@@ -30,26 +30,6 @@ public class SimulationServiceImpl implements SimulationService {
   private final SimulationCalculator simulationCalculator;
   private final Clock clock;
 
-  @Autowired
-  public SimulationServiceImpl(
-      SimulationMapper simulationMapper,
-      SimulationInputProvider simulationInputProvider,
-      SimulationCalculator simulationCalculator) {
-    this(simulationMapper, simulationInputProvider, simulationCalculator, Clock.systemDefaultZone());
-  }
-
-  /** Constructor with a clock so date-dependent calculations can be tested deterministically. */
-  public SimulationServiceImpl(
-      SimulationMapper simulationMapper,
-      SimulationInputProvider simulationInputProvider,
-      SimulationCalculator simulationCalculator,
-      Clock clock) {
-    this.simulationMapper = simulationMapper;
-    this.simulationInputProvider = simulationInputProvider;
-    this.simulationCalculator = simulationCalculator;
-    this.clock = clock;
-  }
-
   @Override
   @Transactional
   public SimulationResponse run(long userId, SimulationRequest request) {

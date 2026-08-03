@@ -15,13 +15,16 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SimulationServiceImplTest {
+
+  private static final Clock FIXED_CLOCK =
+      Clock.fixed(Instant.parse("2026-07-31T00:00:00Z"), ZoneOffset.UTC);
 
   @Test
   void previewIsCalculatedButNotPersisted_andSavedRequestCreatesHistory() {
@@ -37,11 +40,7 @@ class SimulationServiceImplTest {
                 new BigDecimal("5.00"),
                 550_000L);
     SimulationService service =
-        new SimulationServiceImpl(
-            mapper,
-            provider,
-            new SimulationCalculator(),
-            Clock.fixed(Instant.parse("2026-07-31T00:00:00Z"), ZoneId.of("Asia/Seoul")));
+        new SimulationServiceImpl(mapper, provider, new SimulationCalculator(), FIXED_CLOCK);
 
     SimulationResponse preview = service.run(1L, request(false));
 
