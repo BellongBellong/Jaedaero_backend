@@ -2,7 +2,7 @@ package com.jaedaero.domain.codef.connection;
 
 import java.util.List;
 
-/** Result of the CODEF account-create call. Keep connectedId inside the server boundary. */
+/** CODEF 계좌 생성 호출의 결과입니다. connectedId는 서버 경계 안에서만 보관합니다. */
 public class CodefAccountCreateResponse {
 
   private final String connectedId;

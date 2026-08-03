@@ -16,7 +16,6 @@ const commitTypes = [
     '🔒 Security',
     '🚨 Fix',
     '♻ Refactor',
-    '🔨 Refactor',
     '🔨 Modify',
     '🚚 Rename',
     '📝 Docs',

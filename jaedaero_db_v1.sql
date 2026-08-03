@@ -423,59 +423,59 @@ CREATE TABLE simulation (
 -- 17. ai_analysis : AI 분석 이력
 -- ---------------------------------------------
 CREATE TABLE ai_analysis (
-                             analysis_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'AI 분석 ID',
-                             user_id         BIGINT NOT NULL COMMENT '사용자 ID',
-                             snapshot_id     BIGINT NULL COMMENT '분석 기준 자산 스냅샷 ID',
-                             simulation_id   BIGINT NULL COMMENT '참조한 시뮬레이션 FK',
-                             analysis_type   ENUM(
-                                 'CONSUMPTION',
-                                 'SAVING',
-                                 'INVESTMENT',
-                                 'POLICY',
-                                 'DIAGNOSIS',
-                                 'SCENARIO_COMPARISON'
-                                 ) NOT NULL COMMENT '분석 유형',
-                             result_json     JSON NOT NULL COMMENT 'AI 분석 결과',
-                             input_data_hash CHAR(64) NULL COMMENT '분석 입력값 SHA-256 해시',
-                             model_name      VARCHAR(100) NULL COMMENT 'AI 모델명',
-                             prompt_version  VARCHAR(50) NULL COMMENT '프롬프트 버전',
-                             generation_source ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '원본 문구 생성 경로 — OpenAI 성공 또는 템플릿 대체; CACHE는 응답 시점 상태라 저장하지 않음',
-                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    analysis_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'AI 분석 ID',
+    user_id         BIGINT NOT NULL COMMENT '사용자 ID',
+    snapshot_id     BIGINT NULL COMMENT '분석 기준 자산 스냅샷 ID',
+    simulation_id   BIGINT NULL COMMENT '참조한 시뮬레이션 FK',
+    analysis_type   ENUM(
+        'CONSUMPTION',
+        'SAVING',
+        'INVESTMENT',
+        'POLICY',
+        'DIAGNOSIS',
+        'SCENARIO_COMPARISON'
+    ) NOT NULL COMMENT '분석 유형',
+    result_json     JSON NOT NULL COMMENT 'AI 분석 결과',
+    input_data_hash CHAR(64) NULL COMMENT '분석 입력값 SHA-256 해시',
+    model_name      VARCHAR(100) NULL COMMENT 'AI 모델명',
+    prompt_version  VARCHAR(50) NULL COMMENT '프롬프트 버전',
+    generation_source ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '원본 문구 생성 경로 — OpenAI 성공 또는 템플릿 대체; CACHE는 응답 시점 상태라 저장하지 않음',
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
-                             CONSTRAINT fk_ai_analysis_user
-                                 FOREIGN KEY (user_id) REFERENCES users(user_id)
-                                     ON DELETE CASCADE,
-                             CONSTRAINT fk_ai_analysis_snapshot
-                                 FOREIGN KEY (snapshot_id) REFERENCES asset_snapshot(snapshot_id)
-                                     ON DELETE SET NULL,
-                             CONSTRAINT fk_ai_analysis_simulation
-                                 FOREIGN KEY (simulation_id) REFERENCES simulation(simulation_id)
-                                     ON DELETE SET NULL,
-                             INDEX idx_ai_analysis_input_hash (input_data_hash)
+    CONSTRAINT fk_ai_analysis_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+            ON DELETE CASCADE,
+    CONSTRAINT fk_ai_analysis_snapshot
+        FOREIGN KEY (snapshot_id) REFERENCES asset_snapshot(snapshot_id)
+            ON DELETE SET NULL,
+    CONSTRAINT fk_ai_analysis_simulation
+        FOREIGN KEY (simulation_id) REFERENCES simulation(simulation_id)
+            ON DELETE SET NULL,
+    INDEX idx_ai_analysis_input_hash (input_data_hash)
 ) COMMENT='AI 분석 이력'
-    DEFAULT CHARSET=utf8mb4
-    COLLATE=utf8mb4_unicode_ci;
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
 -- 18. financial_product : 금융 상품
 -- ---------------------------------------------
 CREATE TABLE financial_product (
-                                   product_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '금융 상품 ID',
-                                   product_name        VARCHAR(255) NOT NULL COMMENT '상품명',
-                                   company_name        VARCHAR(100) NULL COMMENT '금융회사명',
-                                   product_type        VARCHAR(50) NULL COMMENT '상품 유형',
-                                   base_interest_rate  DECIMAL(5,2) NULL COMMENT '기본 금리',
-                                   max_interest_rate   DECIMAL(5,2) NULL COMMENT '최고 금리',
-                                   return_rate_1y      DECIMAL(6,2) NULL COMMENT '최근 1년 수익률',
-                                   risk_category       ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '위험 분류',
-                                   eligibility         TEXT NULL COMMENT '가입 조건',
-                                   description         TEXT NULL COMMENT '상품 설명',
-                                   source_url          VARCHAR(1000) NULL COMMENT '출처 URL',
-                                   as_of_date          DATE NULL COMMENT '정보 기준일',
-                                   status              ENUM('ACTIVE', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE' COMMENT '상품 상태',
-                                   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
-                                   updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                       ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+    product_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '금융 상품 ID',
+    product_name        VARCHAR(255) NOT NULL COMMENT '상품명',
+    company_name        VARCHAR(100) NULL COMMENT '금융회사명',
+    product_type        VARCHAR(50) NULL COMMENT '상품 유형',
+    base_interest_rate  DECIMAL(5,2) NULL COMMENT '기본 금리',
+    max_interest_rate   DECIMAL(5,2) NULL COMMENT '최고 금리',
+    return_rate_1y      DECIMAL(6,2) NULL COMMENT '최근 1년 수익률',
+    risk_category       ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '위험 분류',
+    eligibility         TEXT NULL COMMENT '가입 조건',
+    description         TEXT NULL COMMENT '상품 설명',
+    source_url          VARCHAR(1000) NULL COMMENT '출처 URL',
+    as_of_date          DATE NULL COMMENT '정보 기준일',
+    status              ENUM('ACTIVE', 'EXPIRED') NOT NULL DEFAULT 'ACTIVE' COMMENT '상품 상태',
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
                                    CONSTRAINT uq_financial_product UNIQUE (product_name, company_name)
 ) COMMENT='금융 상품 — 적금·예금·ETF 등 투자상품 통합 관리(2026-07-24, 상품추천을 다시 MVP로 재격상하며 확장). CODEF 카탈로그에 대응 API 없음, 금융감독원·ETF CHECK류 외부 소스 필요'

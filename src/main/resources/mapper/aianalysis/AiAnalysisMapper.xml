@@ -7,7 +7,7 @@
 
     <sql id="analysisColumns">
         analysis_id, user_id, snapshot_id, simulation_id, analysis_type, result_json,
-        input_data_hash, model_name, prompt_version, created_at
+        input_data_hash, model_name, prompt_version, generation_source, created_at
     </sql>
 
     <sql id="recommendedScenarioColumns">
@@ -20,10 +20,10 @@
             useGeneratedKeys="true" keyProperty="analysisId">
         INSERT INTO ai_analysis (
             user_id, snapshot_id, simulation_id, analysis_type, result_json,
-            input_data_hash, model_name, prompt_version
+            input_data_hash, model_name, prompt_version, generation_source
         ) VALUES (
             #{userId}, #{snapshotId}, #{simulationId}, #{analysisType}, #{resultJson},
-            #{inputDataHash}, #{modelName}, #{promptVersion}
+            #{inputDataHash}, #{modelName}, #{promptVersion}, #{generationSource}
         )
     </insert>
 
@@ -34,11 +34,12 @@
           AND user_id = #{userId}
     </select>
 
-    <select id="findLatestByUserIdAndInputDataHash" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
+    <select id="findLatestSuccessfulByUserIdAndInputDataHash" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
         SELECT <include refid="analysisColumns"/>
         FROM ai_analysis
         WHERE user_id = #{userId}
           AND input_data_hash = #{inputDataHash}
+          AND generation_source = 'OPENAI'
         ORDER BY created_at DESC, analysis_id DESC
         LIMIT 1
     </select>

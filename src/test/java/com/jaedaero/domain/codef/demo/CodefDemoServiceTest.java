@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.jaedaero.domain.codef.account.CodefAccountSyncService;
 import com.jaedaero.domain.codef.account.CodefSecuritiesInquiryService;
 import com.jaedaero.domain.codef.account.SecuritiesAssetResponse;
 import com.jaedaero.domain.codef.account.SecuritiesHoldingResponse;
@@ -25,7 +24,7 @@ class CodefDemoServiceTest {
                 account(2L, "0238", "ST", "SECURITIES", "종합", 0L),
                 account(3L, "0004", "BK", "대출", "신용대출", 9_999L)));
     StubSecuritiesInquiry inquiry = new StubSecuritiesInquiry(Map.of(2L, assets(50L, 300L, 150L)));
-    CodefDemoService service = service(repository, inquiry, 3);
+    CodefDemoService service = service(repository, inquiry);
 
     CodefDemoUnifiedAssets result = service.getUnifiedAssets(1L);
 
@@ -53,7 +52,7 @@ class CodefDemoServiceTest {
   void getUnifiedAssets_keepsCachedSecuritiesBalanceWhenIndividualInquiryFails() {
     StubRepository repository =
         new StubRepository(List.of(account(9L, "0238", "ST", "SECURITIES", "종합", 777L)));
-    CodefDemoService service = service(repository, new StubSecuritiesInquiry(Map.of()), 1);
+    CodefDemoService service = service(repository, new StubSecuritiesInquiry(Map.of()));
 
     CodefDemoUnifiedAccountAsset account =
         service.getUnifiedAssets(1L).getInstitutionGroups().get(0).getAccounts().get(0);
@@ -64,10 +63,9 @@ class CodefDemoServiceTest {
 
   private CodefDemoService service(
       CodefPersistenceRepository repository,
-      CodefSecuritiesInquiryService inquiry,
-      int refreshedCount) {
+      CodefSecuritiesInquiryService inquiry) {
     return new CodefDemoService(
-        repository, null, null, null, inquiry, new StubAccountSync(refreshedCount), null, null);
+        repository, null, null, null, inquiry, null, null);
   }
 
   private static StoredConnectedAccount account(
@@ -115,20 +113,6 @@ class CodefDemoServiceTest {
     @Override
     public List<StoredConnectedAccount> findAccountsByUserId(long userId) {
       return accounts;
-    }
-  }
-
-  private static class StubAccountSync extends CodefAccountSyncService {
-    private final int refreshedCount;
-
-    StubAccountSync(int refreshedCount) {
-      super(null, null, null, null);
-      this.refreshedCount = refreshedCount;
-    }
-
-    @Override
-    public int refreshAllAccounts(long userId) {
-      return refreshedCount;
     }
   }
 

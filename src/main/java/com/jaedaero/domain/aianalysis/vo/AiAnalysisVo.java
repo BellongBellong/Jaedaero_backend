@@ -1,5 +1,6 @@
 package com.jaedaero.domain.aianalysis.vo;
 
+import com.jaedaero.domain.aianalysis.dto.AiGenerationSource;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,5 +23,6 @@ public class AiAnalysisVo {
   private String inputDataHash;
   private String modelName;
   private String promptVersion;
+  private AiGenerationSource generationSource;
   private LocalDateTime createdAt;
 }

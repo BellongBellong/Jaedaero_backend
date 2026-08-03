@@ -7,7 +7,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 
-/** ID/password-only request for one bank or securities institution connection. */
+/** 은행 또는 증권 기관 하나를 ID/비밀번호만으로 연결하는 요청입니다. */
 @ApiModel(description = "온라인 거래 ID와 비밀번호로 금융기관을 CODEF에 연결하는 요청")
 public class CodefBankConnectionCreateRequest {
 
