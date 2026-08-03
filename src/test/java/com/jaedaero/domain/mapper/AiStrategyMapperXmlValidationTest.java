@@ -52,6 +52,12 @@ class AiStrategyMapperXmlValidationTest {
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.insert"));
     assertTrue(
         configuration.hasStatement(
+            "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.findLatestByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.findByUserId"));
+    assertTrue(
+        configuration.hasStatement(
             "com.jaedaero.domain.rebalancing.mapper.RebalancingRecommendationMapper.insert"));
     assertTrue(
         configuration.hasStatement(
