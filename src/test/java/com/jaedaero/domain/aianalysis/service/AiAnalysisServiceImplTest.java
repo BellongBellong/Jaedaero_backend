@@ -1,0 +1,145 @@
+package com.jaedaero.domain.aianalysis.service;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.jaedaero.domain.aianalysis.dto.AiAnalysisRequest;
+import com.jaedaero.domain.aianalysis.dto.AiAnalysisResponse;
+import com.jaedaero.domain.aianalysis.dto.AiGenerationSource;
+import com.jaedaero.domain.aianalysis.llm.AiCoachNarrative;
+import com.jaedaero.domain.aianalysis.llm.AiCoachNarrativeGenerationException;
+import com.jaedaero.domain.aianalysis.llm.AiCoachNarrativeGenerator;
+import com.jaedaero.domain.aianalysis.llm.AiGenerationTask;
+import com.jaedaero.domain.aianalysis.llm.OpenAiModel;
+import com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper;
+import com.jaedaero.domain.aianalysis.service.impl.AiAnalysisServiceImpl;
+import com.jaedaero.domain.aianalysis.vo.AiAnalysisType;
+import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
+import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
+import com.jaedaero.domain.simulation.mapper.SimulationMapper;
+import com.jaedaero.domain.simulation.service.SimulationCalculator;
+import com.jaedaero.domain.simulation.service.SimulationInput;
+import com.jaedaero.domain.simulation.vo.SimulationVo;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+
+class AiAnalysisServiceImplTest {
+
+  @Test
+  void sameBaselineInput_reusesStoredAnalysisAndRecommendation() {
+    InMemoryAiAnalysisMapper mapper = new InMemoryAiAnalysisMapper();
+    AiAnalysisInputProvider analysisInput =
+        userId ->
+            new AiAnalysisInput(
+                10L,
+                20L,
+                18_150_000L,
+                null,
+                new BigDecimal("90.75"),
+                20_000_000L,
+                LocalDate.of(2027, 9, 1),
+                180_000L);
+    com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
+        userId ->
+            new SimulationInput(
+                4_300_000L,
+                10_950_000L,
+                20_000_000L,
+                LocalDate.of(2027, 9, 1),
+                550_000L,
+                new BigDecimal("5.00"),
+                550_000L);
+    AiAnalysisService service =
+        new AiAnalysisServiceImpl(
+            mapper,
+            analysisInput,
+            new EmptySimulationMapper(),
+            simulationInput,
+            new SimulationCalculator(),
+            new ObjectMapper().registerModule(new JavaTimeModule()),
+            (model, prompt) -> new AiCoachNarrative("생성된 AI 코치 문구입니다.", "생성된 추천 사유입니다."));
+
+    AiAnalysisResponse first = service.analyze(1L, new AiAnalysisRequest());
+    AiAnalysisResponse second = service.analyze(1L, new AiAnalysisRequest());
+
+    assertEquals(AiAnalysisType.DIAGNOSIS, first.getAnalysisType());
+    assertEquals(first.getAnalysisId(), second.getAnalysisId());
+    assertEquals(1, mapper.analyses.size());
+    assertEquals(1, mapper.recommendations.size());
+    assertNotNull(second.getRecommendedScenario().getScenarioId());
+    assertEquals("생성된 AI 코치 문구입니다.", first.getComment());
+    assertEquals("생성된 추천 사유입니다.", first.getRecommendedScenario().getRecommendReason());
+    assertEquals("gpt-4o-mini", mapper.analyses.get(0).getModelName());
+    assertEquals(AiGenerationSource.OPENAI, mapper.analyses.get(0).getGenerationSource());
+    assertEquals(AiGenerationSource.OPENAI, first.getGenerationSource());
+    assertEquals(AiGenerationSource.CACHE, second.getGenerationSource());
+    AiAnalysisResponse detail = service.getDetail(1L, first.getAnalysisId());
+    assertEquals(first.getAnalysisId(), detail.getAnalysisId());
+    assertEquals(AiGenerationSource.OPENAI, detail.getGenerationSource());
+  }
+
+  @Test
+  void generationTasksUseServerAssignedModels() {
+    assertEquals(OpenAiModel.GPT_4O_MINI, AiGenerationTask.AI_COACH.model());
+    assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.TRANSACTION_CATEGORY.model());
+    assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.DAILY_MARKET_REPORT.model());
+    assertEquals(OpenAiModel.GPT_4O_MINI, AiGenerationTask.DISCHARGE_REPORT.model());
+  }
+
+  @Test
+  void narrativeFailure_isNotCachedAndNextAttemptUsesOpenAi() {
+    InMemoryAiAnalysisMapper mapper = new InMemoryAiAnalysisMapper();
+    AiAnalysisInputProvider analysisInput =
+        userId -> new AiAnalysisInput(10L, 20L, 18_150_000L, null, new BigDecimal("90.75"), 20_000_000L, LocalDate.of(2027, 9, 1), 180_000L);
+    com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
+        userId -> new SimulationInput(4_300_000L, 10_950_000L, 20_000_000L, LocalDate.of(2027, 9, 1), 550_000L, new BigDecimal("5.00"), 550_000L);
+    AtomicInteger generationAttempts = new AtomicInteger();
+    AiCoachNarrativeGenerator recoveringGenerator =
+        (model, prompt) -> {
+          if (generationAttempts.getAndIncrement() == 0) {
+            throw new AiCoachNarrativeGenerationException("network unavailable");
+          }
+          return new AiCoachNarrative("복구된 AI 코치 문구입니다.", "복구된 추천 사유입니다.");
+        };
+    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, new SimulationCalculator(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator);
+
+    AiAnalysisResponse fallback = service.analyze(1L, new AiAnalysisRequest());
+    AiAnalysisResponse recovered = service.analyze(1L, new AiAnalysisRequest());
+    AiAnalysisResponse cached = service.analyze(1L, new AiAnalysisRequest());
+
+    assertNotNull(fallback.getComment());
+    assertEquals(AiGenerationSource.FALLBACK, fallback.getGenerationSource());
+    assertEquals("openai-chat-v2", mapper.analyses.get(0).getPromptVersion());
+    assertEquals(AiGenerationSource.FALLBACK, mapper.analyses.get(0).getGenerationSource());
+    assertEquals(AiGenerationSource.OPENAI, recovered.getGenerationSource());
+    assertEquals("복구된 AI 코치 문구입니다.", recovered.getComment());
+    assertEquals(AiGenerationSource.CACHE, cached.getGenerationSource());
+    assertEquals(recovered.getAnalysisId(), cached.getAnalysisId());
+    assertEquals(2, generationAttempts.get());
+    assertEquals(2, mapper.analyses.size());
+    assertEquals(2, mapper.recommendations.size());
+  }
+
+  private static class EmptySimulationMapper implements SimulationMapper {
+    @Override public int insert(SimulationVo simulation) { return 0; }
+    @Override public SimulationVo findByIdAndUserId(long simulationId, long userId) { return null; }
+    @Override public List<SimulationVo> findByUserId(long userId, int offset, int limit) { return List.of(); }
+    @Override public long countByUserId(long userId) { return 0; }
+  }
+
+  private static class InMemoryAiAnalysisMapper implements AiAnalysisMapper {
+    private final List<AiAnalysisVo> analyses = new ArrayList<>();
+    private final List<AiRecommendedScenarioVo> recommendations = new ArrayList<>();
+    @Override public int insertAnalysis(AiAnalysisVo analysis) { analysis.setAnalysisId((long) analyses.size() + 1); analyses.add(analysis); return 1; }
+    @Override public AiAnalysisVo findAnalysisByIdAndUserId(long id, long userId) { return analyses.stream().filter(a -> a.getAnalysisId() == id && a.getUserId() == userId).findFirst().orElse(null); }
+    @Override public AiAnalysisVo findLatestSuccessfulByUserIdAndInputDataHash(long userId, String hash) { return analyses.stream().filter(a -> a.getUserId() == userId && a.getInputDataHash().equals(hash)).filter(a -> a.getGenerationSource() == AiGenerationSource.OPENAI).reduce((first, second) -> second).orElse(null); }
+    @Override public int insertRecommendedScenario(AiRecommendedScenarioVo scenario) { scenario.setScenarioId((long) recommendations.size() + 1); recommendations.add(scenario); return 1; }
+    @Override public AiRecommendedScenarioVo findRecommendedScenarioByIdAndUserId(long id, long userId) { return recommendations.stream().filter(s -> s.getScenarioId() == id && s.getUserId() == userId).findFirst().orElse(null); }
+  }
+}

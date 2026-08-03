@@ -13,7 +13,7 @@ public interface AiAnalysisMapper {
   AiAnalysisVo findAnalysisByIdAndUserId(
       @Param("analysisId") long analysisId, @Param("userId") long userId);
 
-  AiAnalysisVo findLatestByUserIdAndInputDataHash(
+  AiAnalysisVo findLatestSuccessfulByUserIdAndInputDataHash(
       @Param("userId") long userId, @Param("inputDataHash") String inputDataHash);
 
   int insertRecommendedScenario(AiRecommendedScenarioVo scenario);

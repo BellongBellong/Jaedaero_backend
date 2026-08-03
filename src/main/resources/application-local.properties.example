@@ -12,6 +12,10 @@ KAKAO_CLIENT_SECRET=your_kakao_client_secret_optional
 codef.client-id=your_codef_client_id
 codef.client-secret=your_codef_client_secret
 codef.public-key=your_codef_rsa_public_key
+
+# OpenAI Chat Completions 호환 프록시. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
+llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.cloudtype.app/v1/chat/completions
+# Models are assigned by server task policy; clients do not select them.
 llm.api-key=your_llm_api_key
 
 # Generate once with: openssl rand -base64 32
