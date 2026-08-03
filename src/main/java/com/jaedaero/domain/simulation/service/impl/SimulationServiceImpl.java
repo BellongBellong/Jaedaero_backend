@@ -12,6 +12,7 @@ import com.jaedaero.domain.simulation.service.SimulationInput;
 import com.jaedaero.domain.simulation.service.SimulationInputProvider;
 import com.jaedaero.domain.simulation.service.SimulationService;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -28,11 +29,12 @@ public class SimulationServiceImpl implements SimulationService {
   private final SimulationMapper simulationMapper;
   private final SimulationInputProvider simulationInputProvider;
   private final SimulationCalculator simulationCalculator;
+  private final Clock clock;
 
   @Override
   @Transactional
   public SimulationResponse run(long userId, SimulationRequest request) {
-    LocalDate today = LocalDate.now();
+    LocalDate today = LocalDate.now(clock);
     SimulationInput input = simulationInputProvider.load(userId);
     SimulationCalculationResult result = simulationCalculator.calculate(input, request, today);
     boolean isSaved = request.getIsSaved() == null || request.getIsSaved();
