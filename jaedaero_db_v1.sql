@@ -438,6 +438,7 @@ CREATE TABLE ai_analysis (
     input_data_hash CHAR(64) NULL COMMENT '분석 입력값 SHA-256 해시',
     model_name      VARCHAR(100) NULL COMMENT 'AI 모델명',
     prompt_version  VARCHAR(50) NULL COMMENT '프롬프트 버전',
+    generation_source ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '원본 문구 생성 경로 — OpenAI 성공 또는 템플릿 대체; CACHE는 응답 시점 상태라 저장하지 않음',
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
     CONSTRAINT fk_ai_analysis_user
