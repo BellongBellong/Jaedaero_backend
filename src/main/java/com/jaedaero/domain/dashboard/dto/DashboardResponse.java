@@ -2,6 +2,8 @@ package com.jaedaero.domain.dashboard.dto;
 
 import com.jaedaero.domain.cashflow.dto.CashflowForecastMonthResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -11,14 +13,30 @@ import lombok.Getter;
 
 @Getter
 @Builder
+@ApiModel(description = "홈 대시보드에 표시할 캐시플로우 요약 정보")
 public class DashboardResponse {
+  @ApiModelProperty(value = "재정 목표를 달성하는 예상 일자", example = "2027-03-15")
   private final LocalDate financialDischargeDate;
+
+  @ApiModelProperty(value = "프로필에 등록된 실제 전역일", example = "2027-06-20")
   private final LocalDate actualDischargeDate;
+
+  @ApiModelProperty(value = "실제 전역일 대비 재정적 전역일 차이(일). 양수면 실제 전역일보다 빠름", example = "97")
   private final Long deltaDaysVsActual;
+
+  @ApiModelProperty(value = "계산 기준 현재 자산", example = "1250000")
   private final Long currentAsset;
+
+  @ApiModelProperty(value = "실제 전역일까지의 예상 자산", example = "18250000")
   private final Long expectedAsset;
+
+  @ApiModelProperty(value = "목표 금액 대비 예상 자산 달성률(%)", example = "91.25")
   private final BigDecimal achievementRate;
+
+  @ApiModelProperty(value = "이번 달 예상 소비액", example = "0")
   private final Long thisMonthSpending;
+
+  @ApiModelProperty(value = "이번 달 예상 저축액", example = "550000")
   private final Long thisMonthSaving;
 
   public static DashboardResponse from(
