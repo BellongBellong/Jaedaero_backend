@@ -82,15 +82,22 @@ public class CashflowServiceImpl implements CashflowService {
   @Override
   @Transactional(readOnly = true)
   public CashflowForecastResponse getLatest(long userId) {
+    return getLatest(userId, Integer.MAX_VALUE);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public CashflowForecastResponse getLatest(long userId, int months) {
     CashflowForecastVo forecast = cashflowMapper.findLatestForecastByUserId(userId);
     if (forecast == null) {
       throw new CashflowException(CashflowErrorCode.NOT_FOUND, "생성된 캐시플로우 예측이 없습니다.");
     }
-    List<CashflowForecastMonthResponse> months =
+    List<CashflowForecastMonthResponse> forecastMonths =
         cashflowMapper.findMonthsByForecastId(forecast.getForecastId()).stream()
             .map(CashflowForecastMonthResponse::from)
+            .limit(months)
             .toList();
-    return CashflowForecastResponse.from(forecast, months);
+    return CashflowForecastResponse.from(forecast, forecastMonths);
   }
 
   private CashflowForecastMonthVo toVo(CashflowForecastMonthCalculation month) {

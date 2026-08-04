@@ -358,12 +358,6 @@ public class CodefDemoService {
             .orElse(null);
     String institutionCode = bankAccount == null ? "0004" : bankAccount.institutionCode();
     String institutionName = bankAccount == null ? "KB국민은행" : bankAccount.institutionName();
-    repository.updateAccountInstitutionByConnectionAndAccountHash(
-        connectionId,
-        accountHash,
-        institutionCode,
-        CodefBusinessType.BANK.getCode(),
-        institutionName);
     repository.upsertAccount(
         connectionId,
         institutionCode,
@@ -381,7 +375,8 @@ public class CodefDemoService {
 
     long accountId =
         repository
-            .findAccountIdByConnectionAndAccountHash(connectionId, accountHash)
+            .findAccountIdByConnectionInstitutionAndAccountHash(
+                connectionId, institutionCode, accountHash)
             .orElseThrow(() -> new IllegalStateException("데모 적금 계좌를 저장하지 못했습니다."));
     repository.upsertSoldierSaving(
         userId,

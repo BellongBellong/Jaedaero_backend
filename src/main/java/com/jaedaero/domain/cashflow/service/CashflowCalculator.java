@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class CashflowCalculator {
 
+  /** Initial allocation used until a synchronized soldier-savings amount is available. */
+  public static final long DEFAULT_MONTHLY_INVESTMENT_AMOUNT = 550_000L;
+  public static final long DEFAULT_MONTHLY_SPENDING_AMOUNT = 0L;
+
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
 
   public CashflowCalculator(DefaultMilitaryPayPolicy militaryPayPolicy) {
@@ -45,33 +49,38 @@ public class CashflowCalculator {
       DefaultMilitaryPayPolicy.MilitaryPay pay =
           militaryPayPolicy.resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), month);
       long requiredSaving = requiredSaving(input.targetAmount(), asset, remainingMonths);
-      long spending = input.monthlySpendingAverage();
+      long spending = Math.max(DEFAULT_MONTHLY_SPENDING_AMOUNT, input.monthlySpendingAverage());
       long monthlySaving =
-          savings.stream()
-              .filter(saving -> !month.isAfter(saving.maturityMonth()))
-              .mapToLong(saving -> saving.input().monthlyAmount())
-              .sum();
+          hasSoldierSavings
+              ? savings.stream()
+                  .filter(saving -> !month.isAfter(saving.maturityMonth()))
+                  .mapToLong(saving -> saving.input().monthlyAmount())
+                  .sum()
+              : Math.max(DEFAULT_MONTHLY_INVESTMENT_AMOUNT, requiredSaving);
       long spendingLimit =
-          Math.max(0L, pay.monthlySalary() - (hasSoldierSavings ? monthlySaving : requiredSaving));
+          Math.max(0L, pay.monthlySalary() - monthlySaving);
       long maturityBonus =
           savings.stream()
               .filter(saving -> month.equals(saving.maturityMonth()))
               .mapToLong(SavingMaturity::bonus)
               .sum();
 
+      long assetBeforeMonth = asset;
       asset += pay.monthlySalary() - spending + maturityBonus;
       expectedSalary += pay.monthlySalary();
-      if (!hasSoldierSavings) expectedSavingAmount += requiredSaving;
+      if (!hasSoldierSavings) expectedSavingAmount += monthlySaving;
       if (index == 0) firstMonthSpendingLimit = spendingLimit;
-      if (financialDischargeDate == null && asset >= input.targetAmount()) {
-        financialDischargeDate = month.atDay(1);
+      if (financialDischargeDate == null) {
+        financialDischargeDate =
+            estimatedFinancialDischargeDate(
+                assetBeforeMonth, asset, input.targetAmount(), calculationDate, month);
       }
       months.add(
           new CashflowForecastMonthCalculation(
               month.atDay(1),
               pay.rankName(),
               pay.monthlySalary(),
-              hasSoldierSavings ? monthlySaving : requiredSaving,
+              monthlySaving,
               spending,
               asset));
     }
@@ -93,6 +102,35 @@ public class CashflowCalculator {
   private long requiredSaving(long targetAmount, long asset, int remainingMonths) {
     long remainingAmount = Math.max(0L, targetAmount - asset);
     return (remainingAmount + remainingMonths - 1) / remainingMonths;
+  }
+
+  /**
+   * Estimates the day within the month that the target is reached by spreading that month's net
+   * asset increase evenly across the remaining calendar days. It is an estimate because salaries,
+   * spending, and maturity benefits are currently forecast monthly.
+   */
+  private LocalDate estimatedFinancialDischargeDate(
+      long assetBeforeMonth,
+      long assetAfterMonth,
+      long targetAmount,
+      LocalDate calculationDate,
+      YearMonth forecastMonth) {
+    if (assetBeforeMonth >= targetAmount || assetAfterMonth < targetAmount) {
+      return null;
+    }
+    long monthlyNetIncrease = assetAfterMonth - assetBeforeMonth;
+    if (monthlyNetIncrease <= 0L) {
+      return null;
+    }
+
+    LocalDate periodStart =
+        forecastMonth.equals(YearMonth.from(calculationDate))
+            ? calculationDate
+            : forecastMonth.atDay(1);
+    int remainingDays = (int) ChronoUnit.DAYS.between(periodStart, forecastMonth.atEndOfMonth()) + 1;
+    long amountNeeded = targetAmount - assetBeforeMonth;
+    long daysToReach = (amountNeeded * remainingDays + monthlyNetIncrease - 1) / monthlyNetIncrease;
+    return periodStart.plusDays(daysToReach - 1);
   }
 
   private List<SavingMaturity> savingsMaturingByDischarge(

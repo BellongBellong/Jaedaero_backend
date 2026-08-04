@@ -273,33 +273,17 @@ public class CodefPersistenceRepository {
   }
 
   /** Finds a locally seeded account after an idempotent account upsert. */
-  public Optional<Long> findAccountIdByConnectionAndAccountHash(
-      long connectionId, String accountNumberHash) {
+  public Optional<Long> findAccountIdByConnectionInstitutionAndAccountHash(
+      long connectionId, String institutionCode, String accountNumberHash) {
     List<Long> accountIds =
         jdbcTemplate.query(
             "SELECT account_id FROM connected_account WHERE connection_id = ? "
-                + "AND account_number_hash = ? AND status = 'ACTIVE'",
+                + "AND institution_code = ? AND account_number_hash = ? AND status = 'ACTIVE'",
             (rs, rowNum) -> rs.getLong("account_id"),
             connectionId,
+            institutionCode,
             accountNumberHash);
     return accountIds.stream().findFirst();
-  }
-
-  /** Keeps an existing mock account under the same institution as the selected bank account. */
-  public void updateAccountInstitutionByConnectionAndAccountHash(
-      long connectionId,
-      String accountNumberHash,
-      String institutionCode,
-      String businessType,
-      String institutionName) {
-    jdbcTemplate.update(
-        "UPDATE connected_account SET institution_code = ?, business_type = ?, institution_name = ? "
-            + "WHERE connection_id = ? AND account_number_hash = ?",
-        institutionCode,
-        businessType,
-        institutionName,
-        connectionId,
-        accountNumberHash);
   }
 
   public boolean isTransactionPeriodCovered(

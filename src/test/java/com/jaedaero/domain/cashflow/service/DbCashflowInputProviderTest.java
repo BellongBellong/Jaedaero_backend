@@ -91,5 +91,10 @@ class DbCashflowInputProviderTest {
     public List<CashflowForecastMonthVo> findMonthsByForecastId(long forecastId) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public LocalDate findDischargeDateByUserId(long userId) {
+      throw new UnsupportedOperationException();
+    }
   }
 }
