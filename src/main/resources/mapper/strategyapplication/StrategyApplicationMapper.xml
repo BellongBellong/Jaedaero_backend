@@ -28,11 +28,29 @@
         )
     </insert>
 
+    <select id="findByIdAndUserId"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE application_id = #{applicationId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE user_id = #{userId}
+        ORDER BY applied_at DESC, application_id DESC
+        LIMIT 1
+    </select>
+
     <select id="findByUserId"
             resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
         SELECT <include refid="strategyApplicationColumns"/>
         FROM strategy_application
         WHERE user_id = #{userId}
         ORDER BY applied_at DESC, application_id DESC
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 </mapper>

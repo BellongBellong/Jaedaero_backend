@@ -10,5 +10,13 @@ public interface StrategyApplicationMapper {
 
   int insert(StrategyApplicationVo strategyApplication);
 
-  List<StrategyApplicationVo> findByUserId(@Param("userId") long userId);
+  StrategyApplicationVo findByIdAndUserId(
+      @Param("applicationId") long applicationId, @Param("userId") long userId);
+
+  StrategyApplicationVo findLatestByUserId(@Param("userId") long userId);
+
+  List<StrategyApplicationVo> findByUserId(
+      @Param("userId") long userId,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
 }

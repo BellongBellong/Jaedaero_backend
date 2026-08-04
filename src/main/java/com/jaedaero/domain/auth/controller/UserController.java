@@ -7,6 +7,10 @@ import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.NicknameException;
 import com.jaedaero.domain.auth.service.NicknameService;
 import com.jaedaero.domain.auth.service.ProfileAppearanceService;
+import com.jaedaero.domain.mypage.dto.MyPageProfileResponse;
+import com.jaedaero.domain.mypage.dto.InvestmentBadgeResponse;
+import com.jaedaero.domain.mypage.service.MyPageService;
+import java.util.List;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -21,6 +25,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +42,42 @@ public class UserController {
 
   private final NicknameService nicknameService;
   private final ProfileAppearanceService profileAppearanceService;
+  private final MyPageService myPageService;
+
+  @GetMapping("/me")
+  @ApiOperation(value = "마이페이지 프로필 조회")
+  @ApiResponses({
+    @ApiResponse(code = 200, message = "조회 성공", response = MyPageProfileResponse.class),
+    @ApiResponse(code = 401, message = "인증 필요"),
+    @ApiResponse(code = 404, message = "사용자를 찾을 수 없음")
+  })
+  public ResponseEntity<MyPageProfileResponse> getMyPageProfile(
+      @ApiIgnore Authentication authentication) {
+    return ResponseEntity.ok(myPageService.getProfile(getAuthenticatedUserId(authentication)));
+  }
+
+  @GetMapping("/investment-badges")
+  @ApiOperation(value = "투자 뱃지 획득 내역 조회")
+  public ResponseEntity<List<InvestmentBadgeResponse>> getInvestmentBadges(
+      @ApiIgnore Authentication authentication,
+      @RequestParam(defaultValue = "0") @javax.validation.constraints.Min(0) int page,
+      @RequestParam(defaultValue = "20") @javax.validation.constraints.Min(1)
+          @javax.validation.constraints.Max(100) int size) {
+    return ResponseEntity.ok(
+        myPageService.getInvestmentBadges(getAuthenticatedUserId(authentication), page, size));
+  }
+
+  @DeleteMapping("/me")
+  @ApiOperation(value = "회원 탈퇴")
+  @ApiResponses({
+    @ApiResponse(code = 204, message = "탈퇴 성공"),
+    @ApiResponse(code = 401, message = "인증 필요"),
+    @ApiResponse(code = 404, message = "사용자를 찾을 수 없음")
+  })
+  public ResponseEntity<Void> withdraw(@ApiIgnore Authentication authentication) {
+    myPageService.withdraw(getAuthenticatedUserId(authentication));
+    return ResponseEntity.noContent().build();
+  }
 
   @GetMapping("/nickname/availability")
   @ApiOperation(value = "닉네임 중복 확인", notes = "현재 사용자를 제외하고 닉네임 사용 가능 여부를 확인합니다.")
