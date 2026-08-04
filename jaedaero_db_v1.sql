@@ -12,6 +12,8 @@ DROP TABLE IF EXISTS `device_token`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
 DROP TABLE IF EXISTS `investment_badge`;
+DROP TABLE IF EXISTS `user_badge`;
+DROP TABLE IF EXISTS `badge`;
 DROP TABLE IF EXISTS `user_mission_completion`;
 DROP TABLE IF EXISTS `user_mission_progress`;
 DROP TABLE IF EXISTS `mission`;
@@ -27,6 +29,7 @@ DROP TABLE IF EXISTS `military_benefit`;
 DROP TABLE IF EXISTS `financial_product`;
 DROP TABLE IF EXISTS `ai_analysis`;
 DROP TABLE IF EXISTS `simulation`;
+DROP TABLE IF EXISTS `challenge_member_summary`;
 DROP TABLE IF EXISTS `challenge_monthly_result`;
 DROP TABLE IF EXISTS `challenge_member`;
 DROP TABLE IF EXISTS `challenge_group`;
@@ -369,7 +372,7 @@ CREATE TABLE challenge_member (
                                   CONSTRAINT fk_challenge_member_user
                                       FOREIGN KEY (user_id) REFERENCES users(user_id)
                                           ON DELETE CASCADE
-) COMMENT='챌린지 참여자 — saving_rate/ranking_no는 challenge_monthly_result로 이력화(현재값 캐시 아님)'
+) COMMENT='챌린지 참여자 — 미션 완료 수와 순위는 챌린지 결과 테이블로 이력화(현재값 캐시 아님)'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -380,7 +383,7 @@ CREATE TABLE challenge_monthly_result (
                                           challenge_result_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '월별 챌린지 결과 ID',
                                           member_id           BIGINT NOT NULL COMMENT '챌린지 참여 ID',
                                           result_month         DATE NOT NULL COMMENT '결과 월의 첫날',
-                                          saving_rate          DECIMAL(5,2) NOT NULL COMMENT '저축률',
+                                          mission_completion_count INT NOT NULL DEFAULT 0 COMMENT '해당 월 미션 완료 수',
                                           ranking_no           INT NULL COMMENT '동기 그룹 내 순위',
                                           created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
@@ -389,14 +392,33 @@ CREATE TABLE challenge_monthly_result (
                                           CONSTRAINT fk_challenge_monthly_result_member
                                               FOREIGN KEY (member_id) REFERENCES challenge_member(member_id)
                                                   ON DELETE CASCADE,
-                                          CONSTRAINT chk_challenge_monthly_result_saving_rate
-                                              CHECK (saving_rate BETWEEN 0 AND 100)
-) COMMENT='월별 챌린지 결과 — 일 배치에서 재계산되는 값, 매월 새 행으로 누적'
+                                          CONSTRAINT chk_challenge_monthly_result_completion_count
+                                              CHECK (mission_completion_count >= 0)
+) COMMENT='월별 챌린지 결과 — 월별 미션 완료 수와 동기 그룹 내 순위 이력'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 16. simulation : 사용자 What-if 시뮬레이션
+-- 16. challenge_member_summary : 챌린지 참여자 누적 현황
+-- ---------------------------------------------
+CREATE TABLE challenge_member_summary (
+                                           member_id               BIGINT PRIMARY KEY COMMENT '챌린지 참여 ID',
+                                           total_mission_count     INT NOT NULL DEFAULT 0 COMMENT '누적 미션 완료 수',
+                                           overall_ranking_no      INT NULL COMMENT '전체 기간 동기 그룹 내 순위',
+                                           updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                               ON UPDATE CURRENT_TIMESTAMP COMMENT '집계 갱신 일시',
+
+                                           CONSTRAINT fk_challenge_member_summary_member
+                                               FOREIGN KEY (member_id) REFERENCES challenge_member(member_id)
+                                                   ON DELETE CASCADE,
+                                           CONSTRAINT chk_challenge_member_summary_mission_count
+                                               CHECK (total_mission_count >= 0)
+) COMMENT='챌린지 참여자의 누적 미션 완료 수와 전체 동기 랭킹용 집계값'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 17. simulation : 사용자 What-if 시뮬레이션
 -- ---------------------------------------------
 CREATE TABLE simulation (
     simulation_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '시뮬레이션 ID',
@@ -736,12 +758,24 @@ CREATE TABLE refresh_token (
 CREATE TABLE mission (
                          mission_id      BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 ID',
                          mission_type    ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '연관 투자성향',
+                         mission_category ENUM('DAILY', 'MONTHLY', 'PAYDAY', 'LEAVE_MODE') NOT NULL DEFAULT 'DAILY' COMMENT '미션 노출 주기 및 분류',
+                         mission_scope   ENUM('ALL', 'SAFE', 'AGGRESSIVE', 'LEAVE_MODE') NOT NULL DEFAULT 'ALL' COMMENT '미션 대상 사용자 범위',
                          title           VARCHAR(255) NOT NULL COMMENT '미션명 (예: 30일 연속 출석 체크, ETF 첫 투자 미션)',
                          description     TEXT NULL COMMENT '미션 설명',
                          action_type     VARCHAR(50) NOT NULL COMMENT '완료 조건 유형 (ATTENDANCE, PRODUCT_VIEW, SAVING_CHECK, SIMULATION_RUN 등)',
+                         default_target_count INT NOT NULL DEFAULT 1 COMMENT '기본 완료 목표 횟수',
+                         display_order   INT NOT NULL DEFAULT 0 COMMENT '화면 노출 순서',
+                         reward_point    INT NOT NULL DEFAULT 0 COMMENT '미션 완료 보상 포인트',
                          is_repeatable   BOOLEAN NOT NULL DEFAULT FALSE COMMENT '반복(일일) 미션 여부',
                          is_active       BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
-                         created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시'
+                         created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                         CONSTRAINT chk_mission_target_count
+                             CHECK (default_target_count > 0),
+                         CONSTRAINT chk_mission_display_order
+                             CHECK (display_order >= 0),
+                         CONSTRAINT chk_mission_reward_point
+                             CHECK (reward_point >= 0)
 ) COMMENT='미션 마스터 — 투자 뱃지 산정 기준 + 오늘의 미션 겸용(2026-07-25)'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
@@ -803,7 +837,79 @@ CREATE TABLE user_mission_completion (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 29. investment_badge : 투자 뱃지
+-- 29. badge : 뱃지 마스터
+-- ---------------------------------------------
+CREATE TABLE badge (
+                         badge_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '뱃지 ID',
+                         badge_name        VARCHAR(100) NOT NULL COMMENT '뱃지명',
+                         badge_description VARCHAR(500) NULL COMMENT '뱃지 획득 조건 설명',
+                         badge_type        ENUM('MISSION_COUNT', 'SAVING_RATE', 'CHALLENGE_RANK') NOT NULL COMMENT '뱃지 달성 기준 유형',
+                         mission_type      ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '미션 완료 수 뱃지의 투자 성향',
+                         condition_value   DECIMAL(10,2) NOT NULL COMMENT '뱃지 획득 기준값',
+                         grade             ENUM('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND') NOT NULL COMMENT '뱃지 등급',
+                         image_url         VARCHAR(500) NULL COMMENT '뱃지 이미지 URL',
+                         is_active         BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
+                         created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                         CONSTRAINT uq_badge_name UNIQUE (badge_name),
+                         CONSTRAINT chk_badge_condition_value
+                             CHECK (condition_value >= 0),
+                         CONSTRAINT chk_badge_mission_type
+                             CHECK (
+                                 badge_type <> 'MISSION_COUNT'
+                                     OR mission_type IS NOT NULL
+                             )
+) COMMENT='성향별 미션 완료 수, 저축률, 챌린지 순위 달성 기준을 정의하는 뱃지 마스터'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 뱃지 마스터 초기 데이터 : 성향별 미션 완료 수 티어
+-- ---------------------------------------------
+INSERT INTO badge (
+    badge_name,
+    badge_description,
+    badge_type,
+    mission_type,
+    condition_value,
+    grade,
+    image_url,
+    is_active
+) VALUES
+    ('안정형 브론즈', '안정형 미션 1개 완료', 'MISSION_COUNT', 'SAFE', 1, 'BRONZE', NULL, TRUE),
+    ('안정형 실버', '안정형 미션 10개 완료', 'MISSION_COUNT', 'SAFE', 10, 'SILVER', NULL, TRUE),
+    ('안정형 골드', '안정형 미션 100개 완료', 'MISSION_COUNT', 'SAFE', 100, 'GOLD', NULL, TRUE),
+    ('안정형 플래티넘', '안정형 미션 300개 완료', 'MISSION_COUNT', 'SAFE', 300, 'PLATINUM', NULL, TRUE),
+    ('안정형 다이아', '안정형 미션 1,000개 완료', 'MISSION_COUNT', 'SAFE', 1000, 'DIAMOND', NULL, TRUE),
+    ('공격형 브론즈', '공격형 미션 1개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 1, 'BRONZE', NULL, TRUE),
+    ('공격형 실버', '공격형 미션 10개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 10, 'SILVER', NULL, TRUE),
+    ('공격형 골드', '공격형 미션 100개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 100, 'GOLD', NULL, TRUE),
+    ('공격형 플래티넘', '공격형 미션 300개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 300, 'PLATINUM', NULL, TRUE),
+    ('공격형 다이아', '공격형 미션 1,000개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 1000, 'DIAMOND', NULL, TRUE);
+
+-- ---------------------------------------------
+-- 30. user_badge : 사용자 뱃지 보유 이력
+-- ---------------------------------------------
+CREATE TABLE user_badge (
+                              user_badge_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 뱃지 ID',
+                              user_id           BIGINT NOT NULL COMMENT '사용자 ID',
+                              badge_id          BIGINT NOT NULL COMMENT '뱃지 ID',
+                              is_representative BOOLEAN NOT NULL DEFAULT FALSE COMMENT '대표 뱃지 여부',
+                              acquired_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '획득 일시',
+
+                              CONSTRAINT uq_user_badge UNIQUE (user_id, badge_id),
+                              CONSTRAINT fk_user_badge_user
+                                  FOREIGN KEY (user_id) REFERENCES users(user_id)
+                                      ON DELETE CASCADE,
+                              CONSTRAINT fk_user_badge_badge
+                                  FOREIGN KEY (badge_id) REFERENCES badge(badge_id)
+                                      ON DELETE CASCADE
+) COMMENT='사용자가 획득한 뱃지와 대표 뱃지 설정 정보'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 31. investment_badge : 투자 뱃지
 -- ---------------------------------------------
 CREATE TABLE investment_badge (
                                   badge_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 뱃지 ID',
