@@ -1,5 +1,5 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.0, 2026-07-30)
+-- JAEDAERO Database Schema (ERD_v1.1, 2026-08-04)
 -- MySQL 8.0+
 -- ============================================================
 
@@ -17,6 +17,8 @@ DROP TABLE IF EXISTS `mission`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `discharge_report`;
 DROP TABLE IF EXISTS `strategy_application`;
+DROP TABLE IF EXISTS `investment_guidance`;
+DROP TABLE IF EXISTS `recurring_investment_plan`;
 DROP TABLE IF EXISTS `rebalancing_recommendation`;
 DROP TABLE IF EXISTS `ai_recommended_scenario`;
 DROP TABLE IF EXISTS `product_recommendation`;
@@ -113,7 +115,7 @@ CREATE TABLE user_agreement (
 CREATE TABLE goal (
     goal_id       BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '목표 ID',
     user_id       BIGINT NOT NULL COMMENT '사용자 ID',
-    target_amount BIGINT NOT NULL COMMENT '목표 금액',
+    target_amount BIGINT NOT NULL DEFAULT 0 COMMENT '전역 자산 목표. 0은 목표 미설정 sentinel',
     target_date   DATE NULL COMMENT '목표 달성 목표일',
     status        ENUM('ACTIVE', 'COMPLETED', 'ARCHIVED') NOT NULL DEFAULT 'ACTIVE' COMMENT '목표 상태',
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -233,6 +235,7 @@ CREATE TABLE connected_account (
     account_number_encrypted  VARCHAR(1024) NOT NULL COMMENT '암호화된 실제 계좌번호',
     account_number_hash       CHAR(64) NOT NULL COMMENT '계좌번호 SHA-256 해시',
     account_masked            VARCHAR(50) NOT NULL COMMENT '화면 표시용 마스킹 계좌번호',
+    business_type             ENUM('BK', 'ST') NOT NULL DEFAULT 'BK' COMMENT 'CODEF 업무 구분(BK 은행, ST 증권)',
     account_type              VARCHAR(50) NULL COMMENT '계좌유형',
     account_role              ENUM('SOLDIER_SAVING', 'NARASARANG', 'GENERAL') NOT NULL DEFAULT 'GENERAL' COMMENT '계좌 분류',
     product_name               VARCHAR(255) NULL COMMENT '상품명',
@@ -398,6 +401,7 @@ CREATE TABLE simulation (
     simulation_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '시뮬레이션 ID',
     user_id                  BIGINT NOT NULL COMMENT '사용자 ID',
     scenario_name             VARCHAR(100) NOT NULL COMMENT '시나리오명',
+    target_amount             BIGINT NOT NULL COMMENT '시나리오 평가 목표금액 스냅샷',
     monthly_saving_amount    BIGINT NOT NULL COMMENT '월 저축액(원)',
     investment_ratio          DECIMAL(5,2) NOT NULL COMMENT '투자 비율(%, 0~100)',
     expected_return_rate      DECIMAL(5,2) NOT NULL COMMENT '사용자 입력 목표 투자수익률(%, 연 환산 가정)',
@@ -413,7 +417,9 @@ CREATE TABLE simulation (
         FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE,
     CONSTRAINT chk_simulation_investment_ratio
-        CHECK (investment_ratio BETWEEN 0 AND 100)
+        CHECK (investment_ratio BETWEEN 0 AND 100),
+    CONSTRAINT chk_simulation_target_amount
+        CHECK (target_amount > 0)
 ) COMMENT='사용자 What-if 시뮬레이션 — 누적 저장(강사 피드백 반영), GET /simulations(목록)·GET /simulations/{id}(상세)로 재조회'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
@@ -550,38 +556,103 @@ CREATE TABLE ai_recommended_scenario (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 22. rebalancing_recommendation : 리밸런싱/글라이드패스 추천
+-- 22. recurring_investment_plan : 사용자 적립식 위험자산 투자 계획
 -- ---------------------------------------------
-CREATE TABLE rebalancing_recommendation (
-    rebalancing_id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '리밸런싱 추천 ID',
-    user_id                       BIGINT NOT NULL COMMENT '사용자 ID',
-    remaining_service_days        INT NOT NULL COMMENT '추천 시점 기준 잔여 복무일',
-    recommended_safe_ratio        DECIMAL(5,2) NOT NULL COMMENT '추천 안정자산 비중(%)',
-    recommended_balanced_ratio    DECIMAL(5,2) NOT NULL COMMENT '추천 균형자산 비중(%)',
-    recommended_aggressive_ratio  DECIMAL(5,2) NOT NULL COMMENT '추천 공격자산 비중(%)',
-    recommend_reason              TEXT NULL COMMENT '추천 사유(시장상황+잔여복무일 근거 서술, Gemini 선택적 사용)',
-    created_at                    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+CREATE TABLE recurring_investment_plan (
+    plan_id                  BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '적립식 투자 계획 ID',
+    user_id                  BIGINT NOT NULL COMMENT '사용자 ID',
+    brokerage_account_id     BIGINT NOT NULL COMMENT '사용자가 선택한 증권 계좌 ID',
+    frequency                ENUM('WEEKLY', 'MONTHLY') NOT NULL COMMENT '적립 주기',
+    contribution_day         TINYINT UNSIGNED NOT NULL COMMENT '주간 1(월)~7(일), 월간 1~28',
+    contribution_amount      BIGINT NOT NULL COMMENT '회차당 현재 적립 예정 금액',
+    maximum_monthly_amount   BIGINT NOT NULL COMMENT '사용자가 설정한 월 최대 투자한도',
+    investment_product_code  VARCHAR(100) NOT NULL COMMENT '사용자가 선택한 투자 대상 코드',
+    investment_product_name  VARCHAR(255) NOT NULL COMMENT '사용자가 선택한 투자 대상명',
+    status                   ENUM('ACTIVE', 'PAUSED', 'SAFE_FOCUS') NOT NULL DEFAULT 'ACTIVE' COMMENT '내부 적립 계획 상태',
+    next_contribution_date   DATE NULL COMMENT '다음 내부 적립 예정일',
+    created_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    updated_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
-    CONSTRAINT fk_rebalancing_recommendation_user
+    CONSTRAINT uq_recurring_investment_plan_user UNIQUE (user_id),
+    CONSTRAINT fk_recurring_investment_plan_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE,
-    CONSTRAINT chk_rebalancing_ratio_sum CHECK (
-        recommended_safe_ratio + recommended_balanced_ratio + recommended_aggressive_ratio BETWEEN 99.00 AND 101.00
-    )
-) COMMENT='리밸런싱/글라이드패스 추천 — 시장상황 + 잔여복무일 기반(2026-07-25)'
+    CONSTRAINT fk_recurring_investment_plan_account
+        FOREIGN KEY (brokerage_account_id) REFERENCES connected_account(account_id)
+            ON DELETE RESTRICT,
+    CONSTRAINT chk_recurring_investment_plan_amounts
+        CHECK (contribution_amount >= 0 AND maximum_monthly_amount >= 0),
+    CONSTRAINT chk_recurring_investment_plan_day
+        CHECK (
+            (frequency = 'WEEKLY' AND contribution_day BETWEEN 1 AND 7)
+            OR (frequency = 'MONTHLY' AND contribution_day BETWEEN 1 AND 28)
+        )
+) COMMENT='사용자가 직접 설정한 정기 위험자산 적립 계획. 실제 증권 주문은 수행하지 않음'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 23. strategy_application : 전략 적용 이력
+-- 23. investment_guidance : 목표 기반 다음 적립금 가이드
+-- ---------------------------------------------
+CREATE TABLE investment_guidance (
+    guidance_id                     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 가이드 ID',
+    user_id                         BIGINT NOT NULL COMMENT '사용자 ID',
+    plan_id                         BIGINT NOT NULL COMMENT '계산에 사용한 적립 계획 ID',
+    plan_updated_at                 TIMESTAMP NOT NULL COMMENT '계산에 사용한 적립 계획 버전 시각',
+    input_data_hash                 CHAR(64) NOT NULL COMMENT '계획·목표·예측·증권평가 입력 해시',
+    service_stage                   ENUM('PRIVATE_BASE', 'PRIVATE_FIRST_CLASS_GROWTH', 'CORPORAL_CHECK', 'SERGEANT_PREPARE') NOT NULL COMMENT '계급 기반 UI 여정 단계',
+    action_type                     ENUM('START', 'CONTINUE', 'REDUCE', 'PAUSE', 'SAFE_FOCUS', 'REVIEW') NOT NULL COMMENT '다음 적립 회차 행동 가이드',
+    target_amount                   BIGINT NOT NULL COMMENT '전역 목표금액',
+    current_contribution_amount     BIGINT NOT NULL COMMENT '현재 회차당 적립금',
+    recommended_contribution_amount BIGINT NOT NULL COMMENT '추천 회차당 적립금',
+    continue_expected_asset         BIGINT NOT NULL COMMENT '현재 계획 유지 시 전역 예상자산',
+    recommended_expected_asset      BIGINT NOT NULL COMMENT '추천 계획 적용 시 전역 예상자산',
+    investment_principal            BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 매입원금',
+    market_value                    BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가금액',
+    unrealized_profit_loss          BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가손익',
+    return_rate                     DECIMAL(9,4) NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 수익률(%)',
+    expected_return_rate            DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '결정론 계산에 사용한 연 예상수익률(%)',
+    remaining_contribution_count    INT NOT NULL DEFAULT 0 COMMENT '전역일까지 남은 적립 회차 수',
+    safety_buffer_amount            BIGINT NOT NULL DEFAULT 0 COMMENT 'SAFE_FOCUS 판정용 안전 여유금',
+    reason                          TEXT NOT NULL COMMENT '가이드 설명. 숫자와 행동은 Spring이 결정',
+    market_data_as_of               TIMESTAMP NULL COMMENT '증권 평가 데이터 기준시각',
+    next_review_at                  TIMESTAMP NOT NULL COMMENT '다음 가이드 계산 예정시각',
+    created_at                      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+    INDEX idx_investment_guidance_user_created (user_id, created_at, guidance_id),
+    INDEX idx_investment_guidance_user_hash (user_id, input_data_hash),
+    CONSTRAINT fk_investment_guidance_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+            ON DELETE CASCADE,
+    CONSTRAINT fk_investment_guidance_plan
+        FOREIGN KEY (plan_id) REFERENCES recurring_investment_plan(plan_id)
+            ON DELETE CASCADE,
+    CONSTRAINT chk_investment_guidance_amounts
+        CHECK (
+            target_amount >= 0
+            AND current_contribution_amount >= 0
+            AND recommended_contribution_amount >= 0
+            AND remaining_contribution_count >= 0
+            AND safety_buffer_amount >= 0
+        )
+) COMMENT='증권 평가와 전역 목표를 반영한 다음 적립금 가이드. 자동 매도·자동 주문 없음'
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 24. strategy_application : 전략 적용 이력
 -- ---------------------------------------------
 CREATE TABLE strategy_application (
     application_id                   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '전략 적용 ID',
     user_id                          BIGINT NOT NULL COMMENT '사용자 ID',
-    source_type                      ENUM('SIMULATION', 'AI_RECOMMENDATION', 'REBALANCING', 'MANUAL') NOT NULL COMMENT '적용 출처',
+    source_type                      ENUM('SIMULATION', 'AI_RECOMMENDATION', 'INVESTMENT_GUIDANCE', 'MANUAL') NOT NULL COMMENT '적용 출처',
     simulation_id                    BIGINT NULL COMMENT '원본 시뮬레이션 ID',
     ai_scenario_id                   BIGINT NULL COMMENT '원본 AI 추천 시나리오 ID',
-    rebalancing_id                   BIGINT NULL COMMENT '원본 리밸런싱 추천 ID',
+    guidance_id                      BIGINT NULL COMMENT '원본 적립식 투자 가이드 ID',
+    applied_guidance_action          ENUM('START', 'CONTINUE', 'REDUCE', 'PAUSE', 'SAFE_FOCUS') NULL COMMENT '사용자가 실제 선택한 가이드 행동',
+    applied_investment_frequency     ENUM('WEEKLY', 'MONTHLY') NULL COMMENT '적용한 적립 주기',
+    applied_recurring_contribution_amount BIGINT NULL COMMENT '적용한 회차당 위험자산 적립금',
     applied_monthly_saving_amount    BIGINT NULL COMMENT '적용 월 저축액',
     applied_investment_ratio         DECIMAL(5,2) NULL COMMENT '적용 투자 비율(%)',
     applied_expected_return_rate     DECIMAL(5,2) NULL COMMENT '적용 목표 투자수익률',
@@ -599,20 +670,27 @@ CREATE TABLE strategy_application (
     CONSTRAINT fk_strategy_application_ai_scenario
         FOREIGN KEY (ai_scenario_id) REFERENCES ai_recommended_scenario(scenario_id)
             ON DELETE SET NULL,
-    CONSTRAINT fk_strategy_application_rebalancing
-        FOREIGN KEY (rebalancing_id) REFERENCES rebalancing_recommendation(rebalancing_id)
+    CONSTRAINT fk_strategy_application_guidance
+        FOREIGN KEY (guidance_id) REFERENCES investment_guidance(guidance_id)
             ON DELETE SET NULL,
+    CONSTRAINT uq_strategy_application_guidance_selection
+        UNIQUE (user_id, guidance_id, applied_guidance_action, applied_investment_frequency, applied_recurring_contribution_amount),
     CONSTRAINT chk_strategy_application_investment_ratio
         CHECK (
             applied_investment_ratio IS NULL
                 OR applied_investment_ratio BETWEEN 0 AND 100
+        ),
+    CONSTRAINT chk_strategy_application_recurring_amount
+        CHECK (
+            applied_recurring_contribution_amount IS NULL
+                OR applied_recurring_contribution_amount >= 0
         )
-) COMMENT='전략 적용 이력 — POST /ai-analyses/{id}/apply 등 "적용하기" 액션의 감사 기록'
+) COMMENT='AI 추천과 적립식 투자 가이드의 "적용하기" 감사 기록. 실제 금융 주문은 수행하지 않음'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 24. discharge_report : 전역 리포트
+-- 25. discharge_report : 전역 리포트
 -- ---------------------------------------------
 CREATE TABLE discharge_report (
     report_id             BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '전역 리포트 ID',
@@ -633,7 +711,7 @@ CREATE TABLE discharge_report (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 25. refresh_token : JWT Refresh Token 관리
+-- 26. refresh_token : JWT Refresh Token 관리
 -- ---------------------------------------------
 CREATE TABLE refresh_token (
     token_id    BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '토큰 ID',
@@ -652,7 +730,7 @@ CREATE TABLE refresh_token (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 26. mission : 미션 마스터
+-- 27. mission : 미션 마스터
 -- ---------------------------------------------
 CREATE TABLE mission (
     mission_id      BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 ID',
@@ -668,7 +746,7 @@ CREATE TABLE mission (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 27. user_mission_completion : 사용자별 미션 완료 이력
+-- 28. user_mission_completion : 사용자별 미션 완료 이력
 -- ---------------------------------------------
 CREATE TABLE user_mission_completion (
     completion_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 완료 ID',
@@ -690,7 +768,7 @@ CREATE TABLE user_mission_completion (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 28. investment_badge : 투자 뱃지
+-- 29. investment_badge : 투자 뱃지
 -- ---------------------------------------------
 CREATE TABLE investment_badge (
     badge_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 뱃지 ID',
@@ -713,7 +791,7 @@ CREATE TABLE investment_badge (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 29. leave_mode : 휴가모드
+-- 30. leave_mode : 휴가모드
 -- ---------------------------------------------
 CREATE TABLE leave_mode (
     leave_mode_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '휴가모드 ID',
@@ -731,7 +809,7 @@ CREATE TABLE leave_mode (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 30. daily_market_report : 오늘의 AI투자리포트
+-- 31. daily_market_report : 오늘의 AI투자리포트
 -- ---------------------------------------------
 CREATE TABLE daily_market_report (
     report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
@@ -748,7 +826,7 @@ CREATE TABLE daily_market_report (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 31. device_token : FCM 디바이스 토큰
+-- 32. device_token : FCM 디바이스 토큰
 -- ---------------------------------------------
 CREATE TABLE device_token (
     device_token_id  BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '디바이스 토큰 ID',
@@ -769,7 +847,7 @@ CREATE TABLE device_token (
   COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 32. notification_history : 알림 발송 이력
+-- 33. notification_history : 알림 발송 이력
 -- ---------------------------------------------
 CREATE TABLE notification_history (
     notification_id    BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '알림 ID',
