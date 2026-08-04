@@ -45,6 +45,18 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <select id="findInvestmentBadgeStatus" parameterType="long" resultType="com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo">
+        SELECT
+            initial_preference,
+            badge_tier,
+            safe_grade,
+            aggressive_grade,
+            safe_count AS safe_mission_count,
+            aggressive_count AS aggressive_mission_count
+        FROM investment_badge
+        WHERE user_id = #{userId}
+    </select>
+
     <update id="withdraw" parameterType="long">
         UPDATE users SET is_withdrawn = TRUE, withdrawn_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId} AND is_withdrawn = FALSE

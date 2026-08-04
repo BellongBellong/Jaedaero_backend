@@ -3,12 +3,14 @@ package com.jaedaero.domain.mypage.service.impl;
 import com.jaedaero.domain.auth.mapper.AuthUserMapper;
 import com.jaedaero.domain.mypage.dto.BadgeSummaryResponse;
 import com.jaedaero.domain.mypage.dto.InvestmentBadgeResponse;
+import com.jaedaero.domain.mypage.dto.InvestmentBadgeStatusResponse;
 import com.jaedaero.domain.mypage.dto.MyPageProfileResponse;
 import com.jaedaero.domain.mypage.exception.MyPageErrorCode;
 import com.jaedaero.domain.mypage.exception.MyPageException;
 import com.jaedaero.domain.mypage.mapper.MyPageMapper;
 import com.jaedaero.domain.mypage.service.MyPageService;
 import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
+import com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,22 @@ public class MyPageServiceImpl implements MyPageService {
         profile.getSoldierType(),
         profile.getMilitaryRank(),
         new BadgeSummaryResponse(
-            myPageMapper.countEarnedBadges(userId), myPageMapper.findRecentBadgeCodes(userId)));
+            myPageMapper.countEarnedBadges(userId), myPageMapper.findRecentBadgeCodes(userId)),
+        toInvestmentBadgeStatus(myPageMapper.findInvestmentBadgeStatus(userId)));
+  }
+
+  private InvestmentBadgeStatusResponse toInvestmentBadgeStatus(InvestmentBadgeStatusVo badgeStatus) {
+    if (badgeStatus == null) {
+      return new InvestmentBadgeStatusResponse(null, null, null, null, 0, 0, 0);
+    }
+    return new InvestmentBadgeStatusResponse(
+        badgeStatus.getInitialPreference(),
+        badgeStatus.getBadgeTier(),
+        badgeStatus.getSafeGrade(),
+        badgeStatus.getAggressiveGrade(),
+        badgeStatus.getSafeMissionCount(),
+        badgeStatus.getAggressiveMissionCount(),
+        badgeStatus.getSafeMissionCount() + badgeStatus.getAggressiveMissionCount());
   }
 
   @Override
