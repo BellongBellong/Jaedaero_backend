@@ -1,6 +1,8 @@
 package com.jaedaero.domain.dashboard.service;
 
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
+import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
+import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
@@ -30,10 +32,21 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional
   public DashboardResponse get(long userId) {
-    CashflowForecastResponse cashflow = cashflowService.getLatest(userId);
+    CashflowForecastResponse cashflow = latestOrGenerate(userId);
     return DashboardResponse.from(
         cashflow, dashboardMapper.findActualDischargeDateByUserId(userId), LocalDate.now(clock));
+  }
+
+  private CashflowForecastResponse latestOrGenerate(long userId) {
+    try {
+      return cashflowService.getLatest(userId);
+    } catch (CashflowException exception) {
+      if (exception.getErrorCode() != CashflowErrorCode.NOT_FOUND) {
+        throw exception;
+      }
+      return cashflowService.generate(userId);
+    }
   }
 }
