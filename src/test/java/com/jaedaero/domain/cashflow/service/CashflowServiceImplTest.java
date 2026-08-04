@@ -46,6 +46,17 @@ class CashflowServiceImplTest {
     assertThrows(CashflowException.class, () -> service(new InMemoryCashflowMapper()).getLatest(1L));
   }
 
+  @Test
+  void latestLimitsMonthlyRowsToRequestedMonths() {
+    InMemoryCashflowMapper mapper = new InMemoryCashflowMapper();
+    CashflowService service = service(mapper);
+    service.generate(1L);
+
+    CashflowForecastResponse latest = service.getLatest(1L, 2);
+
+    assertEquals(2, latest.getMonths().size());
+  }
+
   private CashflowService service(InMemoryCashflowMapper mapper) {
     CashflowInputProvider inputProvider =
         userId ->
@@ -105,6 +116,11 @@ class CashflowServiceImplTest {
     @Override
     public List<CashflowForecastMonthVo> findMonthsByForecastId(long forecastId) {
       return months.stream().filter(month -> forecastId == month.getForecastId()).toList();
+    }
+
+    @Override
+    public LocalDate findDischargeDateByUserId(long userId) {
+      return LocalDate.of(2027, 6, 1);
     }
   }
 }

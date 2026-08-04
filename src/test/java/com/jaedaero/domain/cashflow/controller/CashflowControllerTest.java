@@ -16,6 +16,30 @@ import org.springframework.security.core.authority.AuthorityUtils;
 class CashflowControllerTest {
 
   @Test
+  void getCashflowUsesAuthenticatedUserAndReturnsOk() {
+    RecordingCashflowService service = new RecordingCashflowService();
+    CashflowController controller = new CashflowController(service);
+    UsernamePasswordAuthenticationToken authentication =
+        new UsernamePasswordAuthenticationToken("7", "password", Collections.emptyList());
+
+    var response = controller.getCashflow(6, authentication);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(7L, service.latestUserId);
+    assertEquals(6, service.requestedMonths);
+  }
+
+  @Test
+  void anonymousUserIsRejected() {
+    CashflowController controller = new CashflowController(new RecordingCashflowService());
+    AnonymousAuthenticationToken anonymous =
+        new AnonymousAuthenticationToken(
+            "key", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+
+    assertThrows(CashflowException.class, () -> controller.getCashflow(6, anonymous));
+  }
+
+  @Test
   void generateUsesAuthenticatedUserAndReturnsCreated() {
     RecordingCashflowService service = new RecordingCashflowService();
     CashflowController controller = new CashflowController(service);
@@ -28,18 +52,10 @@ class CashflowControllerTest {
     assertEquals(7L, service.generatedUserId);
   }
 
-  @Test
-  void anonymousUserIsRejected() {
-    CashflowController controller = new CashflowController(new RecordingCashflowService());
-    AnonymousAuthenticationToken anonymous =
-        new AnonymousAuthenticationToken(
-            "key", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-
-    assertThrows(CashflowException.class, () -> controller.getLatest(anonymous));
-  }
-
   private static class RecordingCashflowService implements CashflowService {
+    private long latestUserId;
     private long generatedUserId;
+    private int requestedMonths;
 
     @Override
     public CashflowForecastResponse generate(long userId) {
@@ -49,6 +65,13 @@ class CashflowControllerTest {
 
     @Override
     public CashflowForecastResponse getLatest(long userId) {
+      return CashflowForecastResponse.builder().forecastId(1L).build();
+    }
+
+    @Override
+    public CashflowForecastResponse getLatest(long userId, int months) {
+      latestUserId = userId;
+      requestedMonths = months;
       return CashflowForecastResponse.builder().forecastId(1L).build();
     }
   }
