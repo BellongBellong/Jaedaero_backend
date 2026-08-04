@@ -104,8 +104,18 @@ class CashflowCalculatorTest {
             LocalDate.of(2026, 1, 10));
 
     assertEquals(LocalDate.of(2026, 1, 10), result.financialDischargeDate());
-    assertEquals(0L, result.months().get(0).expectedSavingAmount());
-    assertEquals(200_000L, result.monthlySpendingLimit());
+    assertEquals(550_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(0L, result.monthlySpendingLimit());
+  }
+
+  @Test
+  void estimatesFinancialDischargeDayWithinTheTargetMonth() {
+    CashflowForecastCalculation result =
+        calculator.calculate(
+            input(0L, 100_000L, 0L, LocalDate.of(2026, 1, 31)),
+            LocalDate.of(2026, 1, 10));
+
+    assertEquals(LocalDate.of(2026, 1, 20), result.financialDischargeDate());
   }
 
   @Test
@@ -115,6 +125,8 @@ class CashflowCalculatorTest {
             input(0L, 0L, 0L, LocalDate.of(2026, 1, 1)), LocalDate.of(2026, 1, 10));
 
     assertEquals(100D, result.achievementRate());
+    assertEquals(550_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(0L, result.months().get(0).expectedSpendingAmount());
   }
 
   @Test

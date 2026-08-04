@@ -89,4 +89,10 @@
         WHERE forecast_id = #{forecastId}
         ORDER BY forecast_month ASC
     </select>
+
+    <select id="findDischargeDateByUserId" resultType="java.time.LocalDate">
+        SELECT discharge_date
+        FROM soldier_profile
+        WHERE user_id = #{userId}
+    </select>
 </mapper>

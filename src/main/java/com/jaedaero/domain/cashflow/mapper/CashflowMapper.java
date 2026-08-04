@@ -4,6 +4,7 @@ import com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastVo;
 import com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo;
 import com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo;
+import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -23,4 +24,6 @@ public interface CashflowMapper {
   CashflowForecastVo findLatestForecastByUserId(@Param("userId") long userId);
 
   List<CashflowForecastMonthVo> findMonthsByForecastId(@Param("forecastId") long forecastId);
+
+  LocalDate findDischargeDateByUserId(@Param("userId") long userId);
 }
