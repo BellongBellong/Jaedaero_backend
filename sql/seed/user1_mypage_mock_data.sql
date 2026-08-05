@@ -90,4 +90,22 @@ ON DUPLICATE KEY UPDATE
     aggressive_count = VALUES(aggressive_count),
     aggressive_grade = VALUES(aggressive_grade);
 
+-- 누적 미션 수를 충족한 뱃지의 실제 획득 이력을 생성합니다.
+DELETE FROM user_badge
+WHERE user_id = @user1_id;
+
+INSERT INTO user_badge (user_id, badge_id, acquired_at)
+SELECT
+    @user1_id,
+    b.badge_id,
+    TIMESTAMP('2026-08-05 09:41:00')
+FROM badge b
+JOIN investment_badge ib ON ib.user_id = @user1_id
+WHERE b.is_active = TRUE
+  AND b.required_completion_count <= CASE
+      WHEN b.mission_type = 'SAFE' THEN ib.safe_count
+      WHEN b.mission_type = 'AGGRESSIVE' THEN ib.aggressive_count
+      ELSE 0
+  END;
+
 COMMIT;
