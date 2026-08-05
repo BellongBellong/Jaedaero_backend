@@ -52,6 +52,7 @@ public class SimulationServiceImpl implements SimulationService {
         SimulationVo.builder()
             .userId(userId)
             .scenarioName(defaultScenarioName(request.getScenarioName(), today))
+            .targetAmount(input.targetAmount())
             .monthlySavingAmount(request.getMonthlySavingAmount())
             .investmentRatio(request.getInvestmentRatio())
             .expectedReturnRate(request.getExpectedReturnRate())

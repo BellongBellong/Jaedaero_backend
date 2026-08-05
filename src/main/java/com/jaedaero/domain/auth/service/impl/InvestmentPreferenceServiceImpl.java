@@ -1,7 +1,7 @@
 package com.jaedaero.domain.auth.service.impl;
 
-import com.jaedaero.domain.auth.dto.InvestmentPreferencePreviewResponse;
 import com.jaedaero.domain.auth.dto.InvestmentPreferenceRequest;
+import com.jaedaero.domain.auth.dto.InvestmentPreferenceResponse;
 import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.InvestmentPreferenceException;
 import com.jaedaero.domain.auth.mapper.InvestmentPreferenceMapper;
@@ -19,7 +19,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
   /** 사용자의 투자 성향과 목표 금액을 저장합니다. */
   @Override
   @Transactional
-  public InvestmentPreferencePreviewResponse registerInvestmentPreference(
+  public InvestmentPreferenceResponse registerInvestmentPreference(
       long userId, InvestmentPreferenceRequest request) {
     validateRequest(request);
     if (investmentPreferenceMapper.countActiveUserByUserId(userId) == 0) {
@@ -28,7 +28,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
 
     investmentPreferenceMapper.upsertInitialPreference(userId, request.getInvestmentPreference());
     investmentPreferenceMapper.upsertGoalTargetAmount(userId, request.getTargetAmount());
-    return new InvestmentPreferencePreviewResponse(
+    return new InvestmentPreferenceResponse(
         true, request.getInvestmentPreference(), request.getTargetAmount());
   }
 
@@ -37,7 +37,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
     if (request == null
         || request.getInvestmentPreference() == null
         || request.getTargetAmount() == null
-        || request.getTargetAmount() < 0) {
+        || request.getTargetAmount() <= 0) {
       throw new InvestmentPreferenceException(
           AuthErrorCode.INVALID_TARGET_AMOUNT, "투자 성향과 목표 금액을 올바르게 입력해야 합니다.");
     }

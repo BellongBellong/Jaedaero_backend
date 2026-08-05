@@ -61,9 +61,19 @@ public class MyPageServiceImpl implements MyPageService {
   /** 사용자가 획득한 투자 뱃지를 페이지 단위로 조회합니다. */
   @Override
   @Transactional(readOnly = true)
-  public List<InvestmentBadgeResponse> getInvestmentBadges(long userId, int page, int size) {
-    return myPageMapper.findInvestmentBadges(userId, page * size, size).stream()
-        .map(badge -> new InvestmentBadgeResponse(badge.getBadgeCode(), badge.getUpdatedAt()))
+  public List<InvestmentBadgeResponse> getInvestmentBadges(long userId) {
+    return myPageMapper.findInvestmentBadges(userId).stream()
+        .map(
+            badge ->
+                new InvestmentBadgeResponse(
+                    badge.getBadgeName(),
+                    badge.getBadgeDescription(),
+                    badge.getMissionType(),
+                    badge.getGrade(),
+                    badge.getRequiredMissionCount(),
+                    badge.getMissionCompletedCount(),
+                    badge.isAchieved(),
+                    badge.getAcquiredAt()))
         .collect(Collectors.toList());
   }
 

@@ -8,6 +8,8 @@ import com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper;
 import com.jaedaero.domain.aianalysis.service.AiAnalysisInputProvider;
 import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
 import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
+import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
+import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.strategyapplication.dto.StrategyApplicationResponse;
 import com.jaedaero.domain.strategyapplication.exception.StrategyApplicationErrorCode;
 import com.jaedaero.domain.strategyapplication.exception.StrategyApplicationException;
@@ -27,6 +29,7 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
   private final StrategyApplicationMapper strategyApplicationMapper;
   private final AiAnalysisMapper aiAnalysisMapper;
   private final AiAnalysisInputProvider aiAnalysisInputProvider;
+  private final CashflowService cashflowService;
   private final ObjectMapper objectMapper;
 
   @Override
@@ -39,11 +42,7 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
     }
 
     AiRecommendedScenarioVo recommendation = recommendation(analysis, userId);
-    StrategyApplicationVo latest = strategyApplicationMapper.findLatestByUserId(userId);
-    long beforeExpectedAsset =
-        latest != null && latest.getAfterExpectedAsset() != null
-            ? latest.getAfterExpectedAsset()
-            : aiAnalysisInputProvider.load(userId).expectedAsset();
+    long beforeExpectedAsset = aiAnalysisInputProvider.load(userId).expectedAsset();
 
     StrategyApplicationVo application =
         StrategyApplicationVo.builder()
@@ -55,9 +54,14 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
             .appliedExpectedReturnRate(recommendation.getExpectedReturnRate())
             .appliedMonthlySpendingAmount(recommendation.getMonthlySpendingAmount())
             .beforeExpectedAsset(beforeExpectedAsset)
-            .afterExpectedAsset(recommendation.getExpectedAsset())
             .build();
     strategyApplicationMapper.insert(application);
+
+    // 최신 strategy_application이 현재 적용 상태다. 새 상태로 캐시플로우를 즉시 다시 계산한다.
+    CashflowForecastResponse recalculated = cashflowService.generate(userId);
+    application.setAfterExpectedAsset(recalculated.getExpectedAsset());
+    strategyApplicationMapper.updateAfterExpectedAsset(
+        application.getApplicationId(), userId, recalculated.getExpectedAsset());
 
     StrategyApplicationVo saved =
         strategyApplicationMapper.findByIdAndUserId(application.getApplicationId(), userId);

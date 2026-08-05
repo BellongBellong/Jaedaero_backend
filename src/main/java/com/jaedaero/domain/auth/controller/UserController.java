@@ -45,7 +45,7 @@ public class UserController {
   private final MyPageService myPageService;
 
   @GetMapping("/me")
-  @ApiOperation(value = "마이페이지 프로필 조회")
+  @ApiOperation(value = "마이페이지 회원 정보 조회")
   @ApiResponses({
     @ApiResponse(code = 200, message = "조회 성공", response = MyPageProfileResponse.class),
     @ApiResponse(code = 401, message = "인증 필요"),
@@ -58,13 +58,14 @@ public class UserController {
 
   @GetMapping("/investment-badges")
   @ApiOperation(value = "투자 뱃지 획득 내역 조회")
+  @ApiResponses({
+    @ApiResponse(code = 200, message = "조회 성공", response = InvestmentBadgeResponse.class),
+    @ApiResponse(code = 401, message = "인증 필요")
+  })
   public ResponseEntity<List<InvestmentBadgeResponse>> getInvestmentBadges(
-      @ApiIgnore Authentication authentication,
-      @RequestParam(defaultValue = "0") @javax.validation.constraints.Min(0) int page,
-      @RequestParam(defaultValue = "20") @javax.validation.constraints.Min(1)
-          @javax.validation.constraints.Max(100) int size) {
+      @ApiIgnore Authentication authentication) {
     return ResponseEntity.ok(
-        myPageService.getInvestmentBadges(getAuthenticatedUserId(authentication), page, size));
+        myPageService.getInvestmentBadges(getAuthenticatedUserId(authentication)));
   }
 
   @DeleteMapping("/me")
