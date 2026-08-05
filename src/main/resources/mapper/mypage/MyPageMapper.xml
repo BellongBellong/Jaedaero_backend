@@ -33,16 +33,29 @@
     </select>
 
     <select id="findInvestmentBadges" resultType="com.jaedaero.domain.mypage.vo.InvestmentBadgeVo">
-        SELECT badge_code, updated_at
-        FROM (
-            SELECT CONCAT('TIER_', badge_tier) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND badge_tier IS NOT NULL
-            UNION ALL
-            SELECT CONCAT('SAFE_', safe_grade) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND safe_grade IS NOT NULL
-            UNION ALL
-            SELECT CONCAT('AGGRESSIVE_', aggressive_grade) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND aggressive_grade IS NOT NULL
-        ) badges
-        ORDER BY updated_at DESC, badge_code ASC
-        LIMIT #{size} OFFSET #{offset}
+        SELECT
+            b.badge_name,
+            b.badge_description,
+            b.mission_type,
+            b.grade,
+            b.required_completion_count AS required_mission_count,
+            CASE
+                WHEN b.mission_type = 'SAFE' THEN COALESCE(ib.safe_count, 0)
+                WHEN b.mission_type = 'AGGRESSIVE' THEN COALESCE(ib.aggressive_count, 0)
+                ELSE 0
+            END AS mission_completed_count,
+            CASE
+                WHEN b.mission_type = 'SAFE' THEN COALESCE(ib.safe_count, 0) >= b.required_completion_count
+                WHEN b.mission_type = 'AGGRESSIVE' THEN COALESCE(ib.aggressive_count, 0) >= b.required_completion_count
+                ELSE FALSE
+            END AS achieved,
+            b.image_url
+        FROM badge b
+        LEFT JOIN investment_badge ib ON ib.user_id = #{userId}
+        WHERE b.is_active = TRUE
+        ORDER BY
+            FIELD(b.mission_type, 'SAFE', 'AGGRESSIVE'),
+            b.required_completion_count ASC
     </select>
 
     <select id="findInvestmentBadgeStatus" parameterType="long" resultType="com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo">

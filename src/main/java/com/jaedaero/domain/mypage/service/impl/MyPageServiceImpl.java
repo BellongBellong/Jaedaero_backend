@@ -58,9 +58,19 @@ public class MyPageServiceImpl implements MyPageService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<InvestmentBadgeResponse> getInvestmentBadges(long userId, int page, int size) {
-    return myPageMapper.findInvestmentBadges(userId, page * size, size).stream()
-        .map(badge -> new InvestmentBadgeResponse(badge.getBadgeCode(), badge.getUpdatedAt()))
+  public List<InvestmentBadgeResponse> getInvestmentBadges(long userId) {
+    return myPageMapper.findInvestmentBadges(userId).stream()
+        .map(
+            badge ->
+                new InvestmentBadgeResponse(
+                    badge.getBadgeName(),
+                    badge.getBadgeDescription(),
+                    badge.getMissionType(),
+                    badge.getGrade(),
+                    badge.getRequiredMissionCount(),
+                    badge.getMissionCompletedCount(),
+                    badge.isAchieved(),
+                    badge.getImageUrl()))
         .collect(Collectors.toList());
   }
 

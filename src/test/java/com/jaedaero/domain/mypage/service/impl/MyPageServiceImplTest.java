@@ -50,6 +50,21 @@ class MyPageServiceImplTest {
   }
 
   @Test
+  void returnsAllInvestmentBadgeProgressesWithoutPagination() {
+    StubMyPageMapper myPageMapper = new StubMyPageMapper();
+    InvestmentBadgeVo badge = new InvestmentBadgeVo();
+    badge.setBadgeName("공격형 플래티넘");
+    badge.setRequiredMissionCount(100);
+    badge.setMissionCompletedCount(105);
+    badge.setAchieved(true);
+    myPageMapper.investmentBadges = List.of(badge);
+    MyPageServiceImpl service = new MyPageServiceImpl(myPageMapper, new StubAuthUserMapper());
+
+    assertEquals("공격형 플래티넘", service.getInvestmentBadges(1L).get(0).getBadgeName());
+    assertEquals(105, service.getInvestmentBadges(1L).get(0).getMissionCompletedCount());
+  }
+
+  @Test
   void withdrawsUserAndDeletesRefreshTokens() {
     StubMyPageMapper myPageMapper = new StubMyPageMapper();
     StubAuthUserMapper authUserMapper = new StubAuthUserMapper();
@@ -65,12 +80,13 @@ class MyPageServiceImplTest {
     private MyPageProfileVo profile;
     private int badgeCount;
     private List<String> badgeCodes = List.of();
+    private List<InvestmentBadgeVo> investmentBadges = List.of();
     private long withdrawnUserId;
 
     @Override public MyPageProfileVo findActiveProfile(long userId) { return profile; }
     @Override public int countEarnedBadges(long userId) { return badgeCount; }
     @Override public List<String> findRecentBadgeCodes(long userId) { return badgeCodes; }
-    @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId, int offset, int size) { return List.of(); }
+    @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId) { return investmentBadges; }
     @Override public InvestmentBadgeStatusVo findInvestmentBadgeStatus(long userId) { return null; }
     @Override public int withdraw(long userId) { withdrawnUserId = userId; return 1; }
   }

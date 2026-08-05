@@ -1,12 +1,18 @@
 package com.jaedaero.domain.mypage.vo;
 
-import java.time.LocalDateTime;
+import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 public class InvestmentBadgeVo {
-  private String badgeCode;
-  private LocalDateTime updatedAt;
+  private String badgeName;
+  private String badgeDescription;
+  private InvestmentPreference missionType;
+  private String grade;
+  private int requiredMissionCount;
+  private int missionCompletedCount;
+  private boolean achieved;
+  private String imageUrl;
 }
