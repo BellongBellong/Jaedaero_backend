@@ -11,6 +11,9 @@ import com.jaedaero.domain.simulation.dto.SimulationResponse;
 import com.jaedaero.domain.simulation.mapper.SimulationMapper;
 import com.jaedaero.domain.simulation.service.impl.SimulationServiceImpl;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
+import com.jaedaero.domain.auth.common.enums.SoldierType;
+import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
+import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -35,26 +38,26 @@ class SimulationServiceImplTest {
         userId ->
             new SimulationInput(
                 4_300_000L,
-                10_950_000L,
                 20_000_000L,
-                LocalDate.of(2027, 9, 1),
-                550_000L,
-                new BigDecimal("5.00"),
-                550_000L);
+                SoldierType.ARMY,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2027, 9, 1));
     SimulationService service =
-        new SimulationServiceImpl(mapper, provider, new SimulationCalculator(), FIXED_CLOCK);
+        new SimulationServiceImpl(mapper, provider, simulationCalculator(), FIXED_CLOCK);
 
     SimulationResponse preview = service.run(1L, request(false));
 
     assertFalse(preview.getIsSaved());
     assertNull(preview.getSimulationId());
     assertEquals(0, mapper.countByUserId(1L));
-    assertEquals(16_914_492L, preview.getExpectedAsset());
+    assertEquals(19_900_000L, preview.getExpectedAsset());
+    assertEquals(20_000_000L, preview.getTargetAmount());
 
     SimulationResponse saved = service.run(1L, request(true));
 
     assertTrue(saved.getIsSaved());
     assertEquals(1L, saved.getSimulationId());
+    assertEquals(20_000_000L, saved.getTargetAmount());
     SimulationHistoryResponse history = service.getHistory(1L, 0, 20);
     assertEquals(1, history.getTotalCount());
     assertEquals(saved.getSimulationId(), history.getSimulations().get(0).getSimulationId());
@@ -68,6 +71,19 @@ class SimulationServiceImplTest {
     request.setExpectedReturnRate(new BigDecimal("5.00"));
     request.setIsSaved(isSaved);
     return request;
+  }
+
+  private SimulationCalculator simulationCalculator() {
+    MilitaryPayPolicyMapper payMapper =
+        (soldierType, rankName, monthStart, monthEnd) ->
+            switch (rankName) {
+              case "이병" -> 750_000L;
+              case "일병" -> 900_000L;
+              case "상병" -> 1_200_000L;
+              case "병장" -> 1_500_000L;
+              default -> null;
+            };
+    return new SimulationCalculator(new DefaultMilitaryPayPolicy(payMapper));
   }
 
   private static class InMemorySimulationMapper implements SimulationMapper {

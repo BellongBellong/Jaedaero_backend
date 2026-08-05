@@ -25,6 +25,17 @@ class GoalServiceImplTest {
   }
 
   @Test
+  void returnsCurrentTargetAmount() {
+    StubGoalMapper mapper = new StubGoalMapper();
+    mapper.targetAmount = 20_000_000L;
+    GoalServiceImpl service = new GoalServiceImpl(mapper);
+
+    GoalResponse response = service.getGoal(1L);
+
+    assertEquals(20_000_000L, response.getTargetAmount());
+  }
+
+  @Test
   void throwsWhenGoalDoesNotExist() {
     StubGoalMapper mapper = new StubGoalMapper();
     mapper.goalExists = false;
@@ -37,9 +48,10 @@ class GoalServiceImplTest {
 
   private static class StubGoalMapper implements GoalMapper {
     private boolean goalExists = true;
+    private Long targetAmount;
     private long updatedTargetAmount;
 
-    @Override public Long findTargetAmount(long userId) { return null; }
+    @Override public Long findTargetAmount(long userId) { return targetAmount; }
     @Override public int updateTargetAmount(long userId, long targetAmount) {
       updatedTargetAmount = targetAmount;
       return goalExists ? 1 : 0;

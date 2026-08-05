@@ -6,7 +6,9 @@
 <mapper namespace="com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper">
 
     <sql id="strategyApplicationColumns">
-        application_id, user_id, source_type, simulation_id, ai_scenario_id, rebalancing_id,
+        application_id, user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
+        applied_guidance_action, applied_investment_frequency,
+        applied_recurring_contribution_amount,
         applied_monthly_saving_amount, applied_investment_ratio,
         applied_expected_return_rate, applied_monthly_spending_amount,
         before_expected_asset, after_expected_asset, applied_at
@@ -16,17 +18,28 @@
             parameterType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo"
             useGeneratedKeys="true" keyProperty="applicationId">
         INSERT INTO strategy_application (
-            user_id, source_type, simulation_id, ai_scenario_id, rebalancing_id,
+            user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
+            applied_guidance_action, applied_investment_frequency,
+            applied_recurring_contribution_amount,
             applied_monthly_saving_amount, applied_investment_ratio,
             applied_expected_return_rate, applied_monthly_spending_amount,
             before_expected_asset, after_expected_asset
         ) VALUES (
-            #{userId}, #{sourceType}, #{simulationId}, #{aiScenarioId}, #{rebalancingId},
+            #{userId}, #{sourceType}, #{simulationId}, #{aiScenarioId}, #{guidanceId},
+            #{appliedGuidanceAction}, #{appliedInvestmentFrequency},
+            #{appliedRecurringContributionAmount},
             #{appliedMonthlySavingAmount}, #{appliedInvestmentRatio},
             #{appliedExpectedReturnRate}, #{appliedMonthlySpendingAmount},
             #{beforeExpectedAsset}, #{afterExpectedAsset}
         )
     </insert>
+
+    <update id="updateAfterExpectedAsset">
+        UPDATE strategy_application
+        SET after_expected_asset = #{afterExpectedAsset}
+        WHERE application_id = #{applicationId}
+          AND user_id = #{userId}
+    </update>
 
     <select id="findByIdAndUserId"
             resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
@@ -34,6 +47,18 @@
         FROM strategy_application
         WHERE application_id = #{applicationId}
           AND user_id = #{userId}
+    </select>
+
+    <select id="findByGuidanceSelection"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE user_id = #{userId}
+          AND guidance_id = #{guidanceId}
+          AND applied_guidance_action = #{action}
+          AND applied_investment_frequency = #{frequency}
+          AND applied_recurring_contribution_amount = #{contributionAmount}
+        LIMIT 1
     </select>
 
     <select id="findLatestByUserId"

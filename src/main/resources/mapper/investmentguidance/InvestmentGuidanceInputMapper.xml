@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceInputMapper">
+
+    <select id="findActiveTargetAmountByUserId" resultType="long">
+        SELECT target_amount
+        FROM goal
+        WHERE user_id = #{userId}
+          AND status = 'ACTIVE'
+        LIMIT 1
+    </select>
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceInputSourceVo">
+        SELECT
+            forecast.forecast_id,
+            forecast.expected_asset AS baseline_expected_asset,
+            COALESCE(brokerage.current_balance, 0) AS brokerage_book_value,
+            brokerage.last_synced_at AS brokerage_last_synced_at,
+            goal.target_amount,
+            profile.rank_name,
+            profile.discharge_date,
+            COALESCE((
+                SELECT saved.expected_return_rate
+                FROM simulation saved
+                WHERE saved.user_id = forecast.user_id
+                  AND saved.is_saved = TRUE
+                ORDER BY saved.created_at DESC, saved.simulation_id DESC
+                LIMIT 1
+            ), 0) AS expected_return_rate
+        FROM cashflow_forecast forecast
+        INNER JOIN soldier_profile profile ON profile.user_id = forecast.user_id
+        INNER JOIN goal ON goal.user_id = forecast.user_id AND goal.status = 'ACTIVE'
+        LEFT JOIN connected_account brokerage
+            ON brokerage.account_id = #{brokerageAccountId}
+            AND brokerage.status = 'ACTIVE'
+        WHERE forecast.forecast_id = (
+            SELECT latest.forecast_id
+            FROM cashflow_forecast latest
+            WHERE latest.user_id = #{userId}
+            ORDER BY latest.generated_at DESC, latest.forecast_id DESC
+            LIMIT 1
+        )
+    </select>
+</mapper>

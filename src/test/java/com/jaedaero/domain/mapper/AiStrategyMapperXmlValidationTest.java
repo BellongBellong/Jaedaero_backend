@@ -19,7 +19,9 @@ class AiStrategyMapperXmlValidationTest {
           "mapper/aianalysis/AiAnalysisMapper.xml",
           "mapper/aianalysis/AiAnalysisInputMapper.xml",
           "mapper/strategyapplication/StrategyApplicationMapper.xml",
-          "mapper/rebalancing/RebalancingRecommendationMapper.xml",
+          "mapper/recurringinvestment/RecurringInvestmentPlanMapper.xml",
+          "mapper/investmentguidance/InvestmentGuidanceInputMapper.xml",
+          "mapper/investmentguidance/InvestmentGuidanceMapper.xml",
           "mapper/marketreport/DailyMarketReportMapper.xml");
 
   @Test
@@ -58,7 +60,16 @@ class AiStrategyMapperXmlValidationTest {
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.findByUserId"));
     assertTrue(
         configuration.hasStatement(
-            "com.jaedaero.domain.rebalancing.mapper.RebalancingRecommendationMapper.insert"));
+            "com.jaedaero.domain.recurringinvestment.mapper.RecurringInvestmentPlanMapper.insert"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceInputMapper.findLatestByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceInputMapper.findActiveTargetAmountByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceMapper.insert"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.upsert"));
