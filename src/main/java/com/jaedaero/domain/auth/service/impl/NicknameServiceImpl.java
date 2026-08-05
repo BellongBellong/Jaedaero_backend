@@ -15,12 +15,14 @@ public class NicknameServiceImpl implements NicknameService {
 
   private final AuthUserMapper authUserMapper;
 
+  /** 현재 사용자가 사용할 수 있는 닉네임인지 확인합니다. */
   @Override
   @Transactional(readOnly = true)
   public boolean isAvailable(long userId, String nickname) {
     return authUserMapper.availabilityNickname(normalize(nickname), userId) == 0;
   }
 
+  /** 사용자의 닉네임을 변경합니다. */
   @Override
   @Transactional
   public void updateNickname(long userId, String nickname) {
@@ -40,6 +42,7 @@ public class NicknameServiceImpl implements NicknameService {
     }
   }
 
+  /** 닉네임을 정규화하고 형식을 검증합니다. */
   private String normalize(String nickname) {
     if (nickname == null) {
       throw new NicknameException(

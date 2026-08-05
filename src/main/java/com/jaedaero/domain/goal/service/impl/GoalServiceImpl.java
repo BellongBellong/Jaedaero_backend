@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoalServiceImpl implements GoalService {
   private final GoalMapper goalMapper;
 
+  /** 사용자의 투자 목표 금액을 변경합니다. */
   @Override
   @Transactional
   public GoalResponse updateGoal(long userId, GoalRequest request) {
