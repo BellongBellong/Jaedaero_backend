@@ -6,9 +6,9 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public class InvestmentPreferencePreviewResponse {
+public class InvestmentPreferenceResponse {
 
   private final boolean success;
-  private final InvestmentPreference investmentPreference;
+  private final InvestmentPreference preference;
   private final long targetAmount;
 }

@@ -12,10 +12,9 @@
 | 인증·온보딩              | 닉네임 설정·변경          | seonghun   | PUT    | /api/v1/users/nickname                                        | NicknameRequest                  | 204 No Content                      |
 | 인증·온보딩              | 프로필 아이콘·배경색 설정 | seonghun   | PUT    | /api/v1/users/profile-appearance                              | ProfileAppearanceRequest         | 204 No Content                      |
 | 인증·온보딩              | 군인 정보 등록            | seonghun   | POST   | /api/v1/onboarding/military-info                              | MilitaryInfoRequest              | SoldierProfileResponse              |
-| 인증·온보딩              | 투자성향 프리뷰           | seonghun   | POST   | /api/v1/onboarding/investment-preference                      | InvestmentPreferenceRequest      | InvestmentPreferencePreviewResponse |
-| 인증·온보딩              | 목표 설정                 | seonghun   | POST   | /api/v1/goals                                                 | GoalRequest                      | GoalResponse                        |
+| 인증·온보딩              | 투자성향 시드 설정 / 목표 금액 설정 | seonghun | POST   | /api/v1/onboarding/investment-preference                      | InvestmentPreferenceRequest      | InvestmentPreferenceResponse        |
 | 인증·온보딩              | 목표 조회                 | seonghun   | GET    | /api/v1/goals                                                 | -                                | GoalResponse                        |
-| 마이페이지                | 프로필 전체 조회          | seonghun   | GET    | /api/v1/users/me                                              | -                                | MyPageProfileResponse               |
+| 마이페이지                | 마이페이지 회원 정보 조회 | seonghun   | GET    | /api/v1/users/me                                              | -                                | MyPageProfileResponse               |
 | 마이페이지                | 목표 금액 변경            | seonghun   | PUT    | /api/v1/goals                                                 | GoalRequest                      | GoalResponse                        |
 | 마이페이지                | 회원 탈퇴                 | seonghun   | DELETE | /api/v1/users/me                                              | -                                | 204 No Content                      |
 | CODEF 계좌 연동          | 계좌 연동 시작            | You know   | POST   | /api/v1/accounts/connect                                      | AccountConnectRequest            | CodefConnectionResponse             |
