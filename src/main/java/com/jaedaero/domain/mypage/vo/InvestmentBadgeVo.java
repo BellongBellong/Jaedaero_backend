@@ -14,5 +14,4 @@ public class InvestmentBadgeVo {
   private int requiredMissionCount;
   private int missionCompletedCount;
   private boolean achieved;
-  private String imageUrl;
 }
