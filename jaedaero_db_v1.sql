@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS `device_token`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
 DROP TABLE IF EXISTS `investment_badge`;
+DROP TABLE IF EXISTS `user_badge`;
 DROP TABLE IF EXISTS `badge`;
 DROP TABLE IF EXISTS `user_mission_completion`;
 DROP TABLE IF EXISTS `mission`;
@@ -847,22 +848,41 @@ INSERT INTO badge (
     mission_type,
     required_completion_count,
     grade,
-    image_url,
     is_active
 ) VALUES
-    ('안정형 브론즈', '안정형 미션 1개 완료', 'SAFE', 1, 'BRONZE', NULL, TRUE),
-    ('안정형 실버', '안정형 미션 10개 완료', 'SAFE', 10, 'SILVER', NULL, TRUE),
-    ('안정형 골드', '안정형 미션 50개 완료', 'SAFE', 50, 'GOLD', NULL, TRUE),
-    ('안정형 플래티넘', '안정형 미션 100개 완료', 'SAFE', 100, 'PLATINUM', NULL, TRUE),
-    ('안정형 다이아', '안정형 미션 300개 완료', 'SAFE', 300, 'DIAMOND', NULL, TRUE),
-    ('공격형 브론즈', '공격형 미션 1개 완료', 'AGGRESSIVE', 1, 'BRONZE', NULL, TRUE),
-    ('공격형 실버', '공격형 미션 10개 완료', 'AGGRESSIVE', 10, 'SILVER', NULL, TRUE),
-    ('공격형 골드', '공격형 미션 50개 완료', 'AGGRESSIVE', 50, 'GOLD', NULL, TRUE),
-    ('공격형 플래티넘', '공격형 미션 100개 완료', 'AGGRESSIVE', 100, 'PLATINUM', NULL, TRUE),
-    ('공격형 다이아', '공격형 미션 300개 완료', 'AGGRESSIVE', 300, 'DIAMOND', NULL, TRUE);
+    ('안정형 브론즈', '안정형 미션 1개 완료', 'SAFE', 1, 'BRONZE', TRUE),
+    ('안정형 실버', '안정형 미션 10개 완료', 'SAFE', 10, 'SILVER', TRUE),
+    ('안정형 골드', '안정형 미션 50개 완료', 'SAFE', 50, 'GOLD', TRUE),
+    ('안정형 플래티넘', '안정형 미션 100개 완료', 'SAFE', 100, 'PLATINUM', TRUE),
+    ('안정형 다이아', '안정형 미션 300개 완료', 'SAFE', 300, 'DIAMOND', TRUE),
+    ('공격형 브론즈', '공격형 미션 1개 완료', 'AGGRESSIVE', 1, 'BRONZE', TRUE),
+    ('공격형 실버', '공격형 미션 10개 완료', 'AGGRESSIVE', 10, 'SILVER', TRUE),
+    ('공격형 골드', '공격형 미션 50개 완료', 'AGGRESSIVE', 50, 'GOLD', TRUE),
+    ('공격형 플래티넘', '공격형 미션 100개 완료', 'AGGRESSIVE', 100, 'PLATINUM', TRUE),
+    ('공격형 다이아', '공격형 미션 300개 완료', 'AGGRESSIVE', 300, 'DIAMOND', TRUE);
 
 -- ---------------------------------------------
 -- 30. investment_badge : 투자 뱃지
+-- ---------------------------------------------
+CREATE TABLE user_badge (
+                              user_badge_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 뱃지 이력 ID',
+                              user_id       BIGINT NOT NULL COMMENT '사용자 ID',
+                              badge_id      BIGINT NOT NULL COMMENT '뱃지 ID',
+                              acquired_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '획득 일시',
+
+                              CONSTRAINT uq_user_badge_user_badge UNIQUE (user_id, badge_id),
+                              CONSTRAINT fk_user_badge_user
+                                  FOREIGN KEY (user_id) REFERENCES users(user_id)
+                                      ON DELETE CASCADE,
+                              CONSTRAINT fk_user_badge_badge
+                                  FOREIGN KEY (badge_id) REFERENCES badge(badge_id)
+                                      ON DELETE CASCADE
+) COMMENT='사용자별 투자 뱃지 획득 이력'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 사용자별 투자 뱃지 집계
 -- ---------------------------------------------
 CREATE TABLE investment_badge (
                                   badge_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 뱃지 ID',

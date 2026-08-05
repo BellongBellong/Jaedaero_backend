@@ -1,6 +1,7 @@
 package com.jaedaero.domain.mypage.vo;
 
 import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,4 +15,5 @@ public class InvestmentBadgeVo {
   private int requiredMissionCount;
   private int missionCompletedCount;
   private boolean achieved;
+  private LocalDateTime acquiredAt;
 }

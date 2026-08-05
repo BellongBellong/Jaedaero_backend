@@ -15,6 +15,7 @@ import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
 import com.jaedaero.domain.mypage.vo.InvestmentBadgeVo;
 import com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -57,11 +58,15 @@ class MyPageServiceImplTest {
     badge.setRequiredMissionCount(100);
     badge.setMissionCompletedCount(105);
     badge.setAchieved(true);
+    badge.setAcquiredAt(LocalDateTime.of(2026, 8, 5, 9, 41));
     myPageMapper.investmentBadges = List.of(badge);
     MyPageServiceImpl service = new MyPageServiceImpl(myPageMapper, new StubAuthUserMapper());
 
     assertEquals("공격형 플래티넘", service.getInvestmentBadges(1L).get(0).getBadgeName());
     assertEquals(105, service.getInvestmentBadges(1L).get(0).getMissionCompletedCount());
+    assertEquals(
+        LocalDateTime.of(2026, 8, 5, 9, 41),
+        service.getInvestmentBadges(1L).get(0).getAcquiredAt());
   }
 
   @Test

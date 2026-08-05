@@ -18,18 +18,18 @@
     </select>
 
     <select id="countEarnedBadges" parameterType="long" resultType="int">
-        SELECT COALESCE(MAX(CASE WHEN ib.badge_tier IS NULL THEN 0 ELSE 1 END
-             + CASE WHEN ib.safe_grade IS NULL THEN 0 ELSE 1 END
-             + CASE WHEN ib.aggressive_grade IS NULL THEN 0 ELSE 1 END), 0)
-        FROM investment_badge ib WHERE ib.user_id = #{userId}
+        SELECT COUNT(1)
+        FROM user_badge ub
+        WHERE ub.user_id = #{userId}
     </select>
 
     <select id="findRecentBadgeCodes" parameterType="long" resultType="string">
-        SELECT badge_code FROM (
-            SELECT CONCAT('TIER_', badge_tier) AS badge_code, updated_at FROM investment_badge WHERE user_id = #{userId} AND badge_tier IS NOT NULL
-            UNION ALL SELECT CONCAT('SAFE_', safe_grade), updated_at FROM investment_badge WHERE user_id = #{userId} AND safe_grade IS NOT NULL
-            UNION ALL SELECT CONCAT('AGGRESSIVE_', aggressive_grade), updated_at FROM investment_badge WHERE user_id = #{userId} AND aggressive_grade IS NOT NULL
-        ) badges ORDER BY updated_at DESC LIMIT 3
+        SELECT CONCAT(b.mission_type, '_', b.grade) AS badge_code
+        FROM user_badge ub
+        JOIN badge b ON b.badge_id = ub.badge_id
+        WHERE ub.user_id = #{userId}
+        ORDER BY ub.acquired_at DESC, ub.user_badge_id DESC
+        LIMIT 3
     </select>
 
     <select id="findInvestmentBadges" resultType="com.jaedaero.domain.mypage.vo.InvestmentBadgeVo">
@@ -48,9 +48,11 @@
                 WHEN b.mission_type = 'SAFE' THEN COALESCE(ib.safe_count, 0) >= b.required_completion_count
                 WHEN b.mission_type = 'AGGRESSIVE' THEN COALESCE(ib.aggressive_count, 0) >= b.required_completion_count
                 ELSE FALSE
-            END AS achieved
+            END AS achieved,
+            ub.acquired_at
         FROM badge b
         LEFT JOIN investment_badge ib ON ib.user_id = #{userId}
+        LEFT JOIN user_badge ub ON ub.user_id = #{userId} AND ub.badge_id = b.badge_id
         WHERE b.is_active = TRUE
         ORDER BY
             FIELD(b.mission_type, 'SAFE', 'AGGRESSIVE'),

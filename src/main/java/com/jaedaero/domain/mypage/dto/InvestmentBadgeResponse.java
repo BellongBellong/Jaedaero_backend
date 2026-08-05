@@ -1,6 +1,7 @@
 package com.jaedaero.domain.mypage.dto;
 
 import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -14,4 +15,5 @@ public class InvestmentBadgeResponse {
   private final int requiredMissionCount;
   private final int missionCompletedCount;
   private final boolean achieved;
+  private final LocalDateTime acquiredAt;
 }
