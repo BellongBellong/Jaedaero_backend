@@ -3,6 +3,6 @@ package com.jaedaero.domain.strategyapplication.vo;
 public enum StrategyApplicationSourceType {
   SIMULATION,
   AI_RECOMMENDATION,
-  REBALANCING,
+  INVESTMENT_GUIDANCE,
   MANUAL
 }

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.recurringinvestment.mapper.RecurringInvestmentPlanMapper">
+
+    <sql id="planColumns">
+        plan_id, user_id, brokerage_account_id, frequency, contribution_day,
+        contribution_amount, maximum_monthly_amount, investment_product_code, investment_product_name,
+        status, next_contribution_date, created_at, updated_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo"
+            useGeneratedKeys="true" keyProperty="planId">
+        INSERT INTO recurring_investment_plan (
+            user_id, brokerage_account_id, frequency, contribution_day,
+            contribution_amount, maximum_monthly_amount, investment_product_code, investment_product_name,
+            status, next_contribution_date
+        ) VALUES (
+            #{userId}, #{brokerageAccountId}, #{frequency}, #{contributionDay},
+            #{contributionAmount}, #{maximumMonthlyAmount}, #{investmentProductCode}, #{investmentProductName},
+            #{status}, #{nextContributionDate}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo">
+        UPDATE recurring_investment_plan
+        SET brokerage_account_id = #{brokerageAccountId},
+            frequency = #{frequency},
+            contribution_day = #{contributionDay},
+            contribution_amount = #{contributionAmount},
+            maximum_monthly_amount = #{maximumMonthlyAmount},
+            investment_product_code = #{investmentProductCode},
+            investment_product_name = #{investmentProductName},
+            status = #{status},
+            next_contribution_date = #{nextContributionDate}
+        WHERE plan_id = #{planId}
+          AND user_id = #{userId}
+    </update>
+
+    <select id="findByUserId"
+            resultType="com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo">
+        SELECT <include refid="planColumns"/>
+        FROM recurring_investment_plan
+        WHERE user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="findByIdAndUserId"
+            resultType="com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo">
+        SELECT <include refid="planColumns"/>
+        FROM recurring_investment_plan
+        WHERE plan_id = #{planId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="existsSecuritiesAccount" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM connected_account account
+            INNER JOIN codef_connection connection
+                ON connection.connection_id = account.connection_id
+            WHERE account.account_id = #{accountId}
+              AND connection.user_id = #{userId}
+              AND account.business_type = 'ST'
+              AND account.status = 'ACTIVE'
+        )
+    </select>
+</mapper>

@@ -18,6 +18,9 @@ import com.jaedaero.domain.aianalysis.service.impl.AiAnalysisServiceImpl;
 import com.jaedaero.domain.aianalysis.vo.AiAnalysisType;
 import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
 import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
+import com.jaedaero.domain.auth.common.enums.SoldierType;
+import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
+import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import com.jaedaero.domain.simulation.mapper.SimulationMapper;
 import com.jaedaero.domain.simulation.service.SimulationCalculator;
 import com.jaedaero.domain.simulation.service.SimulationInput;
@@ -49,19 +52,17 @@ class AiAnalysisServiceImplTest {
         userId ->
             new SimulationInput(
                 4_300_000L,
-                10_950_000L,
                 20_000_000L,
-                LocalDate.of(2027, 9, 1),
-                550_000L,
-                new BigDecimal("5.00"),
-                550_000L);
+                SoldierType.ARMY,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2027, 9, 1));
     AiAnalysisService service =
         new AiAnalysisServiceImpl(
             mapper,
             analysisInput,
             new EmptySimulationMapper(),
             simulationInput,
-            new SimulationCalculator(),
+            simulationCalculator(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("생성된 AI 코치 문구입니다.", "생성된 추천 사유입니다."));
 
@@ -98,7 +99,13 @@ class AiAnalysisServiceImplTest {
     AiAnalysisInputProvider analysisInput =
         userId -> new AiAnalysisInput(10L, 20L, 18_150_000L, null, new BigDecimal("90.75"), 20_000_000L, LocalDate.of(2027, 9, 1), 180_000L);
     com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
-        userId -> new SimulationInput(4_300_000L, 10_950_000L, 20_000_000L, LocalDate.of(2027, 9, 1), 550_000L, new BigDecimal("5.00"), 550_000L);
+        userId ->
+            new SimulationInput(
+                4_300_000L,
+                20_000_000L,
+                SoldierType.ARMY,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2027, 9, 1));
     AtomicInteger generationAttempts = new AtomicInteger();
     AiCoachNarrativeGenerator recoveringGenerator =
         (model, prompt) -> {
@@ -107,7 +114,7 @@ class AiAnalysisServiceImplTest {
           }
           return new AiCoachNarrative("복구된 AI 코치 문구입니다.", "복구된 추천 사유입니다.");
         };
-    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, new SimulationCalculator(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator);
+    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, simulationCalculator(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator);
 
     AiAnalysisResponse fallback = service.analyze(1L, new AiAnalysisRequest());
     AiAnalysisResponse recovered = service.analyze(1L, new AiAnalysisRequest());
@@ -124,6 +131,19 @@ class AiAnalysisServiceImplTest {
     assertEquals(2, generationAttempts.get());
     assertEquals(2, mapper.analyses.size());
     assertEquals(2, mapper.recommendations.size());
+  }
+
+  private static SimulationCalculator simulationCalculator() {
+    MilitaryPayPolicyMapper payMapper =
+        (soldierType, rankName, monthStart, monthEnd) ->
+            switch (rankName) {
+              case "이병" -> 750_000L;
+              case "일병" -> 900_000L;
+              case "상병" -> 1_200_000L;
+              case "병장" -> 1_500_000L;
+              default -> null;
+            };
+    return new SimulationCalculator(new DefaultMilitaryPayPolicy(payMapper));
   }
 
   private static class EmptySimulationMapper implements SimulationMapper {

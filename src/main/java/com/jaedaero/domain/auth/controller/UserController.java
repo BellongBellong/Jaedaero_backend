@@ -45,7 +45,7 @@ public class UserController {
   private final MyPageService myPageService;
 
   @GetMapping("/me")
-  @ApiOperation(value = "마이페이지 프로필 조회")
+  @ApiOperation(value = "마이페이지 회원 정보 조회")
   @ApiResponses({
     @ApiResponse(code = 200, message = "조회 성공", response = MyPageProfileResponse.class),
     @ApiResponse(code = 401, message = "인증 필요"),

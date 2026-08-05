@@ -6,7 +6,7 @@
 <mapper namespace="com.jaedaero.domain.simulation.mapper.SimulationMapper">
 
     <sql id="simulationColumns">
-        simulation_id, user_id, scenario_name, monthly_saving_amount, investment_ratio,
+        simulation_id, user_id, scenario_name, target_amount, monthly_saving_amount, investment_ratio,
         expected_return_rate, monthly_spending_amount, expected_asset,
         financial_discharge_date, is_saved, created_at, updated_at
     </sql>
@@ -14,11 +14,11 @@
     <insert id="insert" parameterType="com.jaedaero.domain.simulation.vo.SimulationVo"
             useGeneratedKeys="true" keyProperty="simulationId">
         INSERT INTO simulation (
-            user_id, scenario_name, monthly_saving_amount, investment_ratio,
+            user_id, scenario_name, target_amount, monthly_saving_amount, investment_ratio,
             expected_return_rate, monthly_spending_amount, expected_asset,
             financial_discharge_date, is_saved
         ) VALUES (
-            #{userId}, #{scenarioName}, #{monthlySavingAmount}, #{investmentRatio},
+            #{userId}, #{scenarioName}, #{targetAmount}, #{monthlySavingAmount}, #{investmentRatio},
             #{expectedReturnRate}, #{monthlySpendingAmount}, #{expectedAsset},
             #{financialDischargeDate}, #{isSaved}
         )

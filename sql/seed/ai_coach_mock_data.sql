@@ -9,7 +9,7 @@ START TRANSACTION;
 SET @mock_social_id = 'mock-ai-coach-user-900001';
 
 -- ---------------------------------------------------------------------------
--- 1. 사용자·복무정보·목표: simulations / rebalancing의 기본 입력
+-- 1. 사용자·복무정보·목표: simulations / investment guidance의 기본 입력
 -- ---------------------------------------------------------------------------
 INSERT INTO users (
     user_id, social_type, social_id, nickname, profile_image, profile_source, is_withdrawn
@@ -113,6 +113,50 @@ ON DUPLICATE KEY UPDATE
     status = 'ACTIVE';
 
 SET @mock_saving_account_id = LAST_INSERT_ID();
+
+-- 적립식 투자 가이드가 조회할 개발용 증권계좌와 내부 적립 계획이다.
+INSERT INTO connected_account (
+    account_id, connection_id, institution_code, institution_name,
+    account_number_encrypted, account_number_hash, account_masked,
+    business_type, account_type, account_role, product_name, current_balance, available_balance,
+    account_opened_date, maturity_date, last_synced_at, status
+) VALUES (
+    NULL, @mock_connection_id, '0309', '미래에셋증권',
+    'mock-encrypted-securities-900103', SHA2('mock-securities-900103', 256), '9001-****-9003',
+    'ST', 'BROKERAGE', 'GENERAL', '종합매매계좌', 0, 0,
+    '2026-03-01', NULL, '2026-08-05 09:00:00', 'ACTIVE'
+)
+ON DUPLICATE KEY UPDATE
+    account_id = LAST_INSERT_ID(account_id),
+    business_type = VALUES(business_type),
+    current_balance = VALUES(current_balance),
+    available_balance = VALUES(available_balance),
+    last_synced_at = VALUES(last_synced_at),
+    status = VALUES(status);
+
+SET @mock_securities_account_id = LAST_INSERT_ID();
+
+INSERT INTO recurring_investment_plan (
+    user_id, brokerage_account_id, frequency, contribution_day,
+    contribution_amount, maximum_monthly_amount,
+    investment_product_code, investment_product_name,
+    status, next_contribution_date
+) VALUES (
+    @mock_user_id, @mock_securities_account_id, 'MONTHLY', 10,
+    150000, 300000,
+    '069500', 'KODEX 200',
+    'ACTIVE', '2026-09-10'
+)
+ON DUPLICATE KEY UPDATE
+    brokerage_account_id = VALUES(brokerage_account_id),
+    frequency = VALUES(frequency),
+    contribution_day = VALUES(contribution_day),
+    contribution_amount = VALUES(contribution_amount),
+    maximum_monthly_amount = VALUES(maximum_monthly_amount),
+    investment_product_code = VALUES(investment_product_code),
+    investment_product_name = VALUES(investment_product_name),
+    status = VALUES(status),
+    next_contribution_date = VALUES(next_contribution_date);
 
 INSERT INTO soldier_saving (
     user_id, account_id, bank_name, monthly_amount, interest_rate,
