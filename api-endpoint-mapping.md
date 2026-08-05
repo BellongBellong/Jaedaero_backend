@@ -80,6 +80,7 @@
 | requiredMissionCount | Number | 해당 등급 획득에 필요한 누적 미션 수 |
 | missionCompletedCount | Number | 해당 성향의 현재 누적 미션 달성 수 |
 | achieved | Boolean | 현재 사용자의 해당 뱃지 달성 여부 |
+| acquiredAt | DateTime | 실제 뱃지 획득 일시. 미달성 뱃지는 `null` |
 
 ### `GET /api/v1/users/me`의 `investmentBadgeStatus`
 

@@ -69,7 +69,8 @@ public class MyPageServiceImpl implements MyPageService {
                     badge.getGrade(),
                     badge.getRequiredMissionCount(),
                     badge.getMissionCompletedCount(),
-                    badge.isAchieved()))
+                    badge.isAchieved(),
+                    badge.getAcquiredAt()))
         .collect(Collectors.toList());
   }
 
