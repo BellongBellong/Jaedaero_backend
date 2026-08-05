@@ -48,8 +48,7 @@
                 WHEN b.mission_type = 'SAFE' THEN COALESCE(ib.safe_count, 0) >= b.required_completion_count
                 WHEN b.mission_type = 'AGGRESSIVE' THEN COALESCE(ib.aggressive_count, 0) >= b.required_completion_count
                 ELSE FALSE
-            END AS achieved,
-            b.image_url
+            END AS achieved
         FROM badge b
         LEFT JOIN investment_badge ib ON ib.user_id = #{userId}
         WHERE b.is_active = TRUE

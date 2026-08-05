@@ -14,5 +14,4 @@ public class InvestmentBadgeResponse {
   private final int requiredMissionCount;
   private final int missionCompletedCount;
   private final boolean achieved;
-  private final String imageUrl;
 }
