@@ -824,7 +824,6 @@ CREATE TABLE badge (
                          mission_type      ENUM('SAFE', 'AGGRESSIVE') NOT NULL COMMENT '뱃지 투자 성향',
                          required_completion_count INT NOT NULL COMMENT '티어 획득에 필요한 누적 미션 완료 수',
                          grade             ENUM('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND') NOT NULL COMMENT '뱃지 등급',
-                         image_url         VARCHAR(500) NULL COMMENT '뱃지 이미지 URL',
                          is_active         BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
                          created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
