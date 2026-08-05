@@ -12,11 +12,10 @@
 | 인증·온보딩              | 닉네임 설정·변경          | seonghun   | PUT    | /api/v1/users/nickname                                        | NicknameRequest                  | 204 No Content                      |
 | 인증·온보딩              | 프로필 아이콘·배경색 설정 | seonghun   | PUT    | /api/v1/users/profile-appearance                              | ProfileAppearanceRequest         | 204 No Content                      |
 | 인증·온보딩              | 군인 정보 등록            | seonghun   | POST   | /api/v1/onboarding/military-info                              | MilitaryInfoRequest              | SoldierProfileResponse              |
-| 인증·온보딩              | 투자성향 프리뷰           | seonghun   | POST   | /api/v1/onboarding/investment-preference                      | InvestmentPreferenceRequest      | InvestmentPreferencePreviewResponse |
-| 인증·온보딩              | 목표 설정                 | seonghun   | POST   | /api/v1/goals                                                 | GoalRequest                      | GoalResponse                        |
-| 인증·온보딩              | 목표 조회                 | seonghun   | GET    | /api/v1/goals                                                 | -                                | GoalResponse                        |
-| 마이페이지                | 프로필 전체 조회          | seonghun   | GET    | /api/v1/users/me                                              | -                                | MyPageProfileResponse               |
+| 인증·온보딩              | 투자성향 시드 설정 / 목표 금액 설정 | seonghun | POST | /api/v1/onboarding/investment-preference                      | InvestmentPreferenceRequest      | InvestmentPreferenceResponse        |
+| 마이페이지                | 마이페이지 회원 정보 조회 | seonghun   | GET    | /api/v1/users/me                                              | -                                | MyPageProfileResponse               |
 | 마이페이지                | 목표 금액 변경            | seonghun   | PUT    | /api/v1/goals                                                 | GoalRequest                      | GoalResponse                        |
+| 마이페이지                | 목표 조회                 | seonghun   | GET    | /api/v1/goals                                                 | -                                | GoalResponse                        |
 | 마이페이지                | 회원 탈퇴                 | seonghun   | DELETE | /api/v1/users/me                                              | -                                | 204 No Content                      |
 | CODEF 계좌 연동          | 계좌 연동 시작            | You know   | POST   | /api/v1/accounts/connect                                      | AccountConnectRequest            | CodefConnectionResponse             |
 | CODEF 계좌 연동          | 연동계좌 목록 조회        | You know   | GET    | /api/v1/accounts                                              | -                                | List<ConnectedAccountResponse>      |
@@ -27,26 +26,29 @@
 | What-if 시뮬레이션 · AI 분석 | 과거 시뮬레이션 상세 조회 | 승환 양   | GET    | /api/v1/simulations/{simulationId}                            | simulationId(path)               | SimulationResponse                  |
 | What-if 시뮬레이션 · AI 분석 | AI 분석 요청           | 승환 양    | POST   | /api/v1/ai-analyses                                           | AiAnalysisRequest(simulationId?, model?) | AiAnalysisResponse          |
 | What-if 시뮬레이션 · AI 분석 | 과거 AI 분석 결과 상세 조회 | 승환 양 | GET    | /api/v1/ai-analyses/{analysisId}                              | analysisId(path)                 | AiAnalysisResponse                  |
-| What-if · AI 분석        | 추천 전략 적용            | 승환 양    | POST   | /api/v1/ai-analyses/{analysisId}/apply                        | analysisId(path)                 | StrategyApplicationResponse         |
-| What-if · AI 분석        | 전략 적용 이력            | 승환 양    | GET    | /api/v1/strategy-applications?page=&size=                     | page,size(query)                 | List<StrategyApplicationResponse>   |
+| What-if 시뮬레이션 · AI 분석 | 추천 전략 적용         | 승환 양    | POST   | /api/v1/ai-analyses/{analysisId}/apply                        | analysisId(path)                 | StrategyApplicationResponse         |
+| What-if 시뮬레이션 · AI 분석 | 전략 적용 이력 조회    | 승환 양    | GET    | /api/v1/strategy-applications?page=&size=                     | page, size(query)                | List<StrategyApplicationResponse>   |
 | 거래내역 · 소비          | 거래내역 조회             | You know   | GET    | /api/v1/transactions?accountId=&startDate=&endDate=&category= | TransactionSearchRequest         | List<TransactionResponse>           |
-| 거래내역 · 소비          | 거래 카테고리 수정        | You know   | PUT    | /api/v1/transactions/{transactionId}/category                 | TransactionCategoryUpdateRequest | TransactionResponse                 |
+| 거래내역 · 소비          | 거래내역 카테고리 수정    | You know   | PUT    | /api/v1/transactions/{transactionId}/category                 | TransactionCategoryUpdateRequest | TransactionResponse                 |
 | 장병내일준비적금         | 적금 정보 조회            | You know   | GET    | /api/v1/soldier-savings                                       | -                                | SoldierSavingResponse               |
 | 챌린지                   | 동기 그룹·랭킹 조회       | seonghun   | GET    | /api/v1/challenges/group                                      | -                                | ChallengeGroupResponse              |
 | 챌린지                   | 투자 뱃지 조회            | seonghun   | GET    | /api/v1/users/investment-badges                               | -                                | List<InvestmentBadgeResponse>       |
-| 챌린지                   | 오늘의 미션 목록          | seonghun   | GET    | /api/v1/missions/today                                        | -                                | List<MissionResponse>               |
-| 챌린지                   | 미션 완료                 | seonghun   | POST   | /api/v1/missions/{missionId}/complete                         | missionId(path)                  | MissionCompletionResponse           |
-| 리포트 · 추천 · 혜택     | 전역 리포트               | You know   | GET    | /api/v1/reports/discharge                                     | -                                | DischargeReportResponse             |
-| 리포트 · 추천 · 혜택     | 금융상품 추천             | You know   | GET    | /api/v1/products/recommendations                              | -                                | List<ProductRecommendationResponse> |
-| 리포트 · 추천 · 혜택     | 군인 혜택 목록            | You know   | GET    | /api/v1/benefits?category=&rank=                              | BenefitSearchRequest             | List<MilitaryBenefitResponse>       |
-| 투자 리밸런싱            | 리밸런싱 추천             | 승환 양    | GET    | /api/v1/rebalancing/recommendations                           | -                                | RebalancingRecommendationResponse   |
-| 투자 리밸런싱            | 리밸런싱 적용             | 승환 양    | POST   | /api/v1/rebalancing/recommendations/{rebalancingId}/apply     | rebalancingId(path)              | StrategyApplicationResponse         |
+| 챌린지                   | 오늘의 미션 목록 조회     | seonghun   | GET    | /api/v1/missions/today                                        | -                                | List<MissionResponse>               |
+| 챌린지                   | 미션 완료 및 갱신         | seonghun   | POST   | /api/v1/missions/{missionId}/complete                         | missionId(path)                  | MissionCompletionResponse           |
+| 리포트 · 상품 추천 · 혜택정보 | 전역 리포트 조회      | You know   | GET    | /api/v1/reports/discharge                                     | -                                | DischargeReportResponse             |
+| 리포트 · 상품 추천 · 혜택정보 | 금융상품 추천 조회    | You know   | GET    | /api/v1/products/recommendations                              | -                                | List<ProductRecommendationResponse> |
+| 리포트 · 상품 추천 · 혜택정보 | 군인 혜택 목록 조회  | You know   | GET    | /api/v1/benefits?category=&rank=                              | BenefitSearchRequest             | List<MilitaryBenefitResponse>       |
+| 적립식 적립식 투자 가이드 | 내 적립 계획 조회        | 승환 양    | GET    | /api/v1/recurring-investment-plans/me                         | -                                | RecurringInvestmentPlanResponse     |
+| 적립식 적립식 투자 가이드 | 내 적립 계획 설정·변경  | 승환 양    | PUT    | /api/v1/recurring-investment-plans/me                         | RecurringInvestmentPlanRequest   | RecurringInvestmentPlanResponse     |
+| 적립식 적립식 투자 가이드 | 최신 투자 가이드 조회    | 승환 양    | GET    | /api/v1/investment-guidances/latest                           | -                                | InvestmentGuidanceResponse          |
+| 적립식 적립식 투자 가이드 | 투자 가이드 새로 계산    | 승환 양    | POST   | /api/v1/investment-guidances                                  | -                                | InvestmentGuidanceResponse (201 Created; 동일 입력이면 기존 유효 결과 반환 가능) |
+| 적립식 적립식 투자 가이드 | 투자 가이드 적용         | 승환 양    | POST   | /api/v1/investment-guidances/{guidanceId}/apply               | InvestmentGuidanceApplyRequest   | StrategyApplicationResponse (sourceType=INVESTMENT_GUIDANCE) |
 | 알림 · FCM               | 디바이스 토큰 등록        | -          | POST   | /api/v1/device-tokens                                         | DeviceTokenRequest               | DeviceTokenResponse                 |
-| 알림 · FCM               | 알림 이력                 | -          | GET    | /api/v1/notifications?page=&size=                             | page,size(query)                 | List<NotificationResponse>          |
-| 알림 · FCM               | 알림 읽음                 | -          | PUT    | /api/v1/notifications/{notificationId}/read                   | notificationId(path)             | 204 No Content                      |
+| 알림 · FCM               | 알림 이력 조회            | -          | GET    | /api/v1/notifications?page=&size=                             | page, size(query)                | List<NotificationResponse>          |
+| 알림 · FCM               | 알림 읽음 처리            | -          | PUT    | /api/v1/notifications/{notificationId}/read                   | notificationId(path)             | 204 No Content                      |
 | 휴가모드                 | 휴가모드 시작             | seonghun   | POST   | /api/v1/leave-mode                                            | LeaveModeRequest                 | LeaveModeResponse                   |
-| 휴가모드                 | 현재 상태                 | seonghun   | GET    | /api/v1/leave-mode/current                                    | -                                | LeaveModeResponse 또는 204          |
-| 오늘의 AI 투자리포트     | 오늘 시장 리포트          | 승환 양    | GET    | /api/v1/market-reports/today                                  | -                                | TodayMarketReportResponse           |
+| 휴가모드                 | 휴가모드 현재 상태 조회   | seonghun   | GET    | /api/v1/leave-mode/current                                    | -                                | LeaveModeResponse (휴가 중 아니면 204) |
+| 오늘의 AI투자리포트      | 오늘의 시장 리포트 조회   | 승환 양    | GET    | /api/v1/market-reports/today                                  | -                                | TodayMarketReportResponse           |
 
 ## 현재 요구사항 대비 API 공백
 
@@ -78,7 +80,7 @@
 | requiredMissionCount | Number | 해당 등급 획득에 필요한 누적 미션 수 |
 | missionCompletedCount | Number | 해당 성향의 현재 누적 미션 달성 수 |
 | achieved | Boolean | 현재 사용자의 해당 뱃지 달성 여부 |
-| imageUrl | String | 뱃지 이미지 URL. 이미지가 없으면 `null` |
+| acquiredAt | DateTime | 실제 뱃지 획득 일시. 미달성 뱃지는 `null` |
 
 ### `GET /api/v1/users/me`의 `investmentBadgeStatus`
 
