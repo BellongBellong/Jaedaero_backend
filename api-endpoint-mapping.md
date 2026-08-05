@@ -23,9 +23,9 @@
 | 홈 대시보드 · 캐시플로우 | 홈 요약 조회              | You know   | GET    | /api/v1/dashboard                                             | -                                | DashboardResponse                   |
 | 홈 대시보드 · 캐시플로우 | 월별 자산 흐름 조회       | You know   | GET    | /api/v1/cashflow?months=                                      | months(query)                    | CashflowForecastResponse            |
 | What-if 시뮬레이션 · AI 분석 | 시뮬레이션 실행        | 승환 양    | POST   | /api/v1/simulations                                           | SimulationRequest                | SimulationResponse                  |
-| What-if 시뮬레이션 · AI 분석 | 시뮬레이션 히스토리 목록 조회 | 승환 양 | GET    | /api/v1/simulations?page=&size=                               | page,size(query)                 | List<SimulationResponse>            |
+| What-if 시뮬레이션 · AI 분석 | 시뮬레이션 히스토리 목록 조회 | 승환 양 | GET    | /api/v1/simulations?page=&size=                               | page,size(query)                 | SimulationHistoryResponse           |
 | What-if 시뮬레이션 · AI 분석 | 과거 시뮬레이션 상세 조회 | 승환 양   | GET    | /api/v1/simulations/{simulationId}                            | simulationId(path)               | SimulationResponse                  |
-| What-if 시뮬레이션 · AI 분석 | AI 분석 요청           | 승환 양    | POST   | /api/v1/ai-analyses                                           | AiAnalysisRequest(simulationId?, model?) | AiAnalysisResponse          |
+| What-if 시뮬레이션 · AI 분석 | AI 분석 요청           | 승환 양    | POST   | /api/v1/ai-analyses                                           | AiAnalysisRequest(simulationId?) | AiAnalysisResponse                  |
 | What-if 시뮬레이션 · AI 분석 | 과거 AI 분석 결과 상세 조회 | 승환 양 | GET    | /api/v1/ai-analyses/{analysisId}                              | analysisId(path)                 | AiAnalysisResponse                  |
 | What-if · AI 분석        | 추천 전략 적용            | 승환 양    | POST   | /api/v1/ai-analyses/{analysisId}/apply                        | analysisId(path)                 | StrategyApplicationResponse         |
 | What-if · AI 분석        | 전략 적용 이력            | 승환 양    | GET    | /api/v1/strategy-applications?page=&size=                     | page,size(query)                 | List<StrategyApplicationResponse>   |
@@ -39,8 +39,11 @@
 | 리포트 · 추천 · 혜택     | 전역 리포트               | You know   | GET    | /api/v1/reports/discharge                                     | -                                | DischargeReportResponse             |
 | 리포트 · 추천 · 혜택     | 금융상품 추천             | You know   | GET    | /api/v1/products/recommendations                              | -                                | List<ProductRecommendationResponse> |
 | 리포트 · 추천 · 혜택     | 군인 혜택 목록            | You know   | GET    | /api/v1/benefits?category=&rank=                              | BenefitSearchRequest             | List<MilitaryBenefitResponse>       |
-| 투자 리밸런싱            | 리밸런싱 추천             | 승환 양    | GET    | /api/v1/rebalancing/recommendations                           | -                                | RebalancingRecommendationResponse   |
-| 투자 리밸런싱            | 리밸런싱 적용             | 승환 양    | POST   | /api/v1/rebalancing/recommendations/{rebalancingId}/apply     | rebalancingId(path)              | StrategyApplicationResponse         |
+| 적립식 투자 가이드       | 내 적립 계획 조회         | 승환 양    | GET    | /api/v1/recurring-investment-plans/me                         | -                                | RecurringInvestmentPlanResponse     |
+| 적립식 투자 가이드       | 내 적립 계획 설정·변경    | 승환 양    | PUT    | /api/v1/recurring-investment-plans/me                         | RecurringInvestmentPlanRequest   | RecurringInvestmentPlanResponse     |
+| 적립식 투자 가이드       | 최신 투자 가이드 조회     | 승환 양    | GET    | /api/v1/investment-guidances/latest                           | -                                | InvestmentGuidanceResponse          |
+| 적립식 투자 가이드       | 투자 가이드 새로 계산     | 승환 양    | POST   | /api/v1/investment-guidances                                  | -                                | InvestmentGuidanceResponse          |
+| 적립식 투자 가이드       | 투자 가이드 적용          | 승환 양    | POST   | /api/v1/investment-guidances/{guidanceId}/apply               | InvestmentGuidanceApplyRequest   | StrategyApplicationResponse         |
 | 알림 · FCM               | 디바이스 토큰 등록        | -          | POST   | /api/v1/device-tokens                                         | DeviceTokenRequest               | DeviceTokenResponse                 |
 | 알림 · FCM               | 알림 이력                 | -          | GET    | /api/v1/notifications?page=&size=                             | page,size(query)                 | List<NotificationResponse>          |
 | 알림 · FCM               | 알림 읽음                 | -          | PUT    | /api/v1/notifications/{notificationId}/read                   | notificationId(path)             | 204 No Content                      |
