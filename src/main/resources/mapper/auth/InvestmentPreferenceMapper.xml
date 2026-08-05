@@ -25,13 +25,16 @@
     <insert id="upsertGoalTargetAmount" parameterType="map">
         INSERT INTO goal (
             user_id,
-            target_amount
+            target_amount,
+            status
         )
         VALUES (
             #{userId},
-            #{targetAmount}
+            #{targetAmount},
+            'ACTIVE'
         )
         ON DUPLICATE KEY UPDATE
-            target_amount = VALUES(target_amount)
+            target_amount = VALUES(target_amount),
+            status = 'ACTIVE'
     </insert>
 </mapper>

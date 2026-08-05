@@ -19,6 +19,7 @@ public class SimulationVo {
   private Long simulationId;
   private Long userId;
   private String scenarioName;
+  private Long targetAmount;
   private Long monthlySavingAmount;
   private BigDecimal investmentRatio;
   private BigDecimal expectedReturnRate;

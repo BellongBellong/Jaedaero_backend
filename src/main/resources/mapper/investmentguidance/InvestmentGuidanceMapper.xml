@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceMapper">
+
+    <sql id="guidanceColumns">
+        guidance_id, user_id, plan_id, forecast_id, plan_updated_at, input_data_hash, service_stage, action_type,
+        target_amount, current_contribution_amount, recommended_contribution_amount,
+        continue_expected_asset, recommended_expected_asset, investment_principal,
+        market_value, unrealized_profit_loss, return_rate, expected_return_rate,
+        remaining_contribution_count, safety_buffer_amount, reason,
+        market_data_as_of, next_review_at, created_at
+    </sql>
+
+    <insert id="insert"
+            parameterType="com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceVo"
+            useGeneratedKeys="true" keyProperty="guidanceId">
+        INSERT INTO investment_guidance (
+            user_id, plan_id, forecast_id, plan_updated_at, input_data_hash, service_stage, action_type,
+            target_amount, current_contribution_amount, recommended_contribution_amount,
+            continue_expected_asset, recommended_expected_asset, investment_principal,
+            market_value, unrealized_profit_loss, return_rate, expected_return_rate,
+            remaining_contribution_count, safety_buffer_amount, reason,
+            market_data_as_of, next_review_at
+        ) VALUES (
+            #{userId}, #{planId}, #{forecastId}, #{planUpdatedAt}, #{inputDataHash}, #{serviceStage}, #{actionType},
+            #{targetAmount}, #{currentContributionAmount}, #{recommendedContributionAmount},
+            #{continueExpectedAsset}, #{recommendedExpectedAsset}, #{investmentPrincipal},
+            #{marketValue}, #{unrealizedProfitLoss}, #{returnRate}, #{expectedReturnRate},
+            #{remainingContributionCount}, #{safetyBufferAmount}, #{reason},
+            #{marketDataAsOf}, #{nextReviewAt}
+        )
+    </insert>
+
+    <select id="findByIdAndUserId"
+            resultType="com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceVo">
+        SELECT <include refid="guidanceColumns"/>
+        FROM investment_guidance
+        WHERE guidance_id = #{guidanceId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceVo">
+        SELECT <include refid="guidanceColumns"/>
+        FROM investment_guidance guidance
+        WHERE guidance.user_id = #{userId}
+          AND guidance.next_review_at > #{now}
+          AND EXISTS (
+              SELECT 1
+              FROM goal
+              WHERE goal.user_id = guidance.user_id
+                AND goal.status = 'ACTIVE'
+                AND goal.target_amount = guidance.target_amount
+                AND goal.target_amount > 0
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM recurring_investment_plan plan
+              WHERE plan.plan_id = guidance.plan_id
+                AND plan.updated_at = guidance.plan_updated_at
+          )
+          AND guidance.forecast_id = (
+              SELECT latest.forecast_id
+              FROM cashflow_forecast latest
+              WHERE latest.user_id = guidance.user_id
+              ORDER BY latest.generated_at DESC, latest.forecast_id DESC
+              LIMIT 1
+          )
+          AND (
+              guidance.action_type = 'REVIEW'
+              OR NOT EXISTS (
+                  SELECT 1
+                  FROM recurring_investment_plan current_plan
+                  INNER JOIN connected_account account
+                      ON account.account_id = current_plan.brokerage_account_id
+                  WHERE current_plan.plan_id = guidance.plan_id
+                    AND account.last_synced_at IS NOT NULL
+                    AND (
+                        guidance.market_data_as_of IS NULL
+                        OR account.last_synced_at > guidance.market_data_as_of
+                    )
+              )
+          )
+        ORDER BY guidance.created_at DESC, guidance.guidance_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findLatestByUserIdAndInputDataHash"
+            resultType="com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceVo">
+        SELECT <include refid="guidanceColumns"/>
+        FROM investment_guidance
+        WHERE user_id = #{userId}
+          AND input_data_hash = #{inputDataHash}
+          AND action_type != 'REVIEW'
+        ORDER BY created_at DESC, guidance_id DESC
+        LIMIT 1
+    </select>
+</mapper>
