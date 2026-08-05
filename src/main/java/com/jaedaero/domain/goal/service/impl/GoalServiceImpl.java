@@ -16,6 +16,16 @@ public class GoalServiceImpl implements GoalService {
   private final GoalMapper goalMapper;
 
   @Override
+  @Transactional(readOnly = true)
+  public GoalResponse getGoal(long userId) {
+    Long targetAmount = goalMapper.findTargetAmount(userId);
+    if (targetAmount == null) {
+      throw new MyPageException(MyPageErrorCode.USER_NOT_FOUND, "목표 정보를 찾을 수 없습니다.");
+    }
+    return new GoalResponse(targetAmount);
+  }
+
+  @Override
   @Transactional
   public GoalResponse updateGoal(long userId, GoalRequest request) {
     if (goalMapper.updateTargetAmount(userId, request.getTargetAmount()) == 0) {

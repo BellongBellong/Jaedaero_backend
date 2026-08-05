@@ -12,6 +12,7 @@ public class SimulationResponse {
 
   private final Long simulationId;
   private final String scenarioName;
+  private final Long targetAmount;
   private final Long monthlySpendingAmount;
   private final Long monthlySavingAmount;
   private final BigDecimal investmentRatio;
@@ -24,6 +25,7 @@ public class SimulationResponse {
     return SimulationResponse.builder()
         .simulationId(simulation.getSimulationId())
         .scenarioName(simulation.getScenarioName())
+        .targetAmount(simulation.getTargetAmount())
         .monthlySpendingAmount(simulation.getMonthlySpendingAmount())
         .monthlySavingAmount(simulation.getMonthlySavingAmount())
         .investmentRatio(simulation.getInvestmentRatio())

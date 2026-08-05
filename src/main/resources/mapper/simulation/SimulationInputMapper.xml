@@ -8,23 +8,21 @@
     <select id="findLatestByUserId"
             resultType="com.jaedaero.domain.simulation.vo.SimulationInputSourceVo">
         SELECT
-            forecast.base_asset,
-            forecast.expected_salary,
+            COALESCE((
+                SELECT SUM(account.current_balance)
+                FROM connected_account account
+                INNER JOIN codef_connection connection
+                    ON connection.connection_id = account.connection_id
+                WHERE connection.user_id = #{userId}
+                  AND connection.status = 'ACTIVE'
+                  AND account.status = 'ACTIVE'
+            ), 0) AS base_asset,
             goal.target_amount,
-            profile.discharge_date,
-            COALESCE(saving.monthly_amount, 0) AS mandatory_saving_amount,
-            COALESCE(saving.interest_rate, 0) AS saving_interest_rate,
-            COALESCE(saving.government_support_expected, 0) AS government_support_expected
-        FROM cashflow_forecast forecast
-        INNER JOIN soldier_profile profile ON profile.user_id = forecast.user_id
-        INNER JOIN goal ON goal.user_id = forecast.user_id AND goal.status = 'ACTIVE'
-        LEFT JOIN soldier_saving saving ON saving.user_id = forecast.user_id
-        WHERE forecast.forecast_id = (
-            SELECT latest.forecast_id
-            FROM cashflow_forecast latest
-            WHERE latest.user_id = #{userId}
-            ORDER BY latest.generated_at DESC, latest.forecast_id DESC
-            LIMIT 1
-        )
+            profile.soldier_type,
+            profile.enlistment_date,
+            profile.discharge_date
+        FROM soldier_profile profile
+        INNER JOIN goal ON goal.user_id = profile.user_id AND goal.status = 'ACTIVE'
+        WHERE profile.user_id = #{userId}
     </select>
 </mapper>

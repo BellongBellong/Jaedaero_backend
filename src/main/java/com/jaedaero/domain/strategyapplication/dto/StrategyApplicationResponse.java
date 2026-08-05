@@ -1,5 +1,7 @@
 package com.jaedaero.domain.strategyapplication.dto;
 
+import com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceAction;
+import com.jaedaero.domain.recurringinvestment.vo.InvestmentFrequency;
 import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationSourceType;
 import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo;
 import java.math.BigDecimal;
@@ -19,7 +21,10 @@ public class StrategyApplicationResponse {
   private StrategyApplicationSourceType sourceType;
   private Long simulationId;
   private Long aiScenarioId;
-  private Long rebalancingId;
+  private Long guidanceId;
+  private InvestmentGuidanceAction appliedGuidanceAction;
+  private InvestmentFrequency appliedInvestmentFrequency;
+  private Long appliedRecurringContributionAmount;
   private Long appliedMonthlySavingAmount;
   private BigDecimal appliedInvestmentRatio;
   private BigDecimal appliedExpectedReturnRate;
@@ -34,7 +39,10 @@ public class StrategyApplicationResponse {
         .sourceType(source.getSourceType())
         .simulationId(source.getSimulationId())
         .aiScenarioId(source.getAiScenarioId())
-        .rebalancingId(source.getRebalancingId())
+        .guidanceId(source.getGuidanceId())
+        .appliedGuidanceAction(source.getAppliedGuidanceAction())
+        .appliedInvestmentFrequency(source.getAppliedInvestmentFrequency())
+        .appliedRecurringContributionAmount(source.getAppliedRecurringContributionAmount())
         .appliedMonthlySavingAmount(source.getAppliedMonthlySavingAmount())
         .appliedInvestmentRatio(source.getAppliedInvestmentRatio())
         .appliedExpectedReturnRate(source.getAppliedExpectedReturnRate())

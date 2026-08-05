@@ -1,5 +1,7 @@
 package com.jaedaero.domain.strategyapplication.vo;
 
+import com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceAction;
+import com.jaedaero.domain.recurringinvestment.vo.InvestmentFrequency;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -20,7 +22,10 @@ public class StrategyApplicationVo {
   private StrategyApplicationSourceType sourceType;
   private Long simulationId;
   private Long aiScenarioId;
-  private Long rebalancingId;
+  private Long guidanceId;
+  private InvestmentGuidanceAction appliedGuidanceAction;
+  private InvestmentFrequency appliedInvestmentFrequency;
+  private Long appliedRecurringContributionAmount;
   private Long appliedMonthlySavingAmount;
   private BigDecimal appliedInvestmentRatio;
   private BigDecimal appliedExpectedReturnRate;
