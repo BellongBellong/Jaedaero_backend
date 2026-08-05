@@ -622,6 +622,7 @@ CREATE TABLE investment_guidance (
     guidance_id                     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 가이드 ID',
     user_id                         BIGINT NOT NULL COMMENT '사용자 ID',
     plan_id                         BIGINT NOT NULL COMMENT '계산에 사용한 적립 계획 ID',
+    forecast_id                     BIGINT NOT NULL COMMENT '계산에 사용한 캐시플로우 예측 ID',
     plan_updated_at                 TIMESTAMP NOT NULL COMMENT '계산에 사용한 적립 계획 버전 시각',
     input_data_hash                 CHAR(64) NOT NULL COMMENT '계획·목표·예측·증권평가 입력 해시',
     service_stage                   ENUM('PRIVATE_BASE', 'PRIVATE_FIRST_CLASS_GROWTH', 'CORPORAL_CHECK', 'SERGEANT_PREPARE') NOT NULL COMMENT '계급 기반 UI 여정 단계',
@@ -651,6 +652,9 @@ CREATE TABLE investment_guidance (
     CONSTRAINT fk_investment_guidance_plan
         FOREIGN KEY (plan_id) REFERENCES recurring_investment_plan(plan_id)
             ON DELETE CASCADE,
+    CONSTRAINT fk_investment_guidance_forecast
+        FOREIGN KEY (forecast_id) REFERENCES cashflow_forecast(forecast_id)
+            ON DELETE RESTRICT,
     CONSTRAINT chk_investment_guidance_amounts
         CHECK (
             target_amount >= 0
