@@ -15,6 +15,7 @@ import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
 import com.jaedaero.domain.mypage.vo.InvestmentBadgeVo;
 import com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,25 @@ class MyPageServiceImplTest {
   }
 
   @Test
+  void returnsAllInvestmentBadgeProgressesWithoutPagination() {
+    StubMyPageMapper myPageMapper = new StubMyPageMapper();
+    InvestmentBadgeVo badge = new InvestmentBadgeVo();
+    badge.setBadgeName("공격형 플래티넘");
+    badge.setRequiredMissionCount(100);
+    badge.setMissionCompletedCount(105);
+    badge.setAchieved(true);
+    badge.setAcquiredAt(LocalDateTime.of(2026, 8, 5, 9, 41));
+    myPageMapper.investmentBadges = List.of(badge);
+    MyPageServiceImpl service = new MyPageServiceImpl(myPageMapper, new StubAuthUserMapper());
+
+    assertEquals("공격형 플래티넘", service.getInvestmentBadges(1L).get(0).getBadgeName());
+    assertEquals(105, service.getInvestmentBadges(1L).get(0).getMissionCompletedCount());
+    assertEquals(
+        LocalDateTime.of(2026, 8, 5, 9, 41),
+        service.getInvestmentBadges(1L).get(0).getAcquiredAt());
+  }
+
+  @Test
   void withdrawsUserAndDeletesRefreshTokens() {
     StubMyPageMapper myPageMapper = new StubMyPageMapper();
     StubAuthUserMapper authUserMapper = new StubAuthUserMapper();
@@ -65,12 +85,13 @@ class MyPageServiceImplTest {
     private MyPageProfileVo profile;
     private int badgeCount;
     private List<String> badgeCodes = List.of();
+    private List<InvestmentBadgeVo> investmentBadges = List.of();
     private long withdrawnUserId;
 
     @Override public MyPageProfileVo findActiveProfile(long userId) { return profile; }
     @Override public int countEarnedBadges(long userId) { return badgeCount; }
     @Override public List<String> findRecentBadgeCodes(long userId) { return badgeCodes; }
-    @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId, int offset, int size) { return List.of(); }
+    @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId) { return investmentBadges; }
     @Override public InvestmentBadgeStatusVo findInvestmentBadgeStatus(long userId) { return null; }
     @Override public int withdraw(long userId) { withdrawnUserId = userId; return 1; }
   }
