@@ -100,6 +100,10 @@ public class CodefTransactionSyncService {
           type,
           description,
           key);
+      if ("WITHDRAW".equals(type)) {
+        repository.fillTransactionCategoryIfEmpty(
+            accountId, key, TransactionCategory.fromDescription(description).name());
+      }
       count++;
     }
     return count;
