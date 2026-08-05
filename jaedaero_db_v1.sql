@@ -1,5 +1,5 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.1, 2026-08-04)
+-- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
 -- MySQL 8.0+
 -- ============================================================
 
@@ -12,10 +12,8 @@ DROP TABLE IF EXISTS `device_token`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
 DROP TABLE IF EXISTS `investment_badge`;
-DROP TABLE IF EXISTS `user_badge`;
 DROP TABLE IF EXISTS `badge`;
 DROP TABLE IF EXISTS `user_mission_completion`;
-DROP TABLE IF EXISTS `user_mission_progress`;
 DROP TABLE IF EXISTS `mission`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `discharge_report`;
@@ -757,60 +755,40 @@ CREATE TABLE refresh_token (
 -- ---------------------------------------------
 CREATE TABLE mission (
                          mission_id      BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 ID',
-                         mission_type    ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '연관 투자성향',
-                         mission_category ENUM('DAILY', 'MONTHLY', 'PAYDAY', 'LEAVE_MODE') NOT NULL DEFAULT 'DAILY' COMMENT '미션 노출 주기 및 분류',
-                         mission_scope   ENUM('ALL', 'SAFE', 'AGGRESSIVE', 'LEAVE_MODE') NOT NULL DEFAULT 'ALL' COMMENT '미션 대상 사용자 범위',
+                         mission_type    ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '미션 성향(공통 미션은 NULL)',
+                         mission_category ENUM('DAILY', 'RECOMMENDED', 'ONE_TIME', 'EVENT') NOT NULL DEFAULT 'DAILY' COMMENT '미션 노출 분류',
                          title           VARCHAR(255) NOT NULL COMMENT '미션명 (예: 30일 연속 출석 체크, ETF 첫 투자 미션)',
                          description     TEXT NULL COMMENT '미션 설명',
                          action_type     VARCHAR(50) NOT NULL COMMENT '완료 조건 유형 (ATTENDANCE, PRODUCT_VIEW, SAVING_CHECK, SIMULATION_RUN 등)',
-                         default_target_count INT NOT NULL DEFAULT 1 COMMENT '기본 완료 목표 횟수',
                          display_order   INT NOT NULL DEFAULT 0 COMMENT '화면 노출 순서',
-                         reward_point    INT NOT NULL DEFAULT 0 COMMENT '미션 완료 보상 포인트',
-                         is_repeatable   BOOLEAN NOT NULL DEFAULT FALSE COMMENT '반복(일일) 미션 여부',
+                         trigger_type    ENUM('NONE', 'DAYS_TO_DISCHARGE', 'LEAVE_SCHEDULED', 'PAYDAY') NOT NULL DEFAULT 'NONE' COMMENT '이벤트 미션 노출 조건 유형',
+                         trigger_value   INT NULL COMMENT '이벤트 조건값(예: 전역까지 남은 일수)',
+                         event_priority  INT NOT NULL DEFAULT 0 COMMENT '동시 이벤트 발생 시 노출 우선순위',
                          is_active       BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
                          created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
-                         CONSTRAINT chk_mission_target_count
-                             CHECK (default_target_count > 0),
                          CONSTRAINT chk_mission_display_order
                              CHECK (display_order >= 0),
-                         CONSTRAINT chk_mission_reward_point
-                             CHECK (reward_point >= 0)
-) COMMENT='미션 마스터 — 투자 뱃지 산정 기준 + 오늘의 미션 겸용(2026-07-25)'
-    DEFAULT CHARSET=utf8mb4
-    COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------
--- 27. user_mission_progress : 사용자별 미션 진행 현황
--- ---------------------------------------------
-CREATE TABLE user_mission_progress (
-                                       progress_id        BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 진행 ID',
-                                       user_id            BIGINT NOT NULL COMMENT '사용자 ID',
-                                       mission_id         BIGINT NOT NULL COMMENT '미션 ID',
-
-                                       progress_count     INT NOT NULL DEFAULT 0 COMMENT '현재 진행 횟수',
-                                       target_count       INT NOT NULL DEFAULT 1 COMMENT '목표 횟수',
-
-                                       progress_date      DATE NOT NULL COMMENT '진행 기준일',
-                                       is_completed       BOOLEAN NOT NULL DEFAULT FALSE COMMENT '완료 여부',
-
-                                       created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일',
-                                       updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                           ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
-
-                                       CONSTRAINT uq_user_mission_progress
-                                           UNIQUE (user_id, mission_id, progress_date),
-
-                                       CONSTRAINT fk_user_mission_progress_user
-                                           FOREIGN KEY (user_id)
-                                               REFERENCES users(user_id)
-                                               ON DELETE CASCADE,
-
-                                       CONSTRAINT fk_user_mission_progress_mission
-                                           FOREIGN KEY (mission_id)
-                                               REFERENCES mission(mission_id)
-                                               ON DELETE CASCADE
-) COMMENT='사용자별 미션 진행 현황'
+                         CONSTRAINT chk_mission_trigger_value
+                             CHECK (trigger_value IS NULL OR trigger_value >= 0),
+                         CONSTRAINT chk_mission_event_priority
+                             CHECK (event_priority >= 0),
+                         CONSTRAINT chk_mission_recommended_type
+                             CHECK (
+                                 mission_category <> 'RECOMMENDED'
+                                     OR mission_type IS NOT NULL
+                             ),
+                         CONSTRAINT chk_mission_daily_common_type
+                             CHECK (
+                                 mission_category <> 'DAILY'
+                                     OR mission_type IS NULL
+                             ),
+                         CONSTRAINT chk_mission_event_trigger
+                             CHECK (
+                                 mission_category <> 'EVENT'
+                                     OR trigger_type <> 'NONE'
+                             )
+) COMMENT='공통 데일리·성향별 추천·1회성·조건형 이벤트 미션을 관리하는 마스터'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -840,26 +818,24 @@ CREATE TABLE user_mission_completion (
 -- 29. badge : 뱃지 마스터
 -- ---------------------------------------------
 CREATE TABLE badge (
-                         badge_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '뱃지 ID',
-                         badge_name        VARCHAR(100) NOT NULL COMMENT '뱃지명',
-                         badge_description VARCHAR(500) NULL COMMENT '뱃지 획득 조건 설명',
-                         badge_type        ENUM('MISSION_COUNT', 'SAVING_RATE', 'CHALLENGE_RANK') NOT NULL COMMENT '뱃지 달성 기준 유형',
-                         mission_type      ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '미션 완료 수 뱃지의 투자 성향',
-                         condition_value   DECIMAL(10,2) NOT NULL COMMENT '뱃지 획득 기준값',
+                          badge_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '뱃지 ID',
+                          badge_name        VARCHAR(100) NOT NULL COMMENT '뱃지명',
+                          badge_description VARCHAR(500) NULL COMMENT '뱃지 획득 조건 설명',
+                         mission_type      ENUM('SAFE', 'AGGRESSIVE') NOT NULL COMMENT '뱃지 투자 성향',
+                         required_completion_count INT NOT NULL COMMENT '티어 획득에 필요한 누적 미션 완료 수',
                          grade             ENUM('BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND') NOT NULL COMMENT '뱃지 등급',
                          image_url         VARCHAR(500) NULL COMMENT '뱃지 이미지 URL',
                          is_active         BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
                          created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                          CONSTRAINT uq_badge_name UNIQUE (badge_name),
-                         CONSTRAINT chk_badge_condition_value
-                             CHECK (condition_value >= 0),
-                         CONSTRAINT chk_badge_mission_type
-                             CHECK (
-                                 badge_type <> 'MISSION_COUNT'
-                                     OR mission_type IS NOT NULL
-                             )
-) COMMENT='성향별 미션 완료 수, 저축률, 챌린지 순위 달성 기준을 정의하는 뱃지 마스터'
+                         CONSTRAINT uq_badge_mission_type_grade
+                             UNIQUE (mission_type, grade),
+                         CONSTRAINT uq_badge_mission_type_completion_count
+                             UNIQUE (mission_type, required_completion_count),
+                         CONSTRAINT chk_badge_required_completion_count
+                             CHECK (required_completion_count > 0)
+) COMMENT='성향별 누적 미션 완료 수 티어를 정의하는 뱃지 마스터'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -869,47 +845,25 @@ CREATE TABLE badge (
 INSERT INTO badge (
     badge_name,
     badge_description,
-    badge_type,
     mission_type,
-    condition_value,
+    required_completion_count,
     grade,
     image_url,
     is_active
 ) VALUES
-    ('안정형 브론즈', '안정형 미션 1개 완료', 'MISSION_COUNT', 'SAFE', 1, 'BRONZE', NULL, TRUE),
-    ('안정형 실버', '안정형 미션 10개 완료', 'MISSION_COUNT', 'SAFE', 10, 'SILVER', NULL, TRUE),
-    ('안정형 골드', '안정형 미션 100개 완료', 'MISSION_COUNT', 'SAFE', 100, 'GOLD', NULL, TRUE),
-    ('안정형 플래티넘', '안정형 미션 300개 완료', 'MISSION_COUNT', 'SAFE', 300, 'PLATINUM', NULL, TRUE),
-    ('안정형 다이아', '안정형 미션 1,000개 완료', 'MISSION_COUNT', 'SAFE', 1000, 'DIAMOND', NULL, TRUE),
-    ('공격형 브론즈', '공격형 미션 1개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 1, 'BRONZE', NULL, TRUE),
-    ('공격형 실버', '공격형 미션 10개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 10, 'SILVER', NULL, TRUE),
-    ('공격형 골드', '공격형 미션 100개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 100, 'GOLD', NULL, TRUE),
-    ('공격형 플래티넘', '공격형 미션 300개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 300, 'PLATINUM', NULL, TRUE),
-    ('공격형 다이아', '공격형 미션 1,000개 완료', 'MISSION_COUNT', 'AGGRESSIVE', 1000, 'DIAMOND', NULL, TRUE);
+    ('안정형 브론즈', '안정형 미션 1개 완료', 'SAFE', 1, 'BRONZE', NULL, TRUE),
+    ('안정형 실버', '안정형 미션 10개 완료', 'SAFE', 10, 'SILVER', NULL, TRUE),
+    ('안정형 골드', '안정형 미션 50개 완료', 'SAFE', 50, 'GOLD', NULL, TRUE),
+    ('안정형 플래티넘', '안정형 미션 100개 완료', 'SAFE', 100, 'PLATINUM', NULL, TRUE),
+    ('안정형 다이아', '안정형 미션 300개 완료', 'SAFE', 300, 'DIAMOND', NULL, TRUE),
+    ('공격형 브론즈', '공격형 미션 1개 완료', 'AGGRESSIVE', 1, 'BRONZE', NULL, TRUE),
+    ('공격형 실버', '공격형 미션 10개 완료', 'AGGRESSIVE', 10, 'SILVER', NULL, TRUE),
+    ('공격형 골드', '공격형 미션 50개 완료', 'AGGRESSIVE', 50, 'GOLD', NULL, TRUE),
+    ('공격형 플래티넘', '공격형 미션 100개 완료', 'AGGRESSIVE', 100, 'PLATINUM', NULL, TRUE),
+    ('공격형 다이아', '공격형 미션 300개 완료', 'AGGRESSIVE', 300, 'DIAMOND', NULL, TRUE);
 
 -- ---------------------------------------------
--- 30. user_badge : 사용자 뱃지 보유 이력
--- ---------------------------------------------
-CREATE TABLE user_badge (
-                              user_badge_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '사용자 뱃지 ID',
-                              user_id           BIGINT NOT NULL COMMENT '사용자 ID',
-                              badge_id          BIGINT NOT NULL COMMENT '뱃지 ID',
-                              is_representative BOOLEAN NOT NULL DEFAULT FALSE COMMENT '대표 뱃지 여부',
-                              acquired_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '획득 일시',
-
-                              CONSTRAINT uq_user_badge UNIQUE (user_id, badge_id),
-                              CONSTRAINT fk_user_badge_user
-                                  FOREIGN KEY (user_id) REFERENCES users(user_id)
-                                      ON DELETE CASCADE,
-                              CONSTRAINT fk_user_badge_badge
-                                  FOREIGN KEY (badge_id) REFERENCES badge(badge_id)
-                                      ON DELETE CASCADE
-) COMMENT='사용자가 획득한 뱃지와 대표 뱃지 설정 정보'
-    DEFAULT CHARSET=utf8mb4
-    COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------
--- 31. investment_badge : 투자 뱃지
+-- 30. investment_badge : 투자 뱃지
 -- ---------------------------------------------
 CREATE TABLE investment_badge (
                                   badge_id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '투자 뱃지 ID',

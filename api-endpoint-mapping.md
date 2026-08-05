@@ -33,7 +33,7 @@
 | 거래내역 · 소비          | 거래 카테고리 수정        | You know   | PUT    | /api/v1/transactions/{transactionId}/category                 | TransactionCategoryUpdateRequest | TransactionResponse                 |
 | 장병내일준비적금         | 적금 정보 조회            | You know   | GET    | /api/v1/soldier-savings                                       | -                                | SoldierSavingResponse               |
 | 챌린지                   | 동기 그룹·랭킹 조회       | seonghun   | GET    | /api/v1/challenges/group                                      | -                                | ChallengeGroupResponse              |
-| 챌린지                   | 투자 뱃지 조회            | seonghun   | GET    | /api/v1/users/investment-badges?page=&size=                   | page,size(query)                 | List<InvestmentBadgeResponse>       |
+| 챌린지                   | 투자 뱃지 조회            | seonghun   | GET    | /api/v1/users/investment-badges                               | -                                | List<InvestmentBadgeResponse>       |
 | 챌린지                   | 오늘의 미션 목록          | seonghun   | GET    | /api/v1/missions/today                                        | -                                | List<MissionResponse>               |
 | 챌린지                   | 미션 완료                 | seonghun   | POST   | /api/v1/missions/{missionId}/complete                         | missionId(path)                  | MissionCompletionResponse           |
 | 리포트 · 추천 · 혜택     | 전역 리포트               | You know   | GET    | /api/v1/reports/discharge                                     | -                                | DischargeReportResponse             |
@@ -61,3 +61,33 @@
 | 별도 데일리 금융 브리핑    | `DashboardResponse.dailyBriefing` 사용                  | 별도 브리핑 API 필요 여부         |
 
 명세에 없는 경로를 프론트엔드에서 임의로 호출하지 않습니다.
+
+## 마이페이지 뱃지 획득 내역 응답 명세
+
+### `GET /api/v1/users/investment-badges`
+
+투자 뱃지 획득 이력을 최신순으로 조회합니다. 화면 상단의 현재 뱃지 등급·미션 달성 수는
+`GET /api/v1/users/me`의 `investmentBadgeStatus`를 함께 사용합니다.
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| badgeName | String | 뱃지명. 예: `공격형 플래티넘` |
+| badgeDescription | String | 뱃지 달성 조건 설명 |
+| missionType | String (Enum) | 뱃지 성향: `SAFE`, `AGGRESSIVE` |
+| grade | String (Enum) | 뱃지 등급: `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND` |
+| requiredMissionCount | Number | 해당 등급 획득에 필요한 누적 미션 수 |
+| missionCompletedCount | Number | 해당 성향의 현재 누적 미션 달성 수 |
+| achieved | Boolean | 현재 사용자의 해당 뱃지 달성 여부 |
+| imageUrl | String | 뱃지 이미지 URL. 이미지가 없으면 `null` |
+
+### `GET /api/v1/users/me`의 `investmentBadgeStatus`
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| initialPreference | String (Enum) | 온보딩에서 선택한 최초 투자 성향입니다. |
+| badgeTier | String (Enum) | 현재 대표 뱃지 성향입니다. |
+| safeGrade | String | 안정형 미션 뱃지의 현재 등급입니다. |
+| aggressiveGrade | String | 공격형 미션 뱃지의 현재 등급입니다. |
+| safeMissionCount | Number | 안정형 누적 미션 달성 수입니다. |
+| aggressiveMissionCount | Number | 공격형 누적 미션 달성 수입니다. |
+| missionCompletedCount | Number | 안정형·공격형 미션 누적 달성 수입니다. |
