@@ -16,4 +16,5 @@ public class MyPageProfileResponse {
   private final SoldierType soldierType;
   private final String militaryRank;
   private final BadgeSummaryResponse badgeSummary;
+  private final InvestmentBadgeStatusResponse investmentBadgeStatus;
 }

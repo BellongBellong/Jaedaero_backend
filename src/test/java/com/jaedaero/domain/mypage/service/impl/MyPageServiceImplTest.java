@@ -13,6 +13,7 @@ import com.jaedaero.domain.mypage.exception.MyPageException;
 import com.jaedaero.domain.mypage.mapper.MyPageMapper;
 import com.jaedaero.domain.mypage.vo.MyPageProfileVo;
 import com.jaedaero.domain.mypage.vo.InvestmentBadgeVo;
+import com.jaedaero.domain.mypage.vo.InvestmentBadgeStatusVo;
 import java.sql.Timestamp;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,7 @@ class MyPageServiceImplTest {
     @Override public int countEarnedBadges(long userId) { return badgeCount; }
     @Override public List<String> findRecentBadgeCodes(long userId) { return badgeCodes; }
     @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId, int offset, int size) { return List.of(); }
+    @Override public InvestmentBadgeStatusVo findInvestmentBadgeStatus(long userId) { return null; }
     @Override public int withdraw(long userId) { withdrawnUserId = userId; return 1; }
   }
 
