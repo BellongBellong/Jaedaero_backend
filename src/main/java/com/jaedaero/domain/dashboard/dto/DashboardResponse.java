@@ -103,16 +103,7 @@ public class DashboardResponse {
   }
 
   private static Long monthlyInvestmentGoal(StrategyApplicationVo application) {
-    if (application == null
-        || application.getAppliedMonthlySavingAmount() == null
-        || application.getAppliedInvestmentRatio() == null) {
-      return null;
-    }
-    return BigDecimal.valueOf(application.getAppliedMonthlySavingAmount())
-        .multiply(application.getAppliedInvestmentRatio())
-        .movePointLeft(2)
-        .setScale(0, RoundingMode.HALF_UP)
-        .longValue();
+    return application == null ? null : application.getAppliedMonthlyInvestmentAmount();
   }
 
   private static BigDecimal achievementRate(long actualAmount, Long goalAmount) {

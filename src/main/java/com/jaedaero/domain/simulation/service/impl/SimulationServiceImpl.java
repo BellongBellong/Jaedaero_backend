@@ -115,6 +115,18 @@ public class SimulationServiceImpl implements SimulationService {
             .monthlySpendingAmount(request.getMonthlySpendingAmount())
             .expectedAsset(result.expectedAsset())
             .financialDischargeDate(result.financialDischargeDate())
+            .calculationMonths(result.calculationMonths())
+            .baseAsset(result.baseAsset())
+            .expectedSalary(result.expectedSalary())
+            .expectedSpending(result.expectedSpending())
+            .soldierSavingPrincipal(result.soldierSavingPrincipal())
+            .soldierSavingInterest(result.soldierSavingInterest())
+            .governmentMatchingSupport(result.governmentMatchingSupport())
+            .investmentPrincipal(result.investmentPrincipal())
+            .expectedInvestmentReturn(result.expectedInvestmentReturn())
+            .unallocatedPrincipal(result.unallocatedPrincipal())
+            .potentialExpectedAsset(result.potentialExpectedAsset())
+            .calculationPolicyVersion(result.calculationPolicyVersion())
             .isSaved(isSaved)
             .build();
 

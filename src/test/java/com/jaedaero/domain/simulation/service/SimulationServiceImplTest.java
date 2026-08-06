@@ -80,6 +80,24 @@ class SimulationServiceImplTest {
     assertEquals(new BigDecimal("33.33"), preview.getSavingRate());
     assertEquals(new BigDecimal("16.67"), preview.getInvestmentRate());
     assertEquals(270_000L, preview.getUnallocatedAmount());
+    assertEquals(15, preview.getCalculationDetail().getCalculationMonths());
+    assertEquals(4_300_000L, preview.getCalculationDetail().getBaseAsset());
+    assertEquals(18_300_000L, preview.getCalculationDetail().getExpectedSalary());
+    assertEquals(2_700_000L, preview.getCalculationDetail().getExpectedSpending());
+    assertEquals(15_600_000L, preview.getCalculationDetail().getCashflowIncreaseAmount());
+    assertEquals(4_500_000L, preview.getCalculationDetail().getSoldierSavingPrincipal());
+    assertEquals(2_250_000L, preview.getCalculationDetail().getInvestmentPrincipal());
+    assertEquals(8_850_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
+    assertEquals(133_650L, preview.getExpectedEffect().getSoldierSavingInterest());
+    assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
+    assertEquals(66_825L, preview.getExpectedEffect().getExpectedInvestmentReturn());
+    assertEquals(4_700_475L, preview.getExpectedEffect().getProjectedBenefitAmount());
+    assertFalse(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
+    assertEquals(19_900_000L, preview.getExpectedEffect().getConservativeExpectedAsset());
+    assertEquals(24_600_475L, preview.getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(
+        SimulationCalculator.CALCULATION_POLICY_VERSION,
+        preview.getExpectedEffect().getCalculationPolicyVersion());
 
     SimulationResponse saved = service.run(1L, request(true));
 
@@ -91,6 +109,9 @@ class SimulationServiceImplTest {
     assertEquals(saved.getSimulationId(), history.getSimulations().get(0).getSimulationId());
     assertEquals(150_000L, history.getSimulations().get(0).getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("16.67"), history.getSimulations().get(0).getInvestmentRate());
+    assertEquals(
+        saved.getExpectedEffect().getPotentialExpectedAsset(),
+        history.getSimulations().get(0).getExpectedEffect().getPotentialExpectedAsset());
   }
 
   @Test
@@ -150,6 +171,64 @@ class SimulationServiceImplTest {
     assertEquals(new BigDecimal("61.11"), defaults.getSavingRate());
     assertEquals(new BigDecimal("8.89"), defaults.getInvestmentRate());
     assertEquals(150_000L, defaults.getUnallocatedAmount());
+  }
+
+  @Test
+  void lowerSoldierSavingReducesInterestAndMatching_withoutDoubleCountingPrincipal() {
+    SimulationService service = service(900_000L);
+    SimulationRequest highSaving = request(false);
+    highSaving.setMonthlySavingAmount(300_000L);
+    highSaving.setMonthlyInvestmentAmount(150_000L);
+    SimulationRequest lowSaving = request(false);
+    lowSaving.setMonthlySavingAmount(100_000L);
+    lowSaving.setMonthlyInvestmentAmount(350_000L);
+
+    SimulationResponse high = service.run(1L, highSaving);
+    SimulationResponse low = service.run(1L, lowSaving);
+
+    assertEquals(high.getExpectedAsset(), low.getExpectedAsset());
+    assertTrue(
+        high.getExpectedEffect().getSoldierSavingInterest()
+            > low.getExpectedEffect().getSoldierSavingInterest());
+    assertTrue(
+        high.getExpectedEffect().getGovernmentMatchingSupport()
+            > low.getExpectedEffect().getGovernmentMatchingSupport());
+    assertEquals(
+        high.getCalculationDetail().getCashflowIncreaseAmount(),
+        Math.addExact(
+            Math.addExact(
+                high.getCalculationDetail().getSoldierSavingPrincipal(),
+                high.getCalculationDetail().getInvestmentPrincipal()),
+            high.getCalculationDetail().getUnallocatedPrincipal()));
+  }
+
+  @Test
+  void legacySimulationWithoutDetailSnapshotReturnsNullableDetail() {
+    SimulationVo legacy =
+        SimulationVo.builder()
+            .simulationId(1L)
+            .scenarioName("기존 이력")
+            .targetAmount(20_000_000L)
+            .monthlySpendingAmount(180_000L)
+            .monthlySavingAmount(300_000L)
+            .monthlyInvestmentAmount(150_000L)
+            .expectedReturnRate(new BigDecimal("5.00"))
+            .expectedAsset(19_900_000L)
+            .isSaved(true)
+            .build();
+
+    SimulationResponse response =
+        SimulationResponse.from(
+            legacy,
+            new SimulationAllocationMetrics(
+                900_000L,
+                new BigDecimal("20.00"),
+                new BigDecimal("33.33"),
+                new BigDecimal("16.67"),
+                270_000L));
+
+    assertNull(response.getCalculationDetail());
+    assertNull(response.getExpectedEffect());
   }
 
   private SimulationRequest request(boolean isSaved) {

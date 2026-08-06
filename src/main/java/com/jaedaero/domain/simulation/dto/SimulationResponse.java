@@ -25,6 +25,8 @@ public class SimulationResponse {
   private final BigDecimal expectedReturnRate;
   private final Long expectedAsset;
   private final LocalDate financialDischargeDate;
+  private final SimulationCalculationDetailResponse calculationDetail;
+  private final SimulationExpectedEffectResponse expectedEffect;
   private final Boolean isSaved;
 
   public static SimulationResponse from(
@@ -44,6 +46,8 @@ public class SimulationResponse {
         .expectedReturnRate(simulation.getExpectedReturnRate())
         .expectedAsset(simulation.getExpectedAsset())
         .financialDischargeDate(simulation.getFinancialDischargeDate())
+        .calculationDetail(SimulationCalculationDetailResponse.from(simulation))
+        .expectedEffect(SimulationExpectedEffectResponse.from(simulation))
         .isSaved(simulation.getIsSaved())
         .build();
   }

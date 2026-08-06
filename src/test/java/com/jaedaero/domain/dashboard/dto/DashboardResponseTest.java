@@ -35,7 +35,7 @@ class DashboardResponseTest {
         StrategyApplicationVo.builder()
             .sourceType(StrategyApplicationSourceType.SIMULATION)
             .appliedMonthlySavingAmount(1_000_000L)
-            .appliedInvestmentRatio(new BigDecimal("50.00"))
+            .appliedMonthlyInvestmentAmount(500_000L)
             .appliedMonthlySpendingAmount(100_000L)
             .build();
 
