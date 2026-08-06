@@ -18,6 +18,7 @@ class AiStrategyMapperXmlValidationTest {
           "mapper/simulation/SimulationInputMapper.xml",
           "mapper/aianalysis/AiAnalysisMapper.xml",
           "mapper/aianalysis/AiAnalysisInputMapper.xml",
+          "mapper/analysishistory/AnalysisHistoryMapper.xml",
           "mapper/strategyapplication/StrategyApplicationMapper.xml",
           "mapper/recurringinvestment/RecurringInvestmentPlanMapper.xml",
           "mapper/investmentguidance/InvestmentGuidanceInputMapper.xml",
@@ -50,6 +51,15 @@ class AiStrategyMapperXmlValidationTest {
         configuration.hasStatement(
             "com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper.findLatestSuccessfulByUserIdAndInputDataHash"));
     assertTrue(configuration.hasStatement("com.jaedaero.domain.aianalysis.mapper.AiAnalysisInputMapper.findLatestByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.findByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.countByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.findLatestByUserId"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.insert"));
