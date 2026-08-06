@@ -17,6 +17,15 @@ public class SimulationCalculator {
     this.militaryPayPolicy = militaryPayPolicy;
   }
 
+  public long referenceMonthlyIncome(SimulationInput input, LocalDate calculationDate) {
+    return militaryPayPolicy
+        .resolve(
+            input.soldierType(),
+            YearMonth.from(input.enlistmentDate()),
+            YearMonth.from(calculationDate))
+        .monthlySalary();
+  }
+
   public SimulationCalculationResult calculate(
       SimulationInput input, SimulationRequest request, LocalDate calculationDate) {
     long asset = input.baseAsset();
@@ -36,9 +45,7 @@ public class SimulationCalculator {
     for (int index = 0; index < totalMonths; index++) {
       YearMonth month = startMonth.plusMonths(index);
       long salary =
-          militaryPayPolicy
-              .resolve(input.soldierType(), enlistmentMonth, month)
-              .monthlySalary();
+          militaryPayPolicy.resolve(input.soldierType(), enlistmentMonth, month).monthlySalary();
       long assetBeforeMonth = asset;
 
       // What-if의 저축액과 투자액은 순자산 내부 배분이다. MVP 예상자산은

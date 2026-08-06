@@ -53,6 +53,7 @@ class AiAnalysisServiceImplTest {
             new SimulationInput(
                 4_300_000L,
                 20_000_000L,
+                180_000L,
                 SoldierType.ARMY,
                 LocalDate.of(2026, 3, 1),
                 LocalDate.of(2027, 9, 1));
@@ -103,6 +104,7 @@ class AiAnalysisServiceImplTest {
             new SimulationInput(
                 4_300_000L,
                 20_000_000L,
+                180_000L,
                 SoldierType.ARMY,
                 LocalDate.of(2026, 3, 1),
                 LocalDate.of(2027, 9, 1));

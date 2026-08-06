@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public record SimulationInput(
     long baseAsset,
     long targetAmount,
+    long monthlySpendingAverage,
     SoldierType soldierType,
     LocalDate enlistmentDate,
     LocalDate dischargeDate) {}

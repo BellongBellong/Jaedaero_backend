@@ -11,6 +11,7 @@ public class SimulationInputSourceVo {
 
   private Long baseAsset;
   private Long targetAmount;
+  private Long monthlySpendingAverage;
   private String soldierType;
   private LocalDate enlistmentDate;
   private LocalDate dischargeDate;
