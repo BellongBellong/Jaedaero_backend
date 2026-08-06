@@ -1,5 +1,6 @@
 package com.jaedaero.domain.simulation.controller;
 
+import com.jaedaero.domain.simulation.dto.SimulationDefaultsResponse;
 import com.jaedaero.domain.simulation.dto.SimulationHistoryResponse;
 import com.jaedaero.domain.simulation.dto.SimulationRequest;
 import com.jaedaero.domain.simulation.dto.SimulationResponse;
@@ -30,6 +31,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class SimulationController {
 
   private final SimulationService simulationService;
+
+  @GetMapping("/defaults")
+  public ResponseEntity<SimulationDefaultsResponse> getDefaults(Authentication authentication) {
+    return ResponseEntity.ok(
+        simulationService.getDefaults(authenticatedUserId(authentication)));
+  }
 
   @PostMapping
   public ResponseEntity<SimulationResponse> run(
