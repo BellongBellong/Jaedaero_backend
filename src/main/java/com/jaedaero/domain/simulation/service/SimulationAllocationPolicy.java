@@ -15,15 +15,31 @@ public class SimulationAllocationPolicy {
   public static final BigDecimal DEFAULT_EXPECTED_RETURN_RATE = new BigDecimal("5.00");
 
   public void validate(SimulationRequest request, long referenceMonthlyIncome) {
+    validate(
+        request.getMonthlySpendingAmount(),
+        request.getMonthlySavingAmount(),
+        request.getMonthlyInvestmentAmount(),
+        request.getExpectedReturnRate(),
+        referenceMonthlyIncome);
+  }
+
+  public void validate(
+      Long monthlySpendingAmount,
+      Long monthlySavingAmount,
+      Long monthlyInvestmentAmount,
+      BigDecimal expectedReturnRate,
+      long referenceMonthlyIncome) {
     if (referenceMonthlyIncome <= 0) {
       throw new SimulationException(
           SimulationErrorCode.INPUT_NOT_READY, "계산 기준월의 군 월급 정보가 없습니다.");
     }
 
-    long spending = requiredNonNegative(request.getMonthlySpendingAmount(), "월 소비액");
-    long saving =
-        requiredNonNegative(request.getMonthlySavingAmount(), "장병내일준비적금 월 납입액");
-    long investment = requiredNonNegative(request.getMonthlyInvestmentAmount(), "월 투자금액");
+    long spending = requiredNonNegative(monthlySpendingAmount, "월 소비액");
+    long saving = requiredNonNegative(monthlySavingAmount, "장병내일준비적금 월 납입액");
+    long investment = requiredNonNegative(monthlyInvestmentAmount, "월 투자금액");
+    if (expectedReturnRate == null || expectedReturnRate.signum() < 0) {
+      throw invalid("기대 수익률은 0 이상이어야 합니다.");
+    }
     if (saving > MAX_MONTHLY_SAVING_AMOUNT) {
       throw invalid("장병내일준비적금 월 납입액은 550000원 이하여야 합니다.");
     }

@@ -12,7 +12,27 @@ public record CashflowInput(
     SoldierType soldierType,
     LocalDate enlistmentDate,
     LocalDate dischargeDate,
-    List<SoldierSavingInput> soldierSavings) {
+    List<SoldierSavingInput> soldierSavings,
+    AppliedCashflowStrategy appliedStrategy) {
+
+  public CashflowInput(
+      long baseAsset,
+      long targetAmount,
+      long monthlySpendingAverage,
+      SoldierType soldierType,
+      LocalDate enlistmentDate,
+      LocalDate dischargeDate,
+      List<SoldierSavingInput> soldierSavings) {
+    this(
+        baseAsset,
+        targetAmount,
+        monthlySpendingAverage,
+        soldierType,
+        enlistmentDate,
+        dischargeDate,
+        soldierSavings,
+        null);
+  }
 
   public CashflowInput(
       long baseAsset,
@@ -28,6 +48,7 @@ public record CashflowInput(
         soldierType,
         enlistmentDate,
         dischargeDate,
-        List.of());
+        List.of(),
+        null);
   }
 }

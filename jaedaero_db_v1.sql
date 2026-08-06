@@ -681,6 +681,7 @@ CREATE TABLE strategy_application (
     application_id                   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '전략 적용 ID',
     user_id                          BIGINT NOT NULL COMMENT '사용자 ID',
     source_type                      ENUM('SIMULATION', 'AI_RECOMMENDATION', 'INVESTMENT_GUIDANCE', 'MANUAL') NOT NULL COMMENT '적용 출처',
+    analysis_id                      BIGINT NULL COMMENT '원본 AI 분석 ID — AI 추천 적용 멱등성 키',
     simulation_id                    BIGINT NULL COMMENT '원본 시뮬레이션 ID',
     ai_scenario_id                   BIGINT NULL COMMENT '원본 AI 추천 시나리오 ID',
     guidance_id                      BIGINT NULL COMMENT '원본 적립식 투자 가이드 ID',
@@ -698,6 +699,9 @@ CREATE TABLE strategy_application (
     CONSTRAINT fk_strategy_application_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE,
+    CONSTRAINT fk_strategy_application_analysis
+        FOREIGN KEY (analysis_id) REFERENCES ai_analysis(analysis_id)
+            ON DELETE SET NULL,
     CONSTRAINT fk_strategy_application_simulation
         FOREIGN KEY (simulation_id) REFERENCES simulation(simulation_id)
             ON DELETE SET NULL,
@@ -709,6 +713,8 @@ CREATE TABLE strategy_application (
             ON DELETE SET NULL,
     CONSTRAINT uq_strategy_application_guidance_selection
         UNIQUE (user_id, guidance_id, applied_guidance_action, applied_investment_frequency, applied_recurring_contribution_amount),
+    CONSTRAINT uq_strategy_application_ai_analysis
+        UNIQUE (user_id, analysis_id),
     CONSTRAINT chk_strategy_application_monthly_amounts
         CHECK (
             (applied_monthly_spending_amount IS NULL OR applied_monthly_spending_amount >= 0)
@@ -720,7 +726,7 @@ CREATE TABLE strategy_application (
             applied_recurring_contribution_amount IS NULL
                 OR applied_recurring_contribution_amount >= 0
         )
-) COMMENT='AI 추천과 적립식 투자 가이드의 "적용하기" 감사 기록. 실제 금융 주문은 수행하지 않음'
+) COMMENT='최신 AI 추천 적용 행은 활성 캐시플로우 전략이며 전체 행은 적용 감사 이력. 실제 금융 주문은 수행하지 않음'
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 

@@ -19,6 +19,7 @@ public class StrategyApplicationResponse {
 
   private Long applicationId;
   private StrategyApplicationSourceType sourceType;
+  private Long analysisId;
   private Long simulationId;
   private Long aiScenarioId;
   private Long guidanceId;
@@ -37,6 +38,7 @@ public class StrategyApplicationResponse {
     return builder()
         .applicationId(source.getApplicationId())
         .sourceType(source.getSourceType())
+        .analysisId(source.getAnalysisId())
         .simulationId(source.getSimulationId())
         .aiScenarioId(source.getAiScenarioId())
         .guidanceId(source.getGuidanceId())

@@ -20,6 +20,7 @@ public class StrategyApplicationVo {
   private Long applicationId;
   private Long userId;
   private StrategyApplicationSourceType sourceType;
+  private Long analysisId;
   private Long simulationId;
   private Long aiScenarioId;
   private Long guidanceId;

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jaedaero.domain.aianalysis.dto.AiAnalysisResult;
 import com.jaedaero.domain.aianalysis.dto.AiRecommendedScenarioResponse;
 import com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper;
-import com.jaedaero.domain.aianalysis.service.AiAnalysisInput;
 import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
 import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
@@ -23,7 +22,6 @@ import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo;
 import com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceAction;
 import com.jaedaero.domain.recurringinvestment.vo.InvestmentFrequency;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -44,30 +42,23 @@ class StrategyApplicationServiceImplTest {
     AtomicLong currentExpectedAsset = new AtomicLong(15_000_000L);
     SequencedCashflowService cashflowService =
         new SequencedCashflowService(
-            currentExpectedAsset, List.of(16_500_000L, 17_200_000L));
+            currentExpectedAsset,
+            List.of(15_000_000L, 16_500_000L, 16_500_000L, 17_200_000L));
     StrategyApplicationService service =
         new StrategyApplicationServiceImpl(
             applicationMapper,
             aiAnalysisMapper,
-            userId ->
-                new AiAnalysisInput(
-                    10L,
-                    20L,
-                    currentExpectedAsset.get(),
-                    null,
-                    new BigDecimal("75.00"),
-                    20_000_000L,
-                    LocalDate.of(2027, 9, 1),
-                    180_000L),
             cashflowService,
             objectMapper);
 
     StrategyApplicationResponse first = service.applyAiRecommendation(1L, 3L);
+    StrategyApplicationResponse duplicate = service.applyAiRecommendation(1L, 3L);
     aiAnalysisMapper.recommendation = recommendation(8L, 1L, 17_200_000L);
     aiAnalysisMapper.analysis = analysis(4L, 1L, 8L, objectMapper);
     StrategyApplicationResponse second = service.applyAiRecommendation(1L, 4L);
 
     assertEquals(StrategyApplicationSourceType.AI_RECOMMENDATION, first.getSourceType());
+    assertEquals(3L, first.getAnalysisId());
     assertEquals(7L, first.getAiScenarioId());
     assertNull(first.getSimulationId());
     assertEquals(300_000L, first.getAppliedMonthlySavingAmount());
@@ -76,9 +67,10 @@ class StrategyApplicationServiceImplTest {
     assertEquals(180_000L, first.getAppliedMonthlySpendingAmount());
     assertEquals(15_000_000L, first.getBeforeExpectedAsset());
     assertEquals(16_500_000L, first.getAfterExpectedAsset());
+    assertEquals(first.getApplicationId(), duplicate.getApplicationId());
     assertEquals(16_500_000L, second.getBeforeExpectedAsset());
     assertEquals(17_200_000L, second.getAfterExpectedAsset());
-    assertEquals(2, cashflowService.generateCount);
+    assertEquals(4, cashflowService.generateCount);
 
     List<StrategyApplicationResponse> history = service.getHistory(1L, 0, 1);
     assertEquals(1, history.size());
@@ -95,9 +87,6 @@ class StrategyApplicationServiceImplTest {
         new StrategyApplicationServiceImpl(
             new InMemoryStrategyApplicationMapper(),
             aiAnalysisMapper,
-            userId -> {
-              throw new AssertionError("소유권 검증 전에 입력을 조회하면 안 됩니다.");
-            },
             new SequencedCashflowService(new AtomicLong(), List.of()),
             objectMapper);
 
@@ -235,6 +224,17 @@ class StrategyApplicationServiceImplTest {
               application ->
                   application.getApplicationId() == applicationId
                       && application.getUserId() == userId)
+          .findFirst()
+          .orElse(null);
+    }
+
+    @Override
+    public StrategyApplicationVo findByAnalysisIdAndUserId(long analysisId, long userId) {
+      return applications.stream()
+          .filter(
+              application ->
+                  application.getUserId() == userId
+                      && java.util.Objects.equals(application.getAnalysisId(), analysisId))
           .findFirst()
           .orElse(null);
     }
