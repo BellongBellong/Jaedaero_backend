@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper">
+
+    <resultMap id="challengeGroupResultMap" type="com.jaedaero.domain.challenge.vo.ChallengeGroupVo">
+        <id property="groupId" column="group_id"/>
+        <result property="soldierType" column="soldier_type"
+                javaType="com.jaedaero.domain.auth.common.enums.SoldierType"/>
+        <result property="enlistmentYear" column="enlistment_year"/>
+        <result property="enlistmentMonth" column="enlistment_month"/>
+    </resultMap>
+
+    <resultMap id="rankingMemberResultMap" type="com.jaedaero.domain.challenge.vo.ChallengeRankingMemberVo">
+        <result property="rankingNo" column="ranking_no"/>
+        <result property="memberCount" column="member_count"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImage" column="profile_image"
+                javaType="com.jaedaero.domain.auth.common.enums.ProfileImage"/>
+        <result property="profileSource" column="profile_source"
+                javaType="com.jaedaero.domain.auth.common.enums.ProfileSource"/>
+        <result property="missionCompletionCount" column="mission_completion_count"/>
+    </resultMap>
+
+    <resultMap id="rankingStatisticsResultMap"
+               type="com.jaedaero.domain.challenge.vo.ChallengeRankingStatisticsVo">
+        <result property="memberCount" column="member_count"/>
+        <result property="averageMissionCompletionCount" column="average_mission_completion_count"/>
+        <result property="bottomQuarterAverageMissionCompletionCount"
+                column="bottom_quarter_average_mission_completion_count"/>
+        <result property="topTenPercentThreshold" column="top_ten_percent_threshold"/>
+        <result property="lastUpdatedAt" column="last_updated_at"/>
+    </resultMap>
+
+    <sql id="rankedMembersCte">
+        WITH ranked_members AS (
+            SELECT
+                cm.member_id,
+                cm.user_id,
+                <choose>
+                    <when test="rankingPeriod.name() == 'MONTHLY'">
+                        COALESCE(cmr.mission_completion_count, 0) AS mission_completion_count,
+                        cmr.created_at AS updated_at,
+                    </when>
+                    <otherwise>
+                        COALESCE(cms.total_mission_count, 0) AS mission_completion_count,
+                        cms.updated_at,
+                    </otherwise>
+                </choose>
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    <choose>
+                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
+                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
+                    </choose>
+                    DESC, cm.member_id ASC
+                ) AS ranking_no,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    <choose>
+                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
+                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
+                    </choose>
+                    ASC, cm.member_id ASC
+                ) AS ascending_row_no,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    <choose>
+                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
+                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
+                    </choose>
+                    DESC, cm.member_id ASC
+                ) AS descending_row_no,
+                COUNT(*) OVER () AS member_count
+            FROM challenge_member cm
+            INNER JOIN users member_user ON member_user.user_id = cm.user_id
+            LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
+            LEFT JOIN challenge_monthly_result cmr
+                ON cmr.member_id = cm.member_id
+                AND cmr.result_month = #{resultMonth}
+            WHERE cm.group_id = #{groupId}
+              AND member_user.is_withdrawn = FALSE
+        )
+    </sql>
+
+    <select id="findGroupByUserId" resultMap="challengeGroupResultMap">
+        SELECT
+            cg.group_id,
+            cg.soldier_type,
+            cg.enlistment_year,
+            cg.enlistment_month
+        FROM challenge_member cm
+        INNER JOIN challenge_group cg ON cg.group_id = cm.group_id
+        WHERE cm.user_id = #{userId}
+        ORDER BY cm.joined_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findTopRankersByGroupId" resultMap="rankingMemberResultMap">
+        <include refid="rankedMembersCte"/>
+        SELECT
+            rm.ranking_no,
+            rm.member_count,
+            u.nickname,
+            u.profile_image,
+            u.profile_source,
+            rm.mission_completion_count
+        FROM ranked_members rm
+        INNER JOIN users u ON u.user_id = rm.user_id
+        WHERE u.is_withdrawn = FALSE
+        ORDER BY rm.ranking_no
+        LIMIT 3
+    </select>
+
+    <select id="findMyRankingByGroupId" resultMap="rankingMemberResultMap">
+        <include refid="rankedMembersCte"/>
+        SELECT
+            ranking_no,
+            member_count,
+            mission_completion_count
+        FROM ranked_members
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findRankingStatisticsByGroupId" resultMap="rankingStatisticsResultMap">
+        <include refid="rankedMembersCte"/>
+        SELECT
+            MAX(member_count) AS member_count,
+            CAST(ROUND(AVG(mission_completion_count)) AS SIGNED) AS average_mission_completion_count,
+            CAST(
+                ROUND(
+                    AVG(
+                        CASE
+                            WHEN ascending_row_no &lt;= CEILING(member_count * 0.25)
+                            THEN mission_completion_count
+                        END
+                    )
+                ) AS SIGNED
+            ) AS bottom_quarter_average_mission_completion_count,
+            MAX(
+                CASE
+                    WHEN descending_row_no = CEILING(member_count * 0.10)
+                    THEN mission_completion_count
+                END
+            ) AS top_ten_percent_threshold,
+            MAX(updated_at) AS last_updated_at
+        FROM ranked_members
+    </select>
+</mapper>
