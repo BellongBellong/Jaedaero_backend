@@ -9,7 +9,7 @@
         application_id, user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
         applied_guidance_action, applied_investment_frequency,
         applied_recurring_contribution_amount,
-        applied_monthly_saving_amount, applied_investment_ratio,
+        applied_monthly_saving_amount, applied_monthly_investment_amount,
         applied_expected_return_rate, applied_monthly_spending_amount,
         before_expected_asset, after_expected_asset, applied_at
     </sql>
@@ -21,14 +21,14 @@
             user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
             applied_guidance_action, applied_investment_frequency,
             applied_recurring_contribution_amount,
-            applied_monthly_saving_amount, applied_investment_ratio,
+            applied_monthly_saving_amount, applied_monthly_investment_amount,
             applied_expected_return_rate, applied_monthly_spending_amount,
             before_expected_asset, after_expected_asset
         ) VALUES (
             #{userId}, #{sourceType}, #{simulationId}, #{aiScenarioId}, #{guidanceId},
             #{appliedGuidanceAction}, #{appliedInvestmentFrequency},
             #{appliedRecurringContributionAmount},
-            #{appliedMonthlySavingAmount}, #{appliedInvestmentRatio},
+            #{appliedMonthlySavingAmount}, #{appliedMonthlyInvestmentAmount},
             #{appliedExpectedReturnRate}, #{appliedMonthlySpendingAmount},
             #{beforeExpectedAsset}, #{afterExpectedAsset}
         )

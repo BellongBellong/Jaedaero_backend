@@ -563,8 +563,8 @@ CREATE TABLE product_recommendation (
 CREATE TABLE ai_recommended_scenario (
                                          scenario_id               BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'AI 추천 시나리오 ID',
                                          user_id                   BIGINT NOT NULL COMMENT '사용자 ID',
-                                         monthly_saving_amount     BIGINT NOT NULL COMMENT '추천 월 저축액',
-                                         investment_ratio          DECIMAL(5,2) NOT NULL COMMENT '추천 투자 비율(%)',
+                                         monthly_saving_amount     BIGINT NOT NULL COMMENT '추천 장병내일준비적금 월 납입액(원, 0~550000)',
+                                         monthly_investment_amount BIGINT NOT NULL COMMENT '추천 월 투자 배분액(원)',
                                          expected_return_rate       DECIMAL(5,2) NOT NULL COMMENT '목표 투자수익률(%, 연 환산)',
                                          monthly_spending_amount   BIGINT NOT NULL COMMENT '추천 월 소비액',
                                          expected_asset            BIGINT NOT NULL COMMENT '추천 전역 예상 자산',
@@ -575,8 +575,12 @@ CREATE TABLE ai_recommended_scenario (
                                          CONSTRAINT fk_ai_recommended_scenario_user
                                              FOREIGN KEY (user_id) REFERENCES users(user_id)
                                                  ON DELETE CASCADE,
-                                         CONSTRAINT chk_ai_recommended_scenario_investment_ratio
-                                             CHECK (investment_ratio BETWEEN 0 AND 100)
+                                         CONSTRAINT chk_ai_recommended_scenario_monthly_amounts
+                                             CHECK (
+                                                 monthly_spending_amount >= 0
+                                                 AND monthly_saving_amount BETWEEN 0 AND 550000
+                                                 AND monthly_investment_amount >= 0
+                                             )
 ) COMMENT='AI 추천 시나리오 — 숫자 필드는 Spring 계산(결정론적), GPT는 recommend_reason 서술에만 선택적으로 관여(2026-07-24 확정)'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
@@ -683,8 +687,8 @@ CREATE TABLE strategy_application (
     applied_guidance_action          ENUM('START', 'CONTINUE', 'REDUCE', 'PAUSE', 'SAFE_FOCUS') NULL COMMENT '사용자가 실제 선택한 가이드 행동',
     applied_investment_frequency     ENUM('WEEKLY', 'MONTHLY') NULL COMMENT '적용한 적립 주기',
     applied_recurring_contribution_amount BIGINT NULL COMMENT '적용한 회차당 위험자산 적립금',
-    applied_monthly_saving_amount    BIGINT NULL COMMENT '적용 월 저축액',
-    applied_investment_ratio         DECIMAL(5,2) NULL COMMENT '적용 투자 비율(%)',
+    applied_monthly_saving_amount    BIGINT NULL COMMENT '적용 장병내일준비적금 월 납입액(원, 0~550000)',
+    applied_monthly_investment_amount BIGINT NULL COMMENT '적용 월 투자 배분액(원)',
     applied_expected_return_rate     DECIMAL(5,2) NULL COMMENT '적용 목표 투자수익률',
     applied_monthly_spending_amount  BIGINT NULL COMMENT '적용 월 소비액',
     before_expected_asset            BIGINT NULL COMMENT '적용 전 예상 자산',
@@ -705,10 +709,11 @@ CREATE TABLE strategy_application (
             ON DELETE SET NULL,
     CONSTRAINT uq_strategy_application_guidance_selection
         UNIQUE (user_id, guidance_id, applied_guidance_action, applied_investment_frequency, applied_recurring_contribution_amount),
-    CONSTRAINT chk_strategy_application_investment_ratio
+    CONSTRAINT chk_strategy_application_monthly_amounts
         CHECK (
-            applied_investment_ratio IS NULL
-                OR applied_investment_ratio BETWEEN 0 AND 100
+            (applied_monthly_spending_amount IS NULL OR applied_monthly_spending_amount >= 0)
+            AND (applied_monthly_saving_amount IS NULL OR applied_monthly_saving_amount BETWEEN 0 AND 550000)
+            AND (applied_monthly_investment_amount IS NULL OR applied_monthly_investment_amount >= 0)
         ),
     CONSTRAINT chk_strategy_application_recurring_amount
         CHECK (

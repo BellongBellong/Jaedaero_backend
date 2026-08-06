@@ -19,7 +19,7 @@ public class AiRecommendedScenarioVo {
   private Long scenarioId;
   private Long userId;
   private Long monthlySavingAmount;
-  private BigDecimal investmentRatio;
+  private Long monthlyInvestmentAmount;
   private BigDecimal expectedReturnRate;
   private Long monthlySpendingAmount;
   private Long expectedAsset;

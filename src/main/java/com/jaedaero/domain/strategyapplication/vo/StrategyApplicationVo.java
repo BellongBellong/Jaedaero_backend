@@ -27,7 +27,7 @@ public class StrategyApplicationVo {
   private InvestmentFrequency appliedInvestmentFrequency;
   private Long appliedRecurringContributionAmount;
   private Long appliedMonthlySavingAmount;
-  private BigDecimal appliedInvestmentRatio;
+  private Long appliedMonthlyInvestmentAmount;
   private BigDecimal appliedExpectedReturnRate;
   private Long appliedMonthlySpendingAmount;
   private Long beforeExpectedAsset;

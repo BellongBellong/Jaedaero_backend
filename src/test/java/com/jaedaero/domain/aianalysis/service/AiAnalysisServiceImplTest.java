@@ -1,7 +1,9 @@
 package com.jaedaero.domain.aianalysis.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -30,6 +32,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class AiAnalysisServiceImplTest {
@@ -81,9 +84,15 @@ class AiAnalysisServiceImplTest {
     assertEquals(AiGenerationSource.OPENAI, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, first.getGenerationSource());
     assertEquals(AiGenerationSource.CACHE, second.getGenerationSource());
+    assertEquals(
+        first.getRecommendedScenario().getMonthlyInvestmentAmount(),
+        mapper.recommendations.get(0).getMonthlyInvestmentAmount());
     AiAnalysisResponse detail = service.getDetail(1L, first.getAnalysisId());
     assertEquals(first.getAnalysisId(), detail.getAnalysisId());
     assertEquals(AiGenerationSource.OPENAI, detail.getGenerationSource());
+    assertEquals(
+        first.getRecommendedScenario().getMonthlyInvestmentAmount(),
+        detail.getRecommendedScenario().getMonthlyInvestmentAmount());
   }
 
   @Test
@@ -92,6 +101,72 @@ class AiAnalysisServiceImplTest {
     assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.TRANSACTION_CATEGORY.model());
     assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.DAILY_MARKET_REPORT.model());
     assertEquals(OpenAiModel.GPT_4O_MINI, AiGenerationTask.DISCHARGE_REPORT.model());
+  }
+
+  @Test
+  void simulationRecommendation_keepsMonthlyInvestmentAmountThroughDetail() {
+    InMemoryAiAnalysisMapper mapper = new InMemoryAiAnalysisMapper();
+    AiAnalysisInputProvider analysisInput =
+        userId ->
+            new AiAnalysisInput(
+                10L,
+                20L,
+                18_150_000L,
+                null,
+                new BigDecimal("90.75"),
+                20_000_000L,
+                LocalDate.of(2027, 9, 1),
+                180_000L);
+    com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
+        userId ->
+            new SimulationInput(
+                4_300_000L,
+                20_000_000L,
+                180_000L,
+                SoldierType.ARMY,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2027, 9, 1));
+    SimulationVo simulation =
+        SimulationVo.builder()
+            .simulationId(9L)
+            .userId(1L)
+            .targetAmount(20_000_000L)
+            .monthlySavingAmount(300_000L)
+            .monthlyInvestmentAmount(150_000L)
+            .expectedReturnRate(new BigDecimal("5.00"))
+            .monthlySpendingAmount(180_000L)
+            .expectedAsset(18_500_000L)
+            .build();
+    AtomicReference<String> generatedPrompt = new AtomicReference<>();
+    AiAnalysisService service =
+        new AiAnalysisServiceImpl(
+            mapper,
+            analysisInput,
+            new SingleSimulationMapper(simulation),
+            simulationInput,
+            simulationCalculator(),
+            new ObjectMapper().registerModule(new JavaTimeModule()),
+            (model, prompt) -> {
+              generatedPrompt.set(prompt);
+              return new AiCoachNarrative("시나리오 분석입니다.", "월 투자금액을 유지하세요.");
+            });
+    AiAnalysisRequest request = new AiAnalysisRequest();
+    request.setSimulationId(9L);
+
+    AiAnalysisResponse created = service.analyze(1L, request);
+    AiAnalysisResponse detail = service.getDetail(1L, created.getAnalysisId());
+
+    assertEquals(150_000L, created.getRecommendedScenario().getMonthlyInvestmentAmount());
+    assertEquals(
+        created.getRecommendedScenario().getMonthlyInvestmentAmount(),
+        mapper.recommendations.get(0).getMonthlyInvestmentAmount());
+    assertEquals(
+        created.getRecommendedScenario().getMonthlyInvestmentAmount(),
+        detail.getRecommendedScenario().getMonthlyInvestmentAmount());
+    assertTrue(generatedPrompt.get().contains("추천 월 투자금액: 150,000원"));
+    assertFalse(generatedPrompt.get().contains("추천 투자 비율"));
+    assertTrue(mapper.analyses.get(0).getResultJson().contains("monthlyInvestmentAmount"));
+    assertFalse(mapper.analyses.get(0).getResultJson().contains("investmentRatio"));
   }
 
   @Test
@@ -124,7 +199,8 @@ class AiAnalysisServiceImplTest {
 
     assertNotNull(fallback.getComment());
     assertEquals(AiGenerationSource.FALLBACK, fallback.getGenerationSource());
-    assertEquals("openai-chat-v2", mapper.analyses.get(0).getPromptVersion());
+    assertEquals(
+        "openai-chat-v3-monthly-investment", mapper.analyses.get(0).getPromptVersion());
     assertEquals(AiGenerationSource.FALLBACK, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, recovered.getGenerationSource());
     assertEquals("복구된 AI 코치 문구입니다.", recovered.getComment());
@@ -153,6 +229,38 @@ class AiAnalysisServiceImplTest {
     @Override public SimulationVo findByIdAndUserId(long simulationId, long userId) { return null; }
     @Override public List<SimulationVo> findByUserId(long userId, int offset, int limit) { return List.of(); }
     @Override public long countByUserId(long userId) { return 0; }
+  }
+
+  private static class SingleSimulationMapper implements SimulationMapper {
+
+    private final SimulationVo simulation;
+
+    private SingleSimulationMapper(SimulationVo simulation) {
+      this.simulation = simulation;
+    }
+
+    @Override
+    public int insert(SimulationVo simulation) {
+      return 0;
+    }
+
+    @Override
+    public SimulationVo findByIdAndUserId(long simulationId, long userId) {
+      return this.simulation.getSimulationId() == simulationId
+              && this.simulation.getUserId() == userId
+          ? this.simulation
+          : null;
+    }
+
+    @Override
+    public List<SimulationVo> findByUserId(long userId, int offset, int limit) {
+      return List.of();
+    }
+
+    @Override
+    public long countByUserId(long userId) {
+      return 0;
+    }
   }
 
   private static class InMemoryAiAnalysisMapper implements AiAnalysisMapper {
