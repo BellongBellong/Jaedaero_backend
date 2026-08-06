@@ -40,5 +40,6 @@ com.jaedaero
     │   └── token
     └── investment
         ├── etf      # KRX ETF 시세·수익률 조회
+        └── recommendation # KRX ETF 위험등급별 분류
         └── exception
 ```
