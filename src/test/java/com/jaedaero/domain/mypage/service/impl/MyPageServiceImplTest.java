@@ -81,18 +81,48 @@ class MyPageServiceImplTest {
     assertEquals(1L, authUserMapper.refreshTokensDeletedForUserId);
   }
 
+  @Test
+  void disconnectsCodefConnectionAndRelatedData() {
+    StubMyPageMapper myPageMapper = new StubMyPageMapper();
+    MyPageServiceImpl service = new MyPageServiceImpl(myPageMapper, new StubAuthUserMapper());
+
+    service.unlinkCodef(1L);
+
+    assertEquals(1L, myPageMapper.disconnectedCodefConnectionForUserId);
+    assertEquals(1L, myPageMapper.disconnectedInstitutionConnectionsForUserId);
+    assertEquals(1L, myPageMapper.disconnectedAccountsForUserId);
+  }
+
+  @Test
+  void throwsWhenActiveCodefConnectionDoesNotExist() {
+    StubMyPageMapper myPageMapper = new StubMyPageMapper();
+    myPageMapper.disconnectCodefConnectionCount = 0;
+    MyPageServiceImpl service = new MyPageServiceImpl(myPageMapper, new StubAuthUserMapper());
+
+    assertThrows(MyPageException.class, () -> service.unlinkCodef(1L));
+    assertEquals(0L, myPageMapper.disconnectedInstitutionConnectionsForUserId);
+    assertEquals(0L, myPageMapper.disconnectedAccountsForUserId);
+  }
+
   private static class StubMyPageMapper implements MyPageMapper {
     private MyPageProfileVo profile;
     private int badgeCount;
     private List<String> badgeCodes = List.of();
     private List<InvestmentBadgeVo> investmentBadges = List.of();
     private long withdrawnUserId;
+    private int disconnectCodefConnectionCount = 1;
+    private long disconnectedCodefConnectionForUserId;
+    private long disconnectedInstitutionConnectionsForUserId;
+    private long disconnectedAccountsForUserId;
 
     @Override public MyPageProfileVo findActiveProfile(long userId) { return profile; }
     @Override public int countEarnedBadges(long userId) { return badgeCount; }
     @Override public List<String> findRecentBadgeCodes(long userId) { return badgeCodes; }
     @Override public List<InvestmentBadgeVo> findInvestmentBadges(long userId) { return investmentBadges; }
     @Override public InvestmentBadgeStatusVo findInvestmentBadgeStatus(long userId) { return null; }
+    @Override public int disconnectCodefConnection(long userId) { disconnectedCodefConnectionForUserId = userId; return disconnectCodefConnectionCount; }
+    @Override public void disconnectCodefInstitutionConnections(long userId) { disconnectedInstitutionConnectionsForUserId = userId; }
+    @Override public void disconnectConnectedAccounts(long userId) { disconnectedAccountsForUserId = userId; }
     @Override public int withdraw(long userId) { withdrawnUserId = userId; return 1; }
   }
 
