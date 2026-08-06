@@ -71,7 +71,7 @@ class StrategyApplicationServiceImplTest {
     assertEquals(7L, first.getAiScenarioId());
     assertNull(first.getSimulationId());
     assertEquals(300_000L, first.getAppliedMonthlySavingAmount());
-    assertEquals(new BigDecimal("20.00"), first.getAppliedInvestmentRatio());
+    assertEquals(180_000L, first.getAppliedMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("5.00"), first.getAppliedExpectedReturnRate());
     assertEquals(180_000L, first.getAppliedMonthlySpendingAmount());
     assertEquals(15_000_000L, first.getBeforeExpectedAsset());
@@ -125,7 +125,7 @@ class StrategyApplicationServiceImplTest {
         .scenarioId(scenarioId)
         .userId(userId)
         .monthlySavingAmount(300_000L)
-        .investmentRatio(new BigDecimal("20.00"))
+        .monthlyInvestmentAmount(180_000L)
         .expectedReturnRate(new BigDecimal("5.00"))
         .monthlySpendingAmount(180_000L)
         .expectedAsset(expectedAsset)

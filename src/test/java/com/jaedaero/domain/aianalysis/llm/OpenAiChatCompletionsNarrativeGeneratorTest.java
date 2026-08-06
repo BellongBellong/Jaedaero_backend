@@ -33,6 +33,9 @@ class OpenAiChatCompletionsNarrativeGeneratorTest {
         .andExpect(header("Authorization", "Bearer test-api-key"))
         .andExpect(content().string(containsString("\"response_format\"")))
         .andExpect(content().string(containsString("\"json_schema\"")))
+        .andExpect(
+            content()
+                .string(containsString("\"name\":\"ai_coach_narrative_v3_monthly_investment\"")))
         .andExpect(content().string(containsString("\"strict\":true")))
         .andExpect(content().string(containsString("\"additionalProperties\":false")))
         .andRespond(

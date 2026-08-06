@@ -26,7 +26,7 @@ public class StrategyApplicationResponse {
   private InvestmentFrequency appliedInvestmentFrequency;
   private Long appliedRecurringContributionAmount;
   private Long appliedMonthlySavingAmount;
-  private BigDecimal appliedInvestmentRatio;
+  private Long appliedMonthlyInvestmentAmount;
   private BigDecimal appliedExpectedReturnRate;
   private Long appliedMonthlySpendingAmount;
   private Long beforeExpectedAsset;
@@ -44,7 +44,7 @@ public class StrategyApplicationResponse {
         .appliedInvestmentFrequency(source.getAppliedInvestmentFrequency())
         .appliedRecurringContributionAmount(source.getAppliedRecurringContributionAmount())
         .appliedMonthlySavingAmount(source.getAppliedMonthlySavingAmount())
-        .appliedInvestmentRatio(source.getAppliedInvestmentRatio())
+        .appliedMonthlyInvestmentAmount(source.getAppliedMonthlyInvestmentAmount())
         .appliedExpectedReturnRate(source.getAppliedExpectedReturnRate())
         .appliedMonthlySpendingAmount(source.getAppliedMonthlySpendingAmount())
         .beforeExpectedAsset(source.getBeforeExpectedAsset())

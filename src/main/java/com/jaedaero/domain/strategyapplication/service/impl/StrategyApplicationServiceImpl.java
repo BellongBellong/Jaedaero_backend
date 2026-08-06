@@ -50,7 +50,7 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
             .sourceType(StrategyApplicationSourceType.AI_RECOMMENDATION)
             .aiScenarioId(recommendation.getScenarioId())
             .appliedMonthlySavingAmount(recommendation.getMonthlySavingAmount())
-            .appliedInvestmentRatio(recommendation.getInvestmentRatio())
+            .appliedMonthlyInvestmentAmount(recommendation.getMonthlyInvestmentAmount())
             .appliedExpectedReturnRate(recommendation.getExpectedReturnRate())
             .appliedMonthlySpendingAmount(recommendation.getMonthlySpendingAmount())
             .beforeExpectedAsset(beforeExpectedAsset)
