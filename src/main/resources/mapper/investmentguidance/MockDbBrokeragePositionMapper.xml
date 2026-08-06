@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.investmentguidance.mapper.MockDbBrokeragePositionMapper">
+
+    <select id="findByUserIdAndAccountId"
+            resultType="com.jaedaero.domain.investmentguidance.vo.MockDbBrokeragePositionSourceVo">
+        SELECT
+            brokerage.current_balance AS account_value,
+            COALESCE(brokerage.available_balance, 0) AS cash_balance,
+            brokerage.last_synced_at AS market_data_as_of
+        FROM connected_account brokerage
+        INNER JOIN codef_connection connection
+            ON connection.connection_id = brokerage.connection_id
+        WHERE connection.user_id = #{userId}
+          AND connection.status = 'ACTIVE'
+          AND brokerage.account_id = #{accountId}
+          AND brokerage.status = 'ACTIVE'
+          AND brokerage.business_type = 'ST'
+        LIMIT 1
+    </select>
+
+</mapper>
