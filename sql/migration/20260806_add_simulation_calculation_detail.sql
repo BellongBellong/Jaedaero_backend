@@ -14,3 +14,39 @@ ALTER TABLE simulation
     ADD COLUMN unallocated_principal BIGINT NULL COMMENT '급여에서 소비·군적금·투자 후 남는 금액 합계' AFTER expected_investment_return,
     ADD COLUMN potential_expected_asset BIGINT NULL COMMENT '예상 혜택 실현 시 참고 예상자산' AFTER unallocated_principal,
     ADD COLUMN calculation_policy_version VARCHAR(50) NULL COMMENT '상세 계산 정책 버전' AFTER potential_expected_asset;
+
+-- 위 ALTER 직후 기존 행은 신규 컬럼이 모두 NULL이고, 신규 애플리케이션 행은 전체 값을 저장한다.
+-- 부분 스냅샷은 조회 DTO의 완전성 가정을 깨므로 DB에서도 차단한다.
+ALTER TABLE simulation
+    ADD CONSTRAINT chk_simulation_detail_snapshot_complete
+        CHECK (
+            (
+                calculation_months IS NULL
+                AND base_asset IS NULL
+                AND expected_salary IS NULL
+                AND expected_spending IS NULL
+                AND soldier_saving_principal IS NULL
+                AND soldier_saving_interest IS NULL
+                AND government_matching_support IS NULL
+                AND investment_principal IS NULL
+                AND expected_investment_return IS NULL
+                AND unallocated_principal IS NULL
+                AND potential_expected_asset IS NULL
+                AND calculation_policy_version IS NULL
+            )
+            OR
+            (
+                calculation_months IS NOT NULL
+                AND base_asset IS NOT NULL
+                AND expected_salary IS NOT NULL
+                AND expected_spending IS NOT NULL
+                AND soldier_saving_principal IS NOT NULL
+                AND soldier_saving_interest IS NOT NULL
+                AND government_matching_support IS NOT NULL
+                AND investment_principal IS NOT NULL
+                AND expected_investment_return IS NOT NULL
+                AND unallocated_principal IS NOT NULL
+                AND potential_expected_asset IS NOT NULL
+                AND calculation_policy_version IS NOT NULL
+            )
+        );

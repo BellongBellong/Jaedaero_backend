@@ -191,6 +191,7 @@ CREATE TABLE cashflow_forecast_month (
                                          expected_rank              VARCHAR(20) NULL COMMENT '예상 계급',
                                          expected_salary            BIGINT NOT NULL DEFAULT 0 COMMENT '예상 급여',
                                          expected_saving_amount     BIGINT NOT NULL DEFAULT 0 COMMENT '예상 저축액',
+                                         expected_investment_amount BIGINT NOT NULL DEFAULT 0 COMMENT '예상 투자액',
                                          expected_spending_amount   BIGINT NOT NULL DEFAULT 0 COMMENT '예상 소비액',
                                          expected_ending_asset      BIGINT NOT NULL DEFAULT 0 COMMENT '월말 예상 자산',
 
@@ -457,7 +458,39 @@ CREATE TABLE simulation (
             AND monthly_investment_amount >= 0
         ),
     CONSTRAINT chk_simulation_target_amount
-        CHECK (target_amount > 0)
+        CHECK (target_amount > 0),
+    CONSTRAINT chk_simulation_detail_snapshot_complete
+        CHECK (
+            (
+                calculation_months IS NULL
+                AND base_asset IS NULL
+                AND expected_salary IS NULL
+                AND expected_spending IS NULL
+                AND soldier_saving_principal IS NULL
+                AND soldier_saving_interest IS NULL
+                AND government_matching_support IS NULL
+                AND investment_principal IS NULL
+                AND expected_investment_return IS NULL
+                AND unallocated_principal IS NULL
+                AND potential_expected_asset IS NULL
+                AND calculation_policy_version IS NULL
+            )
+            OR
+            (
+                calculation_months IS NOT NULL
+                AND base_asset IS NOT NULL
+                AND expected_salary IS NOT NULL
+                AND expected_spending IS NOT NULL
+                AND soldier_saving_principal IS NOT NULL
+                AND soldier_saving_interest IS NOT NULL
+                AND government_matching_support IS NOT NULL
+                AND investment_principal IS NOT NULL
+                AND expected_investment_return IS NOT NULL
+                AND unallocated_principal IS NOT NULL
+                AND potential_expected_asset IS NOT NULL
+                AND calculation_policy_version IS NOT NULL
+            )
+        )
 ) COMMENT='사용자 What-if 시뮬레이션 — 누적 저장(강사 피드백 반영), GET /simulations(목록)·GET /simulations/{id}(상세)로 재조회'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;

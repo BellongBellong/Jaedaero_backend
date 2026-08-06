@@ -75,7 +75,10 @@ public class DashboardResponse {
             .orElse(null);
     LocalDate financialDischargeDate = cashflow.getFinancialDischargeDate();
     long thisMonthIncome = currentMonth == null ? 0L : currentMonth.getExpectedSalary();
-    long thisMonthInvestment = currentMonth == null ? 0L : currentMonth.getExpectedSavingAmount();
+    long thisMonthInvestment =
+        currentMonth == null || currentMonth.getExpectedInvestmentAmount() == null
+            ? 0L
+            : currentMonth.getExpectedInvestmentAmount();
     long thisMonthSpending = currentMonth == null ? 0L : currentMonth.getExpectedSpendingAmount();
     Long monthlyInvestmentGoal = monthlyInvestmentGoal(latestApplication);
     Long monthlySpendingGoal =

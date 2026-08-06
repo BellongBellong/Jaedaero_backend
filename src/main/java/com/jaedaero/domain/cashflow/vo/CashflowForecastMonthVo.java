@@ -19,6 +19,7 @@ public class CashflowForecastMonthVo {
   private String expectedRank;
   private Long expectedSalary;
   private Long expectedSavingAmount;
+  private Long expectedInvestmentAmount;
   private Long expectedSpendingAmount;
   private Long expectedEndingAsset;
 }

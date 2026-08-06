@@ -8,5 +8,6 @@ public record CashflowForecastMonthCalculation(
     String expectedRank,
     long expectedSalary,
     long expectedSavingAmount,
+    long expectedInvestmentAmount,
     long expectedSpendingAmount,
     long expectedEndingAsset) {}

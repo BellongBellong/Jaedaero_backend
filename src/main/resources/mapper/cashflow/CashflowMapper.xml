@@ -84,11 +84,12 @@
     <insert id="insertForecastMonths">
         INSERT INTO cashflow_forecast_month (
             forecast_id, forecast_month, expected_rank, expected_salary, expected_saving_amount,
-            expected_spending_amount, expected_ending_asset
+            expected_investment_amount, expected_spending_amount, expected_ending_asset
         ) VALUES
         <foreach collection="months" item="month" separator=",">
             (#{forecastId}, #{month.forecastMonth}, #{month.expectedRank}, #{month.expectedSalary},
-             #{month.expectedSavingAmount}, #{month.expectedSpendingAmount}, #{month.expectedEndingAsset})
+             #{month.expectedSavingAmount}, #{month.expectedInvestmentAmount},
+             #{month.expectedSpendingAmount}, #{month.expectedEndingAsset})
         </foreach>
     </insert>
 
@@ -103,7 +104,8 @@
 
     <select id="findMonthsByForecastId" resultType="com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo">
         SELECT forecast_month_id, forecast_id, forecast_month, expected_rank, expected_salary,
-               expected_saving_amount, expected_spending_amount, expected_ending_asset
+               expected_saving_amount, expected_investment_amount,
+               expected_spending_amount, expected_ending_asset
         FROM cashflow_forecast_month
         WHERE forecast_id = #{forecastId}
         ORDER BY forecast_month ASC

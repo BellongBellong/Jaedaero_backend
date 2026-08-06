@@ -28,6 +28,7 @@ class DashboardResponseTest {
                         .forecastMonth(LocalDate.of(2026, 8, 1))
                         .expectedSalary(1_905_000L)
                         .expectedSavingAmount(550_000L)
+                        .expectedInvestmentAmount(420_000L)
                         .expectedSpendingAmount(154_000L)
                         .build()))
             .build();
@@ -46,11 +47,11 @@ class DashboardResponseTest {
     assertEquals(3_000_000L, response.getCurrentAsset());
     assertEquals(15_000_000L, response.getExpectedAsset());
     assertEquals(1_905_000L, response.getThisMonthIncome());
-    assertEquals(550_000L, response.getThisMonthInvestment());
+    assertEquals(420_000L, response.getThisMonthInvestment());
     assertEquals(154_000L, response.getThisMonthSpending());
     assertEquals(500_000L, response.getMonthlyInvestmentGoal());
     assertEquals(100_000L, response.getMonthlySpendingGoal());
-    assertEquals(new BigDecimal("110.00"), response.getInvestmentGoalAchievementRate());
+    assertEquals(new BigDecimal("84.00"), response.getInvestmentGoalAchievementRate());
     assertEquals(new BigDecimal("154.00"), response.getSpendingGoalAchievementRate());
     assertEquals("SIMULATION", response.getGoalSource());
   }
