@@ -36,6 +36,7 @@ DROP TABLE IF EXISTS `asset_snapshot`;
 DROP TABLE IF EXISTS `transaction_history`;
 DROP TABLE IF EXISTS `soldier_saving`;
 DROP TABLE IF EXISTS `connected_account`;
+DROP TABLE IF EXISTS `codef_institution_connection`;
 DROP TABLE IF EXISTS `codef_connection`;
 DROP TABLE IF EXISTS `cashflow_forecast_month`;
 DROP TABLE IF EXISTS `cashflow_forecast`;
@@ -228,7 +229,36 @@ CREATE TABLE codef_connection (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 9. connected_account : CODEF 연동 계좌
+-- 9. codef_institution_connection : 기관별 CODEF 로그인 정보
+-- ---------------------------------------------
+CREATE TABLE codef_institution_connection (
+    institution_connection_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '기관별 연동 ID',
+    connection_id               BIGINT NOT NULL COMMENT 'CODEF 금융 연동 ID',
+    institution_code            VARCHAR(20) NOT NULL COMMENT 'CODEF organization 코드',
+    business_type               ENUM('BK', 'ST') NOT NULL COMMENT 'CODEF 업무 구분(BK 은행, ST 증권)',
+    login_type                  VARCHAR(10) NOT NULL COMMENT 'CODEF 로그인 방식(아이디/비밀번호는 1)',
+    login_id_encrypted          VARCHAR(1024) NULL COMMENT '암호화된 기관 로그인 ID',
+    login_password_encrypted    VARCHAR(1024) NOT NULL COMMENT '암호화된 기관 로그인 비밀번호',
+    birth_date_encrypted        VARCHAR(1024) NULL COMMENT '암호화된 생년월일',
+    status                      ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE' COMMENT '기관 연동 상태',
+    last_sync_at                TIMESTAMP NULL COMMENT '기관별 마지막 동기화 시각',
+    last_sync_error_message     VARCHAR(500) NULL COMMENT '기관별 최근 동기화 실패 사유',
+    created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    updated_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+    CONSTRAINT uq_codef_institution_connection
+        UNIQUE (connection_id, institution_code, business_type),
+    CONSTRAINT fk_codef_institution_connection_connection
+        FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
+            ON DELETE CASCADE,
+    INDEX idx_codef_institution_connection_status (connection_id, status)
+) COMMENT='CODEF 기관별 로그인 정보 및 동기화 상태. 로그인 식별자와 비밀번호는 평문 저장 금지'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 10. connected_account : CODEF 연동 계좌
 -- ---------------------------------------------
 CREATE TABLE connected_account (
     account_id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '연동 계좌 ID',
