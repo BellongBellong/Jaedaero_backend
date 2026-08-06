@@ -30,9 +30,28 @@
             ), 0) AS monthly_spending_average,
             profile.soldier_type,
             profile.enlistment_date,
-            profile.discharge_date
+            profile.discharge_date,
+            active_strategy.application_id AS active_strategy_application_id,
+            active_strategy.applied_monthly_spending_amount,
+            active_strategy.applied_monthly_saving_amount,
+            active_strategy.applied_monthly_investment_amount,
+            active_strategy.applied_expected_return_rate
         FROM soldier_profile profile
         INNER JOIN goal ON goal.user_id = profile.user_id AND goal.status = 'ACTIVE'
+        LEFT JOIN strategy_application active_strategy
+            ON active_strategy.application_id = (
+                SELECT application.application_id
+                FROM strategy_application application
+                WHERE application.user_id = profile.user_id
+                  AND application.source_type = 'AI_RECOMMENDATION'
+                  AND application.analysis_id IS NOT NULL
+                  AND application.applied_monthly_spending_amount IS NOT NULL
+                  AND application.applied_monthly_saving_amount IS NOT NULL
+                  AND application.applied_monthly_investment_amount IS NOT NULL
+                  AND application.applied_expected_return_rate IS NOT NULL
+                ORDER BY application.applied_at DESC, application.application_id DESC
+                LIMIT 1
+            )
         WHERE profile.user_id = #{userId}
     </select>
 </mapper>

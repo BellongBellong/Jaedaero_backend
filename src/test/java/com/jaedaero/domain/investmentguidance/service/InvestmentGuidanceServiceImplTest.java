@@ -281,6 +281,11 @@ class InvestmentGuidanceServiceImplTest {
     }
 
     @Override
+    public StrategyApplicationVo findByAnalysisIdAndUserId(long analysisId, long userId) {
+      return null;
+    }
+
+    @Override
     public StrategyApplicationVo findLatestByUserId(long userId) {
       return applications.stream()
           .filter(item -> item.getUserId() == userId)

@@ -272,7 +272,8 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         input.monthlySpendingAverage(),
         input.soldierType(),
         input.enlistmentDate(),
-        input.dischargeDate());
+        input.dischargeDate(),
+        input.appliedStrategy());
   }
   private long targetAmount(AiAnalysisInput base, SimulationVo simulation) { return simulation == null ? base.targetAmount() : simulation.getTargetAmount(); }
   private long ceil(long value, long divisor) { return (value + divisor - 1) / divisor; }

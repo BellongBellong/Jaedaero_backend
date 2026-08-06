@@ -1,5 +1,6 @@
 package com.jaedaero.domain.simulation.vo;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,4 +16,9 @@ public class SimulationInputSourceVo {
   private String soldierType;
   private LocalDate enlistmentDate;
   private LocalDate dischargeDate;
+  private Long activeStrategyApplicationId;
+  private Long appliedMonthlySpendingAmount;
+  private Long appliedMonthlySavingAmount;
+  private Long appliedMonthlyInvestmentAmount;
+  private BigDecimal appliedExpectedReturnRate;
 }

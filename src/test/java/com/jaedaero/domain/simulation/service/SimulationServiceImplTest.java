@@ -17,6 +17,7 @@ import com.jaedaero.domain.simulation.service.impl.SimulationServiceImpl;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
 import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
+import com.jaedaero.domain.cashflow.service.AppliedCashflowStrategy;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -116,6 +117,39 @@ class SimulationServiceImplTest {
         assertThrows(SimulationException.class, () -> service.run(1L, request));
 
     assertEquals(SimulationErrorCode.INVALID_REQUEST, exception.getErrorCode());
+  }
+
+  @Test
+  void defaultsUseLatestAppliedAiStrategy() {
+    SimulationInputProvider provider =
+        userId ->
+            new SimulationInput(
+                4_300_000L,
+                20_000_000L,
+                400_000L,
+                SoldierType.ARMY,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2027, 9, 1),
+                new AppliedCashflowStrategy(
+                    9L, 120_000L, 550_000L, 80_000L, new BigDecimal("6.50")));
+    SimulationService service =
+        new SimulationServiceImpl(
+            new InMemorySimulationMapper(),
+            provider,
+            simulationCalculator(),
+            new SimulationAllocationPolicy(),
+            FIXED_CLOCK);
+
+    SimulationDefaultsResponse defaults = service.getDefaults(1L);
+
+    assertEquals(120_000L, defaults.getMonthlySpendingAmount());
+    assertEquals(550_000L, defaults.getMonthlySavingAmount());
+    assertEquals(80_000L, defaults.getMonthlyInvestmentAmount());
+    assertEquals(new BigDecimal("6.50"), defaults.getExpectedReturnRate());
+    assertEquals(new BigDecimal("13.33"), defaults.getSpendingRate());
+    assertEquals(new BigDecimal("61.11"), defaults.getSavingRate());
+    assertEquals(new BigDecimal("8.89"), defaults.getInvestmentRate());
+    assertEquals(150_000L, defaults.getUnallocatedAmount());
   }
 
   private SimulationRequest request(boolean isSaved) {

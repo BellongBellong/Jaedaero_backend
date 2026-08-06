@@ -15,6 +15,7 @@ import com.jaedaero.domain.simulation.service.SimulationInput;
 import com.jaedaero.domain.simulation.service.SimulationInputProvider;
 import com.jaedaero.domain.simulation.service.SimulationService;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -52,13 +53,31 @@ public class SimulationServiceImpl implements SimulationService {
     LocalDate today = LocalDate.now(clock);
     SimulationInput input = simulationInputProvider.load(userId);
     long referenceMonthlyIncome = simulationCalculator.referenceMonthlyIncome(input, today);
-    long monthlySavingAmount =
-        Math.min(
-            SimulationAllocationPolicy.MAX_MONTHLY_SAVING_AMOUNT, referenceMonthlyIncome);
-    long monthlyInvestmentAmount = 0L;
-    long availableForSpending = Math.max(0L, referenceMonthlyIncome - monthlySavingAmount);
-    long monthlySpendingAmount =
-        Math.min(Math.max(0L, input.monthlySpendingAverage()), availableForSpending);
+    long monthlySpendingAmount;
+    long monthlySavingAmount;
+    long monthlyInvestmentAmount;
+    BigDecimal expectedReturnRate;
+    if (input.appliedStrategy() == null) {
+      monthlySavingAmount =
+          Math.min(
+              SimulationAllocationPolicy.MAX_MONTHLY_SAVING_AMOUNT, referenceMonthlyIncome);
+      monthlyInvestmentAmount = 0L;
+      long availableForSpending = Math.max(0L, referenceMonthlyIncome - monthlySavingAmount);
+      monthlySpendingAmount =
+          Math.min(Math.max(0L, input.monthlySpendingAverage()), availableForSpending);
+      expectedReturnRate = SimulationAllocationPolicy.DEFAULT_EXPECTED_RETURN_RATE;
+    } else {
+      monthlySpendingAmount = input.appliedStrategy().monthlySpendingAmount();
+      monthlySavingAmount = input.appliedStrategy().monthlySavingAmount();
+      monthlyInvestmentAmount = input.appliedStrategy().monthlyInvestmentAmount();
+      expectedReturnRate = input.appliedStrategy().expectedReturnRate();
+      allocationPolicy.validate(
+          monthlySpendingAmount,
+          monthlySavingAmount,
+          monthlyInvestmentAmount,
+          expectedReturnRate,
+          referenceMonthlyIncome);
+    }
     SimulationAllocationMetrics metrics =
         allocationPolicy.metrics(
             monthlySpendingAmount,
@@ -70,7 +89,7 @@ public class SimulationServiceImpl implements SimulationService {
         monthlySpendingAmount,
         monthlySavingAmount,
         monthlyInvestmentAmount,
-        SimulationAllocationPolicy.DEFAULT_EXPECTED_RETURN_RATE,
+        expectedReturnRate,
         SimulationAllocationPolicy.MAX_MONTHLY_SAVING_AMOUNT,
         metrics);
   }

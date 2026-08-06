@@ -6,7 +6,7 @@
 <mapper namespace="com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper">
 
     <sql id="strategyApplicationColumns">
-        application_id, user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
+        application_id, user_id, source_type, analysis_id, simulation_id, ai_scenario_id, guidance_id,
         applied_guidance_action, applied_investment_frequency,
         applied_recurring_contribution_amount,
         applied_monthly_saving_amount, applied_monthly_investment_amount,
@@ -18,14 +18,14 @@
             parameterType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo"
             useGeneratedKeys="true" keyProperty="applicationId">
         INSERT INTO strategy_application (
-            user_id, source_type, simulation_id, ai_scenario_id, guidance_id,
+            user_id, source_type, analysis_id, simulation_id, ai_scenario_id, guidance_id,
             applied_guidance_action, applied_investment_frequency,
             applied_recurring_contribution_amount,
             applied_monthly_saving_amount, applied_monthly_investment_amount,
             applied_expected_return_rate, applied_monthly_spending_amount,
             before_expected_asset, after_expected_asset
         ) VALUES (
-            #{userId}, #{sourceType}, #{simulationId}, #{aiScenarioId}, #{guidanceId},
+            #{userId}, #{sourceType}, #{analysisId}, #{simulationId}, #{aiScenarioId}, #{guidanceId},
             #{appliedGuidanceAction}, #{appliedInvestmentFrequency},
             #{appliedRecurringContributionAmount},
             #{appliedMonthlySavingAmount}, #{appliedMonthlyInvestmentAmount},
@@ -47,6 +47,15 @@
         FROM strategy_application
         WHERE application_id = #{applicationId}
           AND user_id = #{userId}
+    </select>
+
+    <select id="findByAnalysisIdAndUserId"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE analysis_id = #{analysisId}
+          AND user_id = #{userId}
+        LIMIT 1
     </select>
 
     <select id="findByGuidanceSelection"

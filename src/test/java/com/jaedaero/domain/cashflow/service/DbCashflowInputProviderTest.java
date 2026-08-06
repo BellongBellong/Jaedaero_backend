@@ -10,6 +10,7 @@ import com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo;
 import com.jaedaero.domain.cashflow.vo.CashflowForecastVo;
 import com.jaedaero.domain.cashflow.vo.CashflowInputSourceVo;
 import com.jaedaero.domain.cashflow.vo.SoldierSavingInputSourceVo;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,35 @@ class DbCashflowInputProviderTest {
   void invalidSoldierTypeIsRejected() {
     CashflowInputSourceVo source = validSource();
     source.setSoldierType("SPACE_FORCE");
+
+    assertThrows(
+        CashflowException.class,
+        () -> new DbCashflowInputProvider(new StubMapper(source)).load(1L));
+  }
+
+  @Test
+  void latestAiStrategyIsMappedAsAppliedCashflowInput() {
+    CashflowInputSourceVo source = validSource();
+    source.setActiveStrategyApplicationId(9L);
+    source.setAppliedMonthlySpendingAmount(120_000L);
+    source.setAppliedMonthlySavingAmount(550_000L);
+    source.setAppliedMonthlyInvestmentAmount(80_000L);
+    source.setAppliedExpectedReturnRate(new BigDecimal("5.00"));
+
+    CashflowInput result = new DbCashflowInputProvider(new StubMapper(source)).load(1L);
+
+    assertEquals(9L, result.appliedStrategy().applicationId());
+    assertEquals(120_000L, result.appliedStrategy().monthlySpendingAmount());
+    assertEquals(550_000L, result.appliedStrategy().monthlySavingAmount());
+    assertEquals(80_000L, result.appliedStrategy().monthlyInvestmentAmount());
+    assertEquals(new BigDecimal("5.00"), result.appliedStrategy().expectedReturnRate());
+  }
+
+  @Test
+  void incompleteActiveAiStrategyIsRejected() {
+    CashflowInputSourceVo source = validSource();
+    source.setActiveStrategyApplicationId(9L);
+    source.setAppliedMonthlySpendingAmount(120_000L);
 
     assertThrows(
         CashflowException.class,

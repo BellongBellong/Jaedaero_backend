@@ -1,6 +1,7 @@
 package com.jaedaero.domain.simulation.service;
 
 import com.jaedaero.domain.auth.common.enums.SoldierType;
+import com.jaedaero.domain.cashflow.service.AppliedCashflowStrategy;
 import com.jaedaero.domain.simulation.exception.SimulationErrorCode;
 import com.jaedaero.domain.simulation.exception.SimulationException;
 import com.jaedaero.domain.simulation.mapper.SimulationInputMapper;
@@ -40,11 +41,31 @@ public class MockDbSimulationInputProvider implements SimulationInputProvider {
           source.getMonthlySpendingAverage() == null ? 0L : source.getMonthlySpendingAverage(),
           SoldierType.valueOf(source.getSoldierType()),
           source.getEnlistmentDate(),
-          source.getDischargeDate());
+          source.getDischargeDate(),
+          appliedStrategy(source));
     } catch (IllegalArgumentException exception) {
       throw new SimulationException(
           SimulationErrorCode.INPUT_NOT_READY, "저장된 군종 정보가 올바르지 않습니다.");
     }
+  }
+
+  private AppliedCashflowStrategy appliedStrategy(SimulationInputSourceVo source) {
+    if (source.getActiveStrategyApplicationId() == null) {
+      return null;
+    }
+    if (source.getAppliedMonthlySpendingAmount() == null
+        || source.getAppliedMonthlySavingAmount() == null
+        || source.getAppliedMonthlyInvestmentAmount() == null
+        || source.getAppliedExpectedReturnRate() == null) {
+      throw new SimulationException(
+          SimulationErrorCode.INPUT_NOT_READY, "활성 AI 추천 전략의 배분 정보가 완전하지 않습니다.");
+    }
+    return new AppliedCashflowStrategy(
+        source.getActiveStrategyApplicationId(),
+        source.getAppliedMonthlySpendingAmount(),
+        source.getAppliedMonthlySavingAmount(),
+        source.getAppliedMonthlyInvestmentAmount(),
+        source.getAppliedExpectedReturnRate());
   }
 
 }
