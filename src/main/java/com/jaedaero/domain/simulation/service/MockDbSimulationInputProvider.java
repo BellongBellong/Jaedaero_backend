@@ -37,6 +37,7 @@ public class MockDbSimulationInputProvider implements SimulationInputProvider {
       return new SimulationInput(
           source.getBaseAsset(),
           source.getTargetAmount(),
+          source.getMonthlySpendingAverage() == null ? 0L : source.getMonthlySpendingAverage(),
           SoldierType.valueOf(source.getSoldierType()),
           source.getEnlistmentDate(),
           source.getDischargeDate());

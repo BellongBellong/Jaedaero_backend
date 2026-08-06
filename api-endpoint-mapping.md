@@ -2,6 +2,8 @@
 
 백엔드 API 명세와 프론트엔드 기능·목 서버 경로를 일치시키기 위한 기준표입니다.
 
+> **2026-08-06 수정**: What-if 배분은 소비·장병내일준비적금·투자 월 금액을 원본값으로 사용한다. 군적금은 0~550,000원이며 구 투자 비율 필드는 월 투자금액으로 교체할 예정이다. 아래 `분석 통합 이력`, `투자 가이드 상세`는 신규 개발 대상이다.
+
 | 도메인                   | 기능                      | 담당자     | Method | Path                                                          | Request                          | Response                            |
 | ------------------------ | ------------------------- | ---------- | ------ | ------------------------------------------------------------- | -------------------------------- | ----------------------------------- |
 | 인증·온보딩              | 소셜 로그인               | seonghun   | POST   | /api/v1/auth/login                                            | LoginRequest                     | LoginResponse                       |
@@ -21,6 +23,7 @@
 | CODEF 계좌 연동          | 연동계좌 목록 조회        | You know   | GET    | /api/v1/accounts                                              | -                                | List<ConnectedAccountResponse>      |
 | 홈 대시보드 · 캐시플로우 | 홈 요약 조회              | You know   | GET    | /api/v1/dashboard                                             | -                                | DashboardResponse                   |
 | 홈 대시보드 · 캐시플로우 | 월별 자산 흐름 조회       | You know   | GET    | /api/v1/cashflow?months=                                      | months(query)                    | CashflowForecastResponse            |
+| What-if 시뮬레이션 · AI 분석 | What-if 최초 입력값 조회 | 승환 양    | GET    | /api/v1/simulations/defaults                                  | -                                | SimulationDefaultsResponse          |
 | What-if 시뮬레이션 · AI 분석 | 시뮬레이션 실행        | 승환 양    | POST   | /api/v1/simulations                                           | SimulationRequest                | SimulationResponse                  |
 | What-if 시뮬레이션 · AI 분석 | 시뮬레이션 히스토리 목록 조회 | 승환 양 | GET    | /api/v1/simulations?page=&size=                               | page,size(query)                 | SimulationHistoryResponse           |
 | What-if 시뮬레이션 · AI 분석 | 과거 시뮬레이션 상세 조회 | 승환 양   | GET    | /api/v1/simulations/{simulationId}                            | simulationId(path)               | SimulationResponse                  |
@@ -28,6 +31,7 @@
 | What-if 시뮬레이션 · AI 분석 | 과거 AI 분석 결과 상세 조회 | 승환 양 | GET    | /api/v1/ai-analyses/{analysisId}                              | analysisId(path)                 | AiAnalysisResponse                  |
 | What-if · AI 분석        | 추천 전략 적용            | 승환 양    | POST   | /api/v1/ai-analyses/{analysisId}/apply                        | analysisId(path)                 | StrategyApplicationResponse         |
 | What-if · AI 분석        | 전략 적용 이력            | 승환 양    | GET    | /api/v1/strategy-applications?page=&size=                     | page,size(query)                 | List<StrategyApplicationResponse>   |
+| What-if · AI 분석        | 분석 통합 이력            | 승환 양    | GET    | /api/v1/analysis-histories?type=&page=&size=                  | type,page,size(query)            | AnalysisHistoryPageResponse         |
 | 거래내역 · 소비          | 거래내역 조회             | You know   | GET    | /api/v1/transactions?accountId=&startDate=&endDate=&category= | TransactionSearchRequest         | List<TransactionResponse>           |
 | 거래내역 · 소비          | 거래 카테고리 수정        | You know   | PUT    | /api/v1/transactions/{transactionId}/category                 | TransactionCategoryUpdateRequest | TransactionResponse                 |
 | 장병내일준비적금         | 적금 정보 조회            | You know   | GET    | /api/v1/soldier-savings                                       | -                                | SoldierSavingResponse               |
@@ -41,6 +45,7 @@
 | 적립식 투자 가이드       | 내 적립 계획 조회         | 승환 양    | GET    | /api/v1/recurring-investment-plans/me                         | -                                | RecurringInvestmentPlanResponse     |
 | 적립식 투자 가이드       | 내 적립 계획 설정·변경    | 승환 양    | PUT    | /api/v1/recurring-investment-plans/me                         | RecurringInvestmentPlanRequest   | RecurringInvestmentPlanResponse     |
 | 적립식 투자 가이드       | 최신 투자 가이드 조회     | 승환 양    | GET    | /api/v1/investment-guidances/latest                           | -                                | InvestmentGuidanceResponse          |
+| 적립식 투자 가이드       | 투자 가이드 상세 조회     | 승환 양    | GET    | /api/v1/investment-guidances/{guidanceId}                     | guidanceId(path)                 | InvestmentGuidanceResponse          |
 | 적립식 투자 가이드       | 투자 가이드 새로 계산     | 승환 양    | POST   | /api/v1/investment-guidances                                  | -                                | InvestmentGuidanceResponse          |
 | 적립식 투자 가이드       | 투자 가이드 적용          | 승환 양    | POST   | /api/v1/investment-guidances/{guidanceId}/apply               | InvestmentGuidanceApplyRequest   | StrategyApplicationResponse         |
 | 알림 · FCM               | 디바이스 토큰 등록        | -          | POST   | /api/v1/device-tokens                                         | DeviceTokenRequest               | DeviceTokenResponse                 |

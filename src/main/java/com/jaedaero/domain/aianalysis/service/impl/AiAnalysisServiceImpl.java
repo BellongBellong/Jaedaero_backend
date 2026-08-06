@@ -109,12 +109,18 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     long extra = months == 0 ? 0 : ceil(Math.max(0, targetAmount - current), months);
     long saving = simulation == null ? extra : simulation.getMonthlySavingAmount() + extra;
     long spending = simulation == null ? base.monthlySpendingLimit() : Math.max(0, simulation.getMonthlySpendingAmount() - Math.min(30_000, simulation.getMonthlySpendingAmount() / 10));
-    BigDecimal ratio = simulation == null ? DEFAULT_RATIO : simulation.getInvestmentRatio();
     BigDecimal expectedReturn = simulation == null ? DEFAULT_RETURN : simulation.getExpectedReturnRate();
+    SimulationInput input = withTargetAmount(simulationInputProvider.load(userId), targetAmount);
+    long referenceMonthlyIncome = simulationCalculator.referenceMonthlyIncome(input, today);
+    long monthlyInvestmentAmount =
+        simulation == null
+            ? amountFromRatio(referenceMonthlyIncome, DEFAULT_RATIO)
+            : simulation.getMonthlyInvestmentAmount();
+    // ai_recommended_scenario는 다음 전환 이슈까지 비율 컬럼을 유지한다.
+    BigDecimal ratio = ratio(monthlyInvestmentAmount, referenceMonthlyIncome);
     SimulationRequest request = new SimulationRequest();
     request.setMonthlySavingAmount(saving); request.setMonthlySpendingAmount(spending);
-    request.setInvestmentRatio(ratio); request.setExpectedReturnRate(expectedReturn);
-    SimulationInput input = withTargetAmount(simulationInputProvider.load(userId), targetAmount);
+    request.setMonthlyInvestmentAmount(monthlyInvestmentAmount); request.setExpectedReturnRate(expectedReturn);
     SimulationCalculationResult calculated = simulationCalculator.calculate(input, request, today);
     return AiRecommendedScenarioVo.builder().userId(userId).monthlySavingAmount(saving).monthlySpendingAmount(spending)
         .investmentRatio(ratio).expectedReturnRate(expectedReturn).expectedAsset(calculated.expectedAsset())
@@ -181,7 +187,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         + "위 확정값을 변경하거나 새 숫자를 만들지 말고 comment에는 결과 해석, recommendReason에는 실행 시 유의점을 작성하세요.";
   }
   private String hash(AiAnalysisInput b, SimulationVo s, OpenAiModel model) {
-    String raw = "analysis-v2|" + PROMPT_VERSION + "|" + model.apiName() + "|" + b.forecastId() + "|" + b.snapshotId() + "|" + targetAmount(b, s) + "|" + b.expectedAsset() + "|" + (s == null ? "baseline" : s.getSimulationId() + "|" + s.getTargetAmount() + "|" + s.getMonthlySavingAmount() + "|" + s.getInvestmentRatio() + "|" + s.getExpectedReturnRate() + "|" + s.getMonthlySpendingAmount() + "|" + s.getExpectedAsset());
+    String raw = "analysis-v2|" + PROMPT_VERSION + "|" + model.apiName() + "|" + b.forecastId() + "|" + b.snapshotId() + "|" + targetAmount(b, s) + "|" + b.expectedAsset() + "|" + (s == null ? "baseline" : s.getSimulationId() + "|" + s.getTargetAmount() + "|" + s.getMonthlySavingAmount() + "|" + s.getMonthlyInvestmentAmount() + "|" + s.getExpectedReturnRate() + "|" + s.getMonthlySpendingAmount() + "|" + s.getExpectedAsset());
     try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8))); }
     catch (Exception e) { throw new IllegalStateException("AI 분석 입력 해시를 생성할 수 없습니다.", e); }
   }
@@ -192,12 +198,26 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     return new SimulationInput(
         input.baseAsset(),
         targetAmount,
+        input.monthlySpendingAverage(),
         input.soldierType(),
         input.enlistmentDate(),
         input.dischargeDate());
   }
   private long targetAmount(AiAnalysisInput base, SimulationVo simulation) { return simulation == null ? base.targetAmount() : simulation.getTargetAmount(); }
   private long ceil(long value, long divisor) { return (value + divisor - 1) / divisor; }
+  private long amountFromRatio(long amount, BigDecimal ratio) {
+    return BigDecimal.valueOf(amount)
+        .multiply(ratio)
+        .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+        .longValueExact();
+  }
+  private BigDecimal ratio(long amount, long referenceAmount) {
+    return referenceAmount <= 0
+        ? BigDecimal.ZERO.setScale(2)
+        : BigDecimal.valueOf(amount)
+            .multiply(BigDecimal.valueOf(100))
+            .divide(BigDecimal.valueOf(referenceAmount), 2, RoundingMode.HALF_UP);
+  }
   private BigDecimal rate(long expected, long target) { return target == 0 ? new BigDecimal("100.00") : BigDecimal.valueOf(expected).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(target), 2, RoundingMode.HALF_UP); }
   private Integer days(LocalDate start, LocalDate end) { return start == null || end == null ? null : Math.toIntExact(ChronoUnit.DAYS.between(start, end)); }
   private String money(long value) { return String.format(Locale.KOREA, "%,d", value); }

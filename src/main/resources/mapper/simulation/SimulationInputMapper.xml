@@ -18,6 +18,16 @@
                   AND account.status = 'ACTIVE'
             ), 0) AS base_asset,
             goal.target_amount,
+            COALESCE((
+                SELECT ROUND(SUM(history.amount) / 3)
+                FROM transaction_history history
+                INNER JOIN connected_account account ON account.account_id = history.account_id
+                INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+                WHERE connection.user_id = #{userId}
+                  AND history.transaction_type = 'WITHDRAW'
+                  AND (history.category IS NULL OR history.category != 'ASSET')
+                  AND history.transaction_datetime >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+            ), 0) AS monthly_spending_average,
             profile.soldier_type,
             profile.enlistment_date,
             profile.discharge_date

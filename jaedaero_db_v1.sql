@@ -424,8 +424,8 @@ CREATE TABLE simulation (
     user_id                  BIGINT NOT NULL COMMENT '사용자 ID',
     scenario_name             VARCHAR(100) NOT NULL COMMENT '시나리오명',
     target_amount             BIGINT NOT NULL COMMENT '시나리오 평가 목표금액 스냅샷',
-    monthly_saving_amount    BIGINT NOT NULL COMMENT '월 저축액(원)',
-    investment_ratio          DECIMAL(5,2) NOT NULL COMMENT '투자 비율(%, 0~100)',
+    monthly_saving_amount    BIGINT NOT NULL COMMENT '장병내일준비적금 월 납입액(원, 0~550000)',
+    monthly_investment_amount BIGINT NOT NULL COMMENT '군적금 외 월 투자 배분액(원)',
     expected_return_rate      DECIMAL(5,2) NOT NULL COMMENT '사용자 입력 목표 투자수익률(%, 연 환산 가정)',
     monthly_spending_amount  BIGINT NOT NULL COMMENT '월 소비액(원)',
     expected_asset            BIGINT NOT NULL COMMENT '전역 예상 자산',
@@ -438,8 +438,12 @@ CREATE TABLE simulation (
     CONSTRAINT fk_simulation_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE,
-    CONSTRAINT chk_simulation_investment_ratio
-        CHECK (investment_ratio BETWEEN 0 AND 100),
+    CONSTRAINT chk_simulation_monthly_amounts
+        CHECK (
+            monthly_spending_amount >= 0
+            AND monthly_saving_amount BETWEEN 0 AND 550000
+            AND monthly_investment_amount >= 0
+        ),
     CONSTRAINT chk_simulation_target_amount
         CHECK (target_amount > 0)
 ) COMMENT='사용자 What-if 시뮬레이션 — 누적 저장(강사 피드백 반영), GET /simulations(목록)·GET /simulations/{id}(상세)로 재조회'
