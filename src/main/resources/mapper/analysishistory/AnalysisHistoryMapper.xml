@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper">
+
+    <sql id="historyUnion">
+        SELECT
+            'WHAT_IF' AS history_type,
+            s.simulation_id AS source_id,
+            s.scenario_name,
+            NULL AS analysis_type,
+            s.created_at,
+            s.expected_asset,
+            s.monthly_spending_amount,
+            s.monthly_saving_amount,
+            s.monthly_investment_amount,
+            NULL AS generation_source,
+            NULL AS result_json,
+            EXISTS (
+                SELECT 1
+                FROM strategy_application sa
+                LEFT JOIN ai_analysis applied_analysis
+                    ON applied_analysis.analysis_id = sa.analysis_id
+                   AND applied_analysis.user_id = sa.user_id
+                WHERE sa.user_id = s.user_id
+                  AND (
+                      sa.simulation_id = s.simulation_id
+                      OR applied_analysis.simulation_id = s.simulation_id
+                  )
+            ) AS applied
+        FROM simulation s
+        WHERE s.user_id = #{userId}
+          AND s.is_saved = TRUE
+
+        UNION ALL
+
+        SELECT
+            'AI' AS history_type,
+            a.analysis_id AS source_id,
+            NULL AS scenario_name,
+            a.analysis_type,
+            a.created_at,
+            NULL AS expected_asset,
+            NULL AS monthly_spending_amount,
+            NULL AS monthly_saving_amount,
+            NULL AS monthly_investment_amount,
+            a.generation_source,
+            a.result_json,
+            EXISTS (
+                SELECT 1
+                FROM strategy_application sa
+                WHERE sa.user_id = a.user_id
+                  AND sa.analysis_id = a.analysis_id
+            ) AS applied
+        FROM ai_analysis a
+        WHERE a.user_id = #{userId}
+    </sql>
+
+    <sql id="filteredHistories">
+        SELECT *
+        FROM (
+            <include refid="historyUnion"/>
+        ) combined_history
+        WHERE (#{type} = 'ALL' OR combined_history.history_type = #{type})
+    </sql>
+
+    <select id="findByUserId"
+            resultType="com.jaedaero.domain.analysishistory.vo.AnalysisHistoryRow">
+        <include refid="filteredHistories"/>
+        ORDER BY created_at DESC, history_type ASC, source_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="filteredHistories"/>
+        ) filtered_history_count
+    </select>
+
+    <select id="findLatestByUserId"
+            resultType="com.jaedaero.domain.analysishistory.vo.AnalysisHistoryRow">
+        <include refid="filteredHistories"/>
+        ORDER BY created_at DESC, history_type ASC, source_id DESC
+        LIMIT 1
+    </select>
+</mapper>

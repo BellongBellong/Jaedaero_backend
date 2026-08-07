@@ -19,6 +19,7 @@ public class AgreementServiceImpl implements AgreementService {
 
   private final AuthUserMapper authUserMapper;
 
+  /** 사용자 약관 동의 정보를 저장합니다. */
   @Override
   @Transactional
   public UserAgreementResponse recordAgreements(long userId, UserAgreementRequest request) {
@@ -40,6 +41,7 @@ public class AgreementServiceImpl implements AgreementService {
         request.getMarketingInformationReceiptAgreed());
   }
 
+  /** 필수 약관 동의 여부를 검증합니다. */
   private void validateRequiredAgreements(UserAgreementRequest request) {
     if (!Boolean.TRUE.equals(request.getServiceUseAgreed())
         || !Boolean.TRUE.equals(request.getPersonalInformationCollectionAgreed())
@@ -50,6 +52,7 @@ public class AgreementServiceImpl implements AgreementService {
     }
   }
 
+  /** 약관 유형별 동의 이력을 저장합니다. */
   private void insertAgreement(long userId, AgreementType agreementType, boolean required) {
     authUserMapper.insertAgreement(
         userId, agreementType.name(), CURRENT_AGREEMENT_VERSION, required);

@@ -51,7 +51,11 @@ INSERT IGNORE INTO military_pay_policy (
     ('ARMY', '이병', 2026, 200000, '2026-01-01', '2026-12-31'),
     ('ARMY', '일병', 2026, 350000, '2026-01-01', '2026-12-31'),
     ('ARMY', '상병', 2026, 650000, '2026-01-01', '2026-12-31'),
-    ('ARMY', '병장', 2026, 950000, '2026-01-01', '2026-12-31');
+    ('ARMY', '병장', 2026, 950000, '2026-01-01', '2026-12-31'),
+    ('ARMY', '이병', 2027, 200000, '2027-01-01', '2027-12-31'),
+    ('ARMY', '일병', 2027, 350000, '2027-01-01', '2027-12-31'),
+    ('ARMY', '상병', 2027, 650000, '2027-01-01', '2027-12-31'),
+    ('ARMY', '병장', 2027, 950000, '2027-01-01', '2027-12-31');
 
 -- ---------------------------------------------------------------------------
 -- 2. 계좌·적금·거래·자산: 캐시플로우 입력
@@ -123,7 +127,7 @@ INSERT INTO connected_account (
 ) VALUES (
     NULL, @mock_connection_id, '0309', '미래에셋증권',
     'mock-encrypted-securities-900103', SHA2('mock-securities-900103', 256), '9001-****-9003',
-    'ST', 'BROKERAGE', 'GENERAL', '종합매매계좌', 0, 0,
+    'ST', 'BROKERAGE', 'GENERAL', '종합매매계좌', 1100000, 100000,
     '2026-03-01', NULL, '2026-08-05 09:00:00', 'ACTIVE'
 )
 ON DUPLICATE KEY UPDATE
@@ -175,9 +179,17 @@ INSERT INTO transaction_history (
     transaction_type, category, category_source, transaction_description, external_transaction_key
 ) VALUES
     (@mock_narasarang_account_id, '2026-07-03 12:10:00', 12500, 1862500, 'WITHDRAW', '식비', 'RULE', 'PX', SHA2('mock-transaction-900001', 256)),
+    (@mock_narasarang_account_id, '2026-07-04 18:10:00', 49900, 1812600, 'WITHDRAW', 'FOOD', 'RULE', '외식', SHA2('mock-transaction-900005', 256)),
+    (@mock_narasarang_account_id, '2026-07-05 09:00:00', 17000, 1795600, 'WITHDRAW', 'LEISURE', 'AI', '넷플릭스', SHA2('mock-transaction-900006', 256)),
+    (@mock_narasarang_account_id, '2026-07-05 20:10:00', 29300, 1766300, 'WITHDRAW', 'SHOPPING', 'RULE', '쿠팡', SHA2('mock-transaction-900012', 256)),
+    (@mock_narasarang_account_id, '2026-07-06 09:00:00', 550000, 1245600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900007', 256)),
     (@mock_narasarang_account_id, '2026-07-08 19:30:00', 48000, 1814500, 'WITHDRAW', '여가', 'AI', '외출 식사', SHA2('mock-transaction-900002', 256)),
     (@mock_narasarang_account_id, '2026-07-15 09:00:00', 350000, 2164500, 'DEPOSIT', NULL, NULL, '월급', SHA2('mock-transaction-900003', 256)),
-    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 614500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900004', 256))
+    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 614500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900004', 256)),
+    (@mock_narasarang_account_id, '2026-08-02 12:30:00', 82400, 1467600, 'WITHDRAW', 'FOOD', 'RULE', '외식', SHA2('mock-transaction-900008', 256)),
+    (@mock_narasarang_account_id, '2026-08-04 09:00:00', 17000, 1450600, 'WITHDRAW', 'LEISURE', 'AI', '넷플릭스', SHA2('mock-transaction-900009', 256)),
+    (@mock_narasarang_account_id, '2026-08-05 09:00:00', 550000, 900600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900010', 256)),
+    (@mock_narasarang_account_id, '2026-08-06 20:10:00', 29300, 871300, 'WITHDRAW', 'SHOPPING', 'RULE', '쿠팡', SHA2('mock-transaction-900011', 256))
 ON DUPLICATE KEY UPDATE
     amount = VALUES(amount),
     balance_after = VALUES(balance_after),

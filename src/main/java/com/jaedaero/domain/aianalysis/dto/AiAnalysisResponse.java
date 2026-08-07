@@ -24,4 +24,8 @@ public class AiAnalysisResponse {
   private final Integer deltaDaysVsBaseline;
   private final List<String> pros;
   private final List<String> cons;
+  private final SpendingPatternResponse spendingPattern;
+  private final List<SpendingInsightResponse> spendingInsights;
+  private final SpendingImprovementResponse spendingImprovement;
+  private final SpendingExpectedEffectResponse spendingExpectedEffect;
 }

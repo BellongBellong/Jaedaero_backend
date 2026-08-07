@@ -18,9 +18,11 @@ class AiStrategyMapperXmlValidationTest {
           "mapper/simulation/SimulationInputMapper.xml",
           "mapper/aianalysis/AiAnalysisMapper.xml",
           "mapper/aianalysis/AiAnalysisInputMapper.xml",
+          "mapper/analysishistory/AnalysisHistoryMapper.xml",
           "mapper/strategyapplication/StrategyApplicationMapper.xml",
           "mapper/recurringinvestment/RecurringInvestmentPlanMapper.xml",
           "mapper/investmentguidance/InvestmentGuidanceInputMapper.xml",
+          "mapper/investmentguidance/MockDbBrokeragePositionMapper.xml",
           "mapper/investmentguidance/InvestmentGuidanceMapper.xml",
           "mapper/marketreport/DailyMarketReportMapper.xml");
 
@@ -51,7 +53,19 @@ class AiStrategyMapperXmlValidationTest {
     assertTrue(configuration.hasStatement("com.jaedaero.domain.aianalysis.mapper.AiAnalysisInputMapper.findLatestByUserId"));
     assertTrue(
         configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.findByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.countByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.analysishistory.mapper.AnalysisHistoryMapper.findLatestByUserId"));
+    assertTrue(
+        configuration.hasStatement(
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.insert"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.findByAnalysisIdAndUserId"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper.findLatestByUserId"));
@@ -67,6 +81,9 @@ class AiStrategyMapperXmlValidationTest {
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceInputMapper.findActiveTargetAmountByUserId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.investmentguidance.mapper.MockDbBrokeragePositionMapper.findByUserIdAndAccountId"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.investmentguidance.mapper.InvestmentGuidanceMapper.insert"));
