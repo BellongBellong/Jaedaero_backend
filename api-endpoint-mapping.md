@@ -31,7 +31,7 @@
 | What-if 시뮬레이션 · AI 분석 | 과거 AI 분석 결과 상세 조회 | 승환 양 | GET    | /api/v1/ai-analyses/{analysisId}                              | analysisId(path)                 | AiAnalysisResponse                  |
 | What-if · AI 분석        | 추천 전략 적용            | 승환 양    | POST   | /api/v1/ai-analyses/{analysisId}/apply                        | analysisId(path)                 | StrategyApplicationResponse         |
 | What-if · AI 분석        | 전략 적용 이력            | 승환 양    | GET    | /api/v1/strategy-applications?page=&size=                     | page,size(query)                 | List<StrategyApplicationResponse>   |
-| What-if · AI 분석        | 분석 통합 이력            | 승환 양    | GET    | /api/v1/analysis-histories?type=&page=&size=                  | type,page,size(query)            | AnalysisHistoryPageResponse         |
+| What-if · AI 분석        | 분석 통합 이력            | 승환 양    | GET    | /api/v1/analysis-histories?type=&page=&size=                  | type(ALL/WHAT_IF/AI),page,size(query) | AnalysisHistoryPageResponse         |
 | 거래내역 · 소비          | 거래내역 조회             | You know   | GET    | /api/v1/transactions?accountId=&startDate=&endDate=&category= | TransactionSearchRequest         | List<TransactionResponse>           |
 | 거래내역 · 소비          | 거래 카테고리 수정        | You know   | PUT    | /api/v1/transactions/{transactionId}/category                 | TransactionCategoryUpdateRequest | TransactionResponse                 |
 | 장병내일준비적금         | 적금 정보 조회            | You know   | GET    | /api/v1/soldier-savings                                       | -                                | SoldierSavingResponse               |
