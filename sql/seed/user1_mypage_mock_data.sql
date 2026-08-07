@@ -1,4 +1,4 @@
-ㄹㄴ-- user1 마이페이지 프론트·백엔드 연결 테스트 데이터
+-- user1 마이페이지 프론트·백엔드 연결 테스트 데이터
 -- 실행: mysql -u <DB_USER> -p jaedaero < sql/seed/user1_mypage_mock_data.sql
 -- 수정된 badge / investment_badge 스키마를 기준으로 재실행 가능하게 작성했습니다.
 

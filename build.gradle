@@ -100,3 +100,93 @@ tasks.named('test') {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// ---------------------------------------------------------------------------
+// DB 스키마/목업 데이터 적재 — mysql CLI로 .sql 파일을 한 번에 실행한다.
+// 커넥션 정보는 src/main/resources/application-local.properties(db.url/db.username/db.password)에서 읽는다.
+// ---------------------------------------------------------------------------
+
+def loadDbConnectionInfo() {
+    def localPropsFile = file('src/main/resources/application-local.properties')
+    if (!localPropsFile.exists()) {
+        throw new GradleException(
+                "src/main/resources/application-local.properties 파일이 없습니다. db.url/db.username/db.password를 설정하세요.")
+    }
+    def props = new Properties()
+    localPropsFile.withInputStream { props.load(it) }
+
+    def url = props.getProperty('db.url')
+    def username = props.getProperty('db.username')
+    def password = props.getProperty('db.password') ?: ''
+    if (!url || !username) {
+        throw new GradleException("application-local.properties에 db.url/db.username이 설정되어 있지 않습니다.")
+    }
+
+    def matcher = (url =~ /jdbc:mysql:\/\/([^:\/?]+)(?::(\d+))?\/([^?]+)/)
+    if (!matcher.find()) {
+        throw new GradleException("db.url 형식을 해석하지 못했습니다: ${url}")
+    }
+    return [
+            host    : matcher.group(1),
+            port    : matcher.group(2) ?: '3306',
+            database: matcher.group(3),
+            username: username,
+            password: password,
+    ]
+}
+
+def runSqlFile(File sqlFile) {
+    if (!sqlFile.exists()) {
+        throw new GradleException("SQL 파일이 없습니다: ${sqlFile}")
+    }
+    def db = loadDbConnectionInfo()
+    logger.lifecycle("mysql 실행: ${sqlFile.name} -> ${db.database}@${db.host}:${db.port}")
+
+    def processBuilder = new ProcessBuilder('mysql', '-h', db.host, '-P', db.port, '-u', db.username, db.database)
+    processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
+    processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
+    if (db.password) {
+        processBuilder.environment().put('MYSQL_PWD', db.password)
+    }
+    def process = processBuilder.start()
+    sqlFile.withInputStream { input ->
+        process.outputStream.withStream { output -> output << input }
+    }
+    def exitCode = process.waitFor()
+    if (exitCode != 0) {
+        throw new GradleException("${sqlFile.name} 실행이 실패했습니다 (exit code ${exitCode}).")
+    }
+}
+
+tasks.register('dbMigrate') {
+    group = 'database'
+    description = '전체 스키마(jaedaero_db_v1.sql)를 로컬 DB에 재적용합니다. 기존 테이블을 DROP 후 재생성하므로 데이터가 모두 사라집니다.'
+    doLast {
+        runSqlFile(file('jaedaero_db_v1.sql'))
+    }
+}
+
+tasks.register('dbSeed') {
+    group = 'database'
+    description = 'sql/seed/*.sql 목업 데이터를 정해진 순서로 모두 적재합니다. 반복 실행해도 안전하도록 작성된 스크립트들입니다.'
+    doLast {
+        // cohort_test_users.sql은 challenge_mission_mock_data.sql 선행 실행이 필요하다(파일 상단 주석 근거).
+        def orderedSeedFiles = [
+                'military_pay_policy.sql',
+                'ai_coach_mock_data.sql',
+                'challenge_mission_mock_data.sql',
+                'cohort_test_users.sql',
+                'user1_mypage_mock_data.sql',
+        ]
+        orderedSeedFiles.each { name ->
+            runSqlFile(file("sql/seed/${name}"))
+        }
+    }
+}
+
+tasks.register('dbReset') {
+    group = 'database'
+    description = 'DDL 재생성(dbMigrate) 후 목업 데이터 적재(dbSeed)까지 한 번에 수행합니다.'
+    dependsOn 'dbMigrate', 'dbSeed'
+}
+tasks.named('dbSeed') { mustRunAfter 'dbMigrate' }
