@@ -1,5 +1,5 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
+-- JAEDAERO Database Schema (ERD_v1.1, 2026-08-07)
 -- MySQL 8.0+
 -- ============================================================
 
@@ -9,6 +9,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `notification_history`;
 DROP TABLE IF EXISTS `device_token`;
+DROP TABLE IF EXISTS `daily_market_indicator`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
 DROP TABLE IF EXISTS `investment_badge`;
@@ -992,7 +993,12 @@ CREATE TABLE leave_mode (
 CREATE TABLE daily_market_report (
                                      report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
                                      report_date        DATE NOT NULL COMMENT '서비스 기준일(18:00~익일 17:59 노출 구간의 기준 날짜)',
-                                     content            TEXT NOT NULL COMMENT 'Gemini API가 생성한 오늘의 시장 경향 리포트 텍스트',
+                                     content            TEXT NOT NULL COMMENT 'OpenAI GPT(gpt-5-nano)가 생성한 오늘의 시장 경향 리포트 텍스트',
+                                     market_condition   ENUM('BULL', 'BEAR', 'NEUTRAL') NOT NULL COMMENT '오늘의 AI 판단 시장 상황',
+                                     report_status      ENUM('NORMAL', 'PARTIAL', 'STALE') NOT NULL DEFAULT 'NORMAL' COMMENT '리포트 전체 상태 — PARTIAL: 일부 지표 DELAYED/MISSING, STALE: 당일 배치 실패로 이전 리포트 노출 중',
+                                     generation_source  ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '서술 생성 출처',
+                                     model_name         VARCHAR(50) NOT NULL COMMENT '생성에 사용한 모델명(gpt-5-nano)',
+                                     prompt_version     VARCHAR(50) NOT NULL COMMENT 'Structured Outputs 프롬프트 버전',
                                      valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 18:00)',
                                      valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 17:59)',
                                      created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -1000,6 +1006,30 @@ CREATE TABLE daily_market_report (
                                      CONSTRAINT uq_daily_market_report_date
                                          UNIQUE (report_date)
 ) COMMENT='오늘의 AI투자리포트 — 전체 사용자 공통 1일 1건'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 31-B. daily_market_indicator : 오늘의 AI투자리포트 지표 원본값
+-- ---------------------------------------------
+CREATE TABLE daily_market_indicator (
+                                         indicator_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '지표 ID',
+                                         report_id        BIGINT NOT NULL COMMENT '소속 리포트',
+                                         indicator_type   ENUM('KOSPI', 'KOSDAQ', 'US_TREASURY_10Y', 'USD_KRW') NOT NULL COMMENT '지표 종류',
+                                         data_as_of       TIMESTAMP NOT NULL COMMENT '해당 지표 값의 실제 기준 시각',
+                                         source           VARCHAR(100) NOT NULL COMMENT '제공처명',
+                                         observed_value   DECIMAL(18,4) NOT NULL COMMENT '관측값(지수·금리·환율)',
+                                         change_value     DECIMAL(18,4) NULL COMMENT '전일 대비 변화량',
+                                         change_rate      DECIMAL(6,2) NULL COMMENT '전일 대비 변화율(%)',
+                                         status           ENUM('NORMAL', 'DELAYED', 'MISSING') NOT NULL COMMENT '지표 단위 수집 상태',
+                                         created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                                         CONSTRAINT uq_daily_market_indicator
+                                             UNIQUE (report_id, indicator_type),
+                                         CONSTRAINT fk_daily_market_indicator_report
+                                             FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
+                                                 ON DELETE CASCADE
+) COMMENT='오늘의 AI투자리포트 지표별 원본값 — 리포트 1건당 4행'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
