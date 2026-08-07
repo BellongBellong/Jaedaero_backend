@@ -9,6 +9,13 @@
         AND u.is_withdrawn = FALSE
     </select>
 
+    <select id="findInitialPreferenceByUserId"
+            resultType="com.jaedaero.domain.auth.common.enums.InvestmentPreference">
+        SELECT initial_preference
+        FROM investment_badge
+        WHERE user_id = #{userId}
+    </select>
+
     <insert id="upsertInitialPreference" parameterType="map">
         INSERT INTO investment_badge (
             user_id,

@@ -7,6 +7,8 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,6 +38,7 @@ public class ProductRecommendationController {
     @ApiResponse(code = 503, message = "KRX 인증키 미설정 또는 KRX 요청 중단")
   })
   public ProductRecommendationResponse getRecommendations(
+      Authentication authentication,
       @ApiParam(value = "기준일(yyyyMMdd). 생략하면 오늘", example = "20260806")
           @RequestParam(required = false)
           String asOfDate) {
@@ -43,7 +46,15 @@ public class ProductRecommendationController {
     if (date.isAfter(LocalDate.now())) {
       throw new IllegalArgumentException("기준일은 오늘보다 늦을 수 없습니다.");
     }
-    return productRecommendationService.getEtfRecommendations(date);
+    return productRecommendationService.getEtfRecommendations(authenticatedUserId(authentication), date);
+  }
+
+  private long authenticatedUserId(Authentication authentication) {
+    if (authentication == null || !authentication.isAuthenticated()
+        || authentication instanceof AnonymousAuthenticationToken) {
+      throw new IllegalStateException("로그인이 필요합니다.");
+    }
+    return Long.parseLong(authentication.getName());
   }
 
   private LocalDate parseDate(String value) {
