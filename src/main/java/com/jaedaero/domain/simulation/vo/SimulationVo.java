@@ -26,6 +26,18 @@ public class SimulationVo {
   private Long monthlySpendingAmount;
   private Long expectedAsset;
   private LocalDate financialDischargeDate;
+  private Integer calculationMonths;
+  private Long baseAsset;
+  private Long expectedSalary;
+  private Long expectedSpending;
+  private Long soldierSavingPrincipal;
+  private Long soldierSavingInterest;
+  private Long governmentMatchingSupport;
+  private Long investmentPrincipal;
+  private Long expectedInvestmentReturn;
+  private Long unallocatedPrincipal;
+  private Long potentialExpectedAsset;
+  private String calculationPolicyVersion;
   private Boolean isSaved;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;

@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 
-/** Calculates the monthly salary, savings target, spending limit, and ending asset forecast. */
+/** Calculates the monthly salary, saving/investment allocation, spending, and ending asset forecast. */
 @Component
 public class CashflowCalculator {
 
@@ -72,6 +72,12 @@ public class CashflowCalculator {
           hasAppliedStrategy
               ? spending
               : Math.max(0L, pay.monthlySalary() - monthlySaving);
+      long monthlyInvestment =
+          hasAppliedStrategy
+              ? input.appliedStrategy().monthlyInvestmentAmount()
+              : Math.min(
+                  Math.max(0L, pay.monthlySalary() - spending - monthlySaving),
+                  Math.max(0L, requiredSaving - monthlySaving));
       long maturityBonus =
           savings.stream()
               .filter(saving -> month.equals(saving.maturityMonth()))
@@ -94,6 +100,7 @@ public class CashflowCalculator {
               pay.rankName(),
               pay.monthlySalary(),
               monthlySaving,
+              monthlyInvestment,
               spending,
               asset));
     }

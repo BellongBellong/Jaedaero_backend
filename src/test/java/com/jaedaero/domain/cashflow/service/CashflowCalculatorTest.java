@@ -189,8 +189,10 @@ class CashflowCalculatorTest {
     assertEquals(300_000L, result.expectedAsset());
     assertEquals(50_000L, result.months().get(0).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(50_000L, result.months().get(0).expectedInvestmentAmount());
     assertEquals(50_000L, result.months().get(1).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(1).expectedSavingAmount());
+    assertEquals(50_000L, result.months().get(1).expectedInvestmentAmount());
   }
 
   @Test

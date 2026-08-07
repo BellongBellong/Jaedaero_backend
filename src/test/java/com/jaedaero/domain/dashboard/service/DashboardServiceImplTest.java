@@ -65,6 +65,11 @@ class DashboardServiceImplTest {
     }
 
     @Override
+    public StrategyApplicationVo findByAnalysisIdAndUserId(long analysisId, long userId) {
+      return null;
+    }
+
+    @Override
     public StrategyApplicationVo findLatestByUserId(long userId) {
       return null;
     }
