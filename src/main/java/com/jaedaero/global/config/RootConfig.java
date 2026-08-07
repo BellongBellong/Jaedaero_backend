@@ -68,8 +68,6 @@ public class RootConfig {
                 new ClassPathResource("application-local.properties")
         );
         configurer.setIgnoreResourceNotFound(true);
-        configurer.setLocalOverride(true);
-
         return configurer;
     }
 
