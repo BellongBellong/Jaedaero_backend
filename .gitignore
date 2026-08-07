@@ -58,3 +58,6 @@ logs/
 uploads/
 cache/
 tmp/
+
+### Subagent-driven-development scratch workspace ###
+.superpowers/
