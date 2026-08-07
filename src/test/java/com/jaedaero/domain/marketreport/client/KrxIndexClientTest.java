@@ -1,6 +1,7 @@
 package com.jaedaero.domain.marketreport.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,6 +71,17 @@ class KrxIndexClientTest {
         newClient().getKosdaqDailyTrading("20260809");
 
     assertTrue(response.outBlock1().isEmpty());
+  }
+
+  @Test
+  void getKospiDailyTradingThrowsOnServerError() {
+    server.createContext(
+        "/svc/apis/idx/kospi_dd_trd",
+        exchange -> respond(exchange, 500, "internal error"));
+
+    assertThrows(
+        com.jaedaero.domain.investment.exception.KrxApiException.class,
+        () -> newClient().getKospiDailyTrading("20260806"));
   }
 
   private KrxIndexClient newClient() {

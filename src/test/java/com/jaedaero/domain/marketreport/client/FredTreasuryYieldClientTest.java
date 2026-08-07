@@ -1,6 +1,7 @@
 package com.jaedaero.domain.marketreport.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,6 +56,32 @@ class FredTreasuryYieldClientTest {
     assertEquals("4.25", response.observations().get(0).value());
   }
 
+  @Test
+  void getRecentObservationsThrowsOnServerError() {
+    server.createContext(
+        "/fred/series/observations",
+        exchange -> respond(exchange, 500, "internal error"));
+
+    assertThrows(FredApiException.class, () -> newClient().getRecentObservations(10));
+  }
+
+  @Test
+  void getRecentObservationsThrowsOnMalformedJson() {
+    server.createContext(
+        "/fred/series/observations", exchange -> respond(exchange, 200, "not-json"));
+
+    assertThrows(FredApiException.class, () -> newClient().getRecentObservations(10));
+  }
+
+  @Test
+  void getRecentObservationsThrowsWhenApiKeyMissing() {
+    FredTreasuryYieldClient client =
+        new FredTreasuryYieldClient(
+            baseUri, "", HttpClient.newHttpClient(), new ObjectMapper());
+
+    assertThrows(FredApiException.class, () -> client.getRecentObservations(10));
+  }
+
   private FredTreasuryYieldClient newClient() {
     return new FredTreasuryYieldClient(
         baseUri,
@@ -65,8 +92,13 @@ class FredTreasuryYieldClientTest {
 
   private static void respond(HttpExchange exchange, String body)
       throws IOException {
+    respond(exchange, 200, body);
+  }
+
+  private static void respond(HttpExchange exchange, int statusCode, String body)
+      throws IOException {
     byte[] responseBody = body.getBytes(StandardCharsets.UTF_8);
-    exchange.sendResponseHeaders(200, responseBody.length);
+    exchange.sendResponseHeaders(statusCode, responseBody.length);
     exchange.getResponseBody().write(responseBody);
     exchange.close();
   }

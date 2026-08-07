@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class MarketIndicatorCollector {
+public class MarketIndicatorCollector implements MarketIndicatorProvider {
 
   static final long HOLIDAY_TOLERANCE_DAYS = 2;
 
@@ -21,6 +21,7 @@ public class MarketIndicatorCollector {
     this.sources = sources;
   }
 
+  @Override
   public List<MarketIndicatorResult> collect(LocalDate businessDate) {
     return sources.stream()
         .map(source -> collectOne(source, businessDate))
@@ -37,6 +38,14 @@ public class MarketIndicatorCollector {
       }
       long daysBehind =
           ChronoUnit.DAYS.between(observation.get().dataAsOf(), businessDate);
+      if (daysBehind < 0) {
+        log.warn(
+            "지표 기준일이 미래입니다, MISSING으로 기록합니다. type={}, dataAsOf={}, businessDate={}",
+            source.type(),
+            observation.get().dataAsOf(),
+            businessDate);
+        return MarketIndicatorResult.missing(source.type());
+      }
       MarketIndicatorStatus status =
           daysBehind <= HOLIDAY_TOLERANCE_DAYS
               ? MarketIndicatorStatus.NORMAL

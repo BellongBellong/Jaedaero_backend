@@ -108,7 +108,8 @@ public class OpenAiMarketReportNarrativeGenerator
       throw new AiCoachNarrativeGenerationException(
           "OpenAI Chat Completions 호출이 HTTP "
               + exception.getRawStatusCode()
-              + "로 실패했습니다.");
+              + "로 실패했습니다.",
+          exception);
     } catch (RestClientException exception) {
       throw new AiCoachNarrativeGenerationException(
           "OpenAI Chat Completions 호출에 실패했습니다.", exception);

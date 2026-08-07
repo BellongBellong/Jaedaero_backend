@@ -74,6 +74,30 @@ class MarketReportGenerationServiceTest {
   }
 
   @Test
+  void generateMarksPartialAndPersistsDelayedWhenIndicatorIsDelayed() {
+    RecordingReportMapper reports = new RecordingReportMapper();
+    RecordingIndicatorMapper indicators = new RecordingIndicatorMapper();
+
+    new MarketReportGenerationService(
+            reports,
+            indicators,
+            collector(false, true),
+            new SucceedingNarrativeGenerator(),
+            FIXED_CLOCK)
+        .generateForToday();
+
+    assertEquals(MarketReportStatus.PARTIAL, reports.upserted.get(0).getReportStatus());
+    DailyMarketIndicatorVo kosdaq =
+        indicators.inserted.stream()
+            .filter(vo -> vo.getIndicatorType() == MarketIndicatorType.KOSDAQ)
+            .findFirst()
+            .orElseThrow();
+    assertEquals(
+        com.jaedaero.domain.marketreport.dto.MarketIndicatorStatus.DELAYED,
+        kosdaq.getStatus());
+  }
+
+  @Test
   void generateFallsBackWhenOpenAiFails() {
     RecordingReportMapper reports = new RecordingReportMapper();
 
@@ -197,6 +221,16 @@ class MarketReportGenerationServiceTest {
     @Override
     public int countByReportDate(LocalDate reportDate) {
       return existing.getOrDefault(reportDate, 0);
+    }
+
+    @Override
+    public int claimReportDate(
+        LocalDate reportDate, LocalDateTime validFrom, LocalDateTime validUntil) {
+      if (existing.getOrDefault(reportDate, 0) > 0) {
+        return 0;
+      }
+      existing.put(reportDate, 1);
+      return 1;
     }
   }
 

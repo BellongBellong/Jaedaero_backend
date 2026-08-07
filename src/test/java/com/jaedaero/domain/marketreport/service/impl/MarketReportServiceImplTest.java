@@ -102,6 +102,12 @@ class MarketReportServiceImplTest {
     public int countByReportDate(java.time.LocalDate reportDate) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public int claimReportDate(
+        java.time.LocalDate reportDate, LocalDateTime validFrom, LocalDateTime validUntil) {
+      throw new UnsupportedOperationException();
+    }
   }
 
   private static class StubIndicatorMapper

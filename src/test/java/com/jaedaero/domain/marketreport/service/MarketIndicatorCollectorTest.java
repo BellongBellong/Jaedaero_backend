@@ -41,6 +41,46 @@ class MarketIndicatorCollectorTest {
         statusOf(results, MarketIndicatorType.US_TREASURY_10Y));
   }
 
+  @Test
+  void collectMarksExactlyToleranceDaysBehindAsNormal() {
+    MarketIndicatorCollector collector =
+        new MarketIndicatorCollector(
+            List.of(
+                fixedSource(
+                    MarketIndicatorType.KOSPI,
+                    BUSINESS_DATE.minusDays(MarketIndicatorCollector.HOLIDAY_TOLERANCE_DAYS))));
+
+    List<MarketIndicatorResult> results = collector.collect(BUSINESS_DATE);
+
+    assertEquals(MarketIndicatorStatus.NORMAL, statusOf(results, MarketIndicatorType.KOSPI));
+  }
+
+  @Test
+  void collectMarksOneDayBeyondToleranceAsDelayed() {
+    MarketIndicatorCollector collector =
+        new MarketIndicatorCollector(
+            List.of(
+                fixedSource(
+                    MarketIndicatorType.KOSPI,
+                    BUSINESS_DATE.minusDays(
+                        MarketIndicatorCollector.HOLIDAY_TOLERANCE_DAYS + 1))));
+
+    List<MarketIndicatorResult> results = collector.collect(BUSINESS_DATE);
+
+    assertEquals(MarketIndicatorStatus.DELAYED, statusOf(results, MarketIndicatorType.KOSPI));
+  }
+
+  @Test
+  void collectMarksFutureDataAsOfAsMissing() {
+    MarketIndicatorCollector collector =
+        new MarketIndicatorCollector(
+            List.of(fixedSource(MarketIndicatorType.KOSPI, BUSINESS_DATE.plusDays(1))));
+
+    List<MarketIndicatorResult> results = collector.collect(BUSINESS_DATE);
+
+    assertEquals(MarketIndicatorStatus.MISSING, statusOf(results, MarketIndicatorType.KOSPI));
+  }
+
   private MarketIndicatorStatus statusOf(
       List<MarketIndicatorResult> results, MarketIndicatorType type) {
     return results.stream()

@@ -44,7 +44,7 @@ public class KospiIndicatorSource implements MarketIndicatorSource {
         return Optional.of(
             new MarketIndicatorObservation(
                 type(),
-                candidate,
+                LocalDate.parse(row.basDd(), BASE_DATE_FORMAT),
                 "KRX Open API",
                 new BigDecimal(row.clsprcIdx()),
                 new BigDecimal(row.cmpprevddIdx()),

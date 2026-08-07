@@ -1,6 +1,7 @@
 package com.jaedaero.domain.marketreport.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,6 +67,35 @@ class EximbankExchangeRateClientTest {
     assertTrue(newClient().getExchangeRates("20260809").isEmpty());
   }
 
+  @Test
+  void getExchangeRatesThrowsOnServerError() {
+    server.createContext(
+        "/site/program/financial/exchangeJSON",
+        exchange -> respond(exchange, 500, "internal error"));
+
+    assertThrows(
+        EximbankApiException.class, () -> newClient().getExchangeRates("20260806"));
+  }
+
+  @Test
+  void getExchangeRatesThrowsOnMalformedJson() {
+    server.createContext(
+        "/site/program/financial/exchangeJSON",
+        exchange -> respond(exchange, 200, "not-json"));
+
+    assertThrows(
+        EximbankApiException.class, () -> newClient().getExchangeRates("20260806"));
+  }
+
+  @Test
+  void getExchangeRatesThrowsWhenApiKeyMissing() {
+    EximbankExchangeRateClient client =
+        new EximbankExchangeRateClient(
+            baseUri, "", HttpClient.newHttpClient(), new ObjectMapper());
+
+    assertThrows(EximbankApiException.class, () -> client.getExchangeRates("20260806"));
+  }
+
   private EximbankExchangeRateClient newClient() {
     return new EximbankExchangeRateClient(
         baseUri,
@@ -76,8 +106,13 @@ class EximbankExchangeRateClientTest {
 
   private static void respond(HttpExchange exchange, String body)
       throws IOException {
+    respond(exchange, 200, body);
+  }
+
+  private static void respond(HttpExchange exchange, int statusCode, String body)
+      throws IOException {
     byte[] responseBody = body.getBytes(StandardCharsets.UTF_8);
-    exchange.sendResponseHeaders(200, responseBody.length);
+    exchange.sendResponseHeaders(statusCode, responseBody.length);
     exchange.getResponseBody().write(responseBody);
     exchange.close();
   }

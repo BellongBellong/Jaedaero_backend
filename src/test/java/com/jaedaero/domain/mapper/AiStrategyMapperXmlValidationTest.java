@@ -96,6 +96,12 @@ class AiStrategyMapperXmlValidationTest {
             "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.findLatest"));
     assertTrue(
         configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.countByReportDate"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.claimReportDate"));
+    assertTrue(
+        configuration.hasStatement(
             "com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper.insert"));
     assertTrue(
         configuration.hasStatement(

@@ -64,6 +64,80 @@ class OpenAiMarketReportNarrativeGeneratorTest {
   }
 
   @Test
+  void generateThrowsOnNonSuccessHttpResponse() {
+    server.createContext(
+        "/v1/chat/completions",
+        exchange -> respond(exchange, 500, "{\"error\":\"internal\"}"));
+    var generator =
+        new OpenAiMarketReportNarrativeGenerator(
+            new RestTemplate(), "test-llm-key", endpoint.toString());
+
+    assertThrows(
+        AiCoachNarrativeGenerationException.class,
+        () -> generator.generate(OpenAiModel.GPT_5_NANO, "오늘의 지표 요약"));
+  }
+
+  @Test
+  void generateThrowsWhenChoicesMissing() {
+    server.createContext(
+        "/v1/chat/completions", exchange -> respond(exchange, 200, "{\"choices\":[]}"));
+    var generator =
+        new OpenAiMarketReportNarrativeGenerator(
+            new RestTemplate(), "test-llm-key", endpoint.toString());
+
+    assertThrows(
+        AiCoachNarrativeGenerationException.class,
+        () -> generator.generate(OpenAiModel.GPT_5_NANO, "오늘의 지표 요약"));
+  }
+
+  @Test
+  void generateThrowsWhenMarketConditionInvalid() {
+    server.createContext(
+        "/v1/chat/completions",
+        exchange ->
+            respond(
+                exchange,
+                200,
+                "{\"choices\":[{\"message\":{\"content\":"
+                    + "\"{\\\"marketCondition\\\":\\\"SIDEWAYS\\\",\\\"content\\\":\\\"요약\\\"}\"}}]}"));
+    var generator =
+        new OpenAiMarketReportNarrativeGenerator(
+            new RestTemplate(), "test-llm-key", endpoint.toString());
+
+    assertThrows(
+        AiCoachNarrativeGenerationException.class,
+        () -> generator.generate(OpenAiModel.GPT_5_NANO, "오늘의 지표 요약"));
+  }
+
+  @Test
+  void generateThrowsWhenContentEmpty() {
+    server.createContext(
+        "/v1/chat/completions",
+        exchange ->
+            respond(
+                exchange,
+                200,
+                "{\"choices\":[{\"message\":{\"content\":"
+                    + "\"{\\\"marketCondition\\\":\\\"BULL\\\",\\\"content\\\":\\\"\\\"}\"}}]}"));
+    var generator =
+        new OpenAiMarketReportNarrativeGenerator(
+            new RestTemplate(), "test-llm-key", endpoint.toString());
+
+    assertThrows(
+        AiCoachNarrativeGenerationException.class,
+        () -> generator.generate(OpenAiModel.GPT_5_NANO, "오늘의 지표 요약"));
+  }
+
+  private static void respond(com.sun.net.httpserver.HttpExchange exchange, int statusCode, String body)
+      throws IOException {
+    byte[] responseBody = body.getBytes(StandardCharsets.UTF_8);
+    exchange.getResponseHeaders().set("Content-Type", "application/json");
+    exchange.sendResponseHeaders(statusCode, responseBody.length);
+    exchange.getResponseBody().write(responseBody);
+    exchange.close();
+  }
+
+  @Test
   void generateThrowsWhenApiKeyMissing() {
     var generator =
         new OpenAiMarketReportNarrativeGenerator(

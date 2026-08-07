@@ -12,7 +12,6 @@ import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper;
 import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,14 +28,14 @@ public class MarketReportGenerationService {
 
   private final DailyMarketReportMapper reportMapper;
   private final DailyMarketIndicatorMapper indicatorMapper;
-  private final MarketIndicatorCollector indicatorCollector;
+  private final MarketIndicatorProvider indicatorCollector;
   private final MarketReportNarrativeGenerator narrativeGenerator;
   private final Clock clock;
 
   public MarketReportGenerationService(
       DailyMarketReportMapper reportMapper,
       DailyMarketIndicatorMapper indicatorMapper,
-      MarketIndicatorCollector indicatorCollector,
+      MarketIndicatorProvider indicatorCollector,
       MarketReportNarrativeGenerator narrativeGenerator,
       Clock clock) {
     this.reportMapper = reportMapper;
@@ -49,7 +48,10 @@ public class MarketReportGenerationService {
   @Transactional
   public void generateForToday() {
     LocalDate reportDate = LocalDate.now(clock);
-    if (reportMapper.countByReportDate(reportDate) > 0) {
+    LocalDateTime validFrom = reportDate.atTime(18, 0);
+    LocalDateTime validUntil = reportDate.plusDays(1).atTime(17, 59, 59);
+    int claimed = reportMapper.claimReportDate(reportDate, validFrom, validUntil);
+    if (claimed == 0) {
       log.info("오늘자 시장 리포트가 이미 있어 배치를 건너뜁니다. reportDate={}", reportDate);
       return;
     }
@@ -85,8 +87,8 @@ public class MarketReportGenerationService {
             .generationSource(generationSource)
             .modelName(AiGenerationTask.DAILY_MARKET_REPORT.model().apiName())
             .promptVersion(PROMPT_VERSION)
-            .validFrom(reportDate.atTime(18, 0))
-            .validUntil(reportDate.plusDays(1).atTime(17, 59, 59))
+            .validFrom(validFrom)
+            .validUntil(validUntil)
             .build();
     reportMapper.upsert(report);
     if (report.getReportId() == null) {
@@ -115,11 +117,7 @@ public class MarketReportGenerationService {
             .indicatorType(result.type())
             .status(result.status());
     if (result.observation() == null) {
-      return builder
-          .dataAsOf(LocalDateTime.now(clock))
-          .source("N/A")
-          .observedValue(BigDecimal.ZERO)
-          .build();
+      return builder.dataAsOf(null).source("N/A").observedValue(null).build();
     }
     return builder
         .dataAsOf(result.observation().dataAsOf().atStartOfDay())
