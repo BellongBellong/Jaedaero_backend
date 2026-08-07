@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -77,6 +78,7 @@ public class ProductRecommendationService {
             .map(EtfMarketOverviewItem::etf)
             .filter(etf -> sameCode(etf.isuCd(), plan.getInvestmentProductCode()))
             .map(com.jaedaero.domain.investment.etf.EtfDailyTradingInfo::idxIndNm)
+            .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
     return items.stream()

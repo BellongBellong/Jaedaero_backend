@@ -59,7 +59,7 @@ class ProductRecommendationServiceTest {
   private static EtfMarketOverviewItem item(String code, String name, String price, String indexName) {
     return new EtfMarketOverviewItem(
         new EtfDailyTradingInfo("20260807", code, name, price, null, null, null, null, null, null,
-            null, null, null, null, indexName, null, null, null, null),
+            null, null, null, null, null, indexName, null, null, null),
         List.of());
   }
 
