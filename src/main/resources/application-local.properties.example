@@ -24,7 +24,5 @@ llm.api-key=your_llm_api_key
 # Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
 app.crypto.master-key-base64=your_32_byte_aes256_key_base64
 
-# JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
-codef.demo.user-id=1
 # KRX Open API 인증키
 krx.api.auth-key=YOUR_KRX_AUTH_KEY

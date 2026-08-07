@@ -82,7 +82,7 @@ public class ServletConfig implements WebMvcConfigurer {
         return resolver;
     }
 
-    /** JSP view name (for example, codef-demo/login) to WEB-INF JSP path mapping. */
+    /** JSP view name to WEB-INF JSP path mapping. */
     @Bean
     public InternalResourceViewResolver jspViewResolver() {
         InternalResourceViewResolver resolver = new InternalResourceViewResolver();

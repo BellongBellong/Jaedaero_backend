@@ -16,18 +16,6 @@ public class CodefPersistenceRepository {
     this.jdbcTemplate = jdbcTemplate;
   }
 
-  /**
-   * The JSP demo has no authentication flow yet. Create its configured local user once so the CODEF
-   * connection can still keep the same foreign-key and per-user data model as production.
-   */
-  public void createDemoUserIfAbsent(long userId) {
-    jdbcTemplate.update(
-        "INSERT IGNORE INTO users (user_id, social_type, social_id, nickname) VALUES (?, 'DEMO', ?,"
-            + " 'CODEF 데모')",
-        userId,
-        "codef-demo-" + userId);
-  }
-
   public boolean existsUser(long userId) {
     Integer count =
         jdbcTemplate.queryForObject(
