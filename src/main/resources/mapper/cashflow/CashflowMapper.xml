@@ -26,9 +26,28 @@
             ), 0) AS monthly_spending_average,
             profile.soldier_type,
             profile.enlistment_date,
-            profile.discharge_date
+            profile.discharge_date,
+            active_strategy.application_id AS active_strategy_application_id,
+            active_strategy.applied_monthly_spending_amount,
+            active_strategy.applied_monthly_saving_amount,
+            active_strategy.applied_monthly_investment_amount,
+            active_strategy.applied_expected_return_rate
         FROM soldier_profile profile
         INNER JOIN goal ON goal.user_id = profile.user_id AND goal.status = 'ACTIVE'
+        LEFT JOIN strategy_application active_strategy
+          ON active_strategy.application_id = (
+              SELECT candidate.application_id
+              FROM strategy_application candidate
+              WHERE candidate.user_id = profile.user_id
+                AND candidate.source_type = 'AI_RECOMMENDATION'
+                AND candidate.analysis_id IS NOT NULL
+                AND candidate.applied_monthly_spending_amount IS NOT NULL
+                AND candidate.applied_monthly_saving_amount IS NOT NULL
+                AND candidate.applied_monthly_investment_amount IS NOT NULL
+                AND candidate.applied_expected_return_rate IS NOT NULL
+              ORDER BY candidate.applied_at DESC, candidate.application_id DESC
+              LIMIT 1
+          )
         WHERE profile.user_id = #{userId}
     </select>
 
@@ -65,11 +84,12 @@
     <insert id="insertForecastMonths">
         INSERT INTO cashflow_forecast_month (
             forecast_id, forecast_month, expected_rank, expected_salary, expected_saving_amount,
-            expected_spending_amount, expected_ending_asset
+            expected_investment_amount, expected_spending_amount, expected_ending_asset
         ) VALUES
         <foreach collection="months" item="month" separator=",">
             (#{forecastId}, #{month.forecastMonth}, #{month.expectedRank}, #{month.expectedSalary},
-             #{month.expectedSavingAmount}, #{month.expectedSpendingAmount}, #{month.expectedEndingAsset})
+             #{month.expectedSavingAmount}, #{month.expectedInvestmentAmount},
+             #{month.expectedSpendingAmount}, #{month.expectedEndingAsset})
         </foreach>
     </insert>
 
@@ -84,7 +104,8 @@
 
     <select id="findMonthsByForecastId" resultType="com.jaedaero.domain.cashflow.vo.CashflowForecastMonthVo">
         SELECT forecast_month_id, forecast_id, forecast_month, expected_rank, expected_salary,
-               expected_saving_amount, expected_spending_amount, expected_ending_asset
+               expected_saving_amount, expected_investment_amount,
+               expected_spending_amount, expected_ending_asset
         FROM cashflow_forecast_month
         WHERE forecast_id = #{forecastId}
         ORDER BY forecast_month ASC

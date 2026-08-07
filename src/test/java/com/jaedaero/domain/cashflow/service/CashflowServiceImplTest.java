@@ -35,6 +35,7 @@ class CashflowServiceImplTest {
     assertEquals(1L, generated.getForecastId());
     assertEquals(18, generated.getMonths().size());
     assertEquals(10_200_000L, generated.getExpectedSalary());
+    assertEquals(0L, generated.getMonths().get(0).getExpectedInvestmentAmount());
     assertEquals(1, mapper.forecasts.size());
     assertEquals(18, mapper.months.size());
     assertEquals(generated.getForecastId(), latest.getForecastId());

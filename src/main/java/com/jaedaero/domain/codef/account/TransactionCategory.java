@@ -3,28 +3,69 @@ package com.jaedaero.domain.codef.account;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Fixed spending categories selectable by a user for a transaction. */
 @ApiModel(description = "거래 카테고리")
 public enum TransactionCategory {
   SALARY("급여"),
   ASSET("자산"),
-  PX("PX"),
-  FOOD("식비"),
-  SHOPPING("쇼핑"),
-  TRANSPORT("교통"),
-  LEISURE("여가"),
-  MEDICAL("의료"),
+  PX("PX", Set.of("PX", "충성마트", "국군복지단", "영외마트", "나라사랑마트")),
+  FOOD(
+      "식비",
+      Set.of(
+          "스타벅스", "투썸", "이디야", "메가커피", "컴포즈", "빽다방", "맥도날드", "버거킹", "롯데리아",
+          "맘스터치", "서브웨이", "배달의민족", "배민", "요기요", "쿠팡이츠", "식당", "카페", "치킨", "피자")),
+  SHOPPING(
+      "쇼핑",
+      Set.of(
+          "쿠팡", "마켓컬리", "컬리", "올리브영", "다이소", "무신사", "지마켓", "G마켓", "11번가",
+          "오늘의집", "이케아", "홈플러스", "이마트", "롯데마트")),
+  TRANSPORT(
+      "교통",
+      Set.of(
+          "카카오T", "카카오택시", "택시", "티머니", "코레일", "KTX", "SRT", "고속버스", "시외버스",
+          "쏘카", "그린카", "주차")),
+  LEISURE(
+      "여가",
+      Set.of(
+          "넷플릭스", "유튜브", "멜론", "스포티파이", "PC방", "CGV", "메가박스", "롯데시네마", "야놀자",
+          "여기어때", "노래방", "에버랜드", "롯데월드")),
+  MEDICAL("의료", Set.of("약국", "병원", "의원", "치과", "한의원", "보건소")),
   ETC("기타");
 
   private final String displayName;
+  private final Set<String> merchantNames;
 
   TransactionCategory(String displayName) {
+    this(displayName, Set.of());
+  }
+
+  TransactionCategory(String displayName, Set<String> merchantNames) {
     this.displayName = displayName;
+    this.merchantNames =
+        merchantNames.stream()
+            .map(TransactionCategory::normalize)
+            .collect(Collectors.toUnmodifiableSet());
   }
 
   public String getDisplayName() {
     return displayName;
+  }
+
+  /** Resolves a withdrawal description to a rule-based spending category. */
+  public static TransactionCategory fromDescription(String description) {
+    String normalizedDescription = normalize(description);
+    if (normalizedDescription.isBlank()) {
+      return ETC;
+    }
+    return Arrays.stream(values())
+        .filter(category -> !category.merchantNames.isEmpty())
+        .filter(category -> category.merchantNames.stream().anyMatch(normalizedDescription::contains))
+        .findFirst()
+        .orElse(ETC);
   }
 
   /** Accepts both API codes (for example, FOOD) and Korean display names (식비). */
@@ -41,5 +82,12 @@ public enum TransactionCategory {
                 new IllegalArgumentException(
                     "지원하지 않는 거래 카테고리입니다. 허용값: "
                         + Arrays.toString(TransactionCategory.values())));
+  }
+
+  private static String normalize(String value) {
+    if (value == null) {
+      return "";
+    }
+    return value.replaceAll("[\\s\\p{Punct}]", "").toUpperCase(Locale.ROOT);
   }
 }

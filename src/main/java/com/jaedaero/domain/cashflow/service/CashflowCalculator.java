@@ -1,5 +1,7 @@
 package com.jaedaero.domain.cashflow.service;
 
+import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
+import com.jaedaero.domain.cashflow.exception.CashflowException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -10,12 +12,12 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 
-/** Calculates the monthly salary, savings target, spending limit, and ending asset forecast. */
+/** Calculates the monthly salary, saving/investment allocation, spending, and ending asset forecast. */
 @Component
 public class CashflowCalculator {
 
   /** Initial allocation used until a synchronized soldier-savings amount is available. */
-  public static final long DEFAULT_MONTHLY_INVESTMENT_AMOUNT = 550_000L;
+  public static final long DEFAULT_MONTHLY_SAVING_AMOUNT = 550_000L;
   public static final long DEFAULT_MONTHLY_SPENDING_AMOUNT = 0L;
 
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
@@ -42,6 +44,7 @@ public class CashflowCalculator {
     List<SavingMaturity> savings =
         savingsMaturingByDischarge(input.soldierSavings(), startMonth, dischargeMonth);
     boolean hasSoldierSavings = !savings.isEmpty();
+    boolean hasAppliedStrategy = input.appliedStrategy() != null;
 
     for (int index = 0; index < totalMonths; index++) {
       YearMonth month = startMonth.plusMonths(index);
@@ -49,16 +52,32 @@ public class CashflowCalculator {
       DefaultMilitaryPayPolicy.MilitaryPay pay =
           militaryPayPolicy.resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), month);
       long requiredSaving = requiredSaving(input.targetAmount(), asset, remainingMonths);
-      long spending = Math.max(DEFAULT_MONTHLY_SPENDING_AMOUNT, input.monthlySpendingAverage());
+      if (hasAppliedStrategy) {
+        validateAppliedStrategy(input.appliedStrategy(), pay.monthlySalary());
+      }
+      long spending =
+          hasAppliedStrategy
+              ? input.appliedStrategy().monthlySpendingAmount()
+              : Math.max(DEFAULT_MONTHLY_SPENDING_AMOUNT, input.monthlySpendingAverage());
       long monthlySaving =
-          hasSoldierSavings
+          hasAppliedStrategy
+              ? input.appliedStrategy().monthlySavingAmount()
+              : hasSoldierSavings
               ? savings.stream()
                   .filter(saving -> !month.isAfter(saving.maturityMonth()))
                   .mapToLong(saving -> saving.input().monthlyAmount())
                   .sum()
-              : Math.max(DEFAULT_MONTHLY_INVESTMENT_AMOUNT, requiredSaving);
+              : Math.max(DEFAULT_MONTHLY_SAVING_AMOUNT, requiredSaving);
       long spendingLimit =
-          Math.max(0L, pay.monthlySalary() - monthlySaving);
+          hasAppliedStrategy
+              ? spending
+              : Math.max(0L, pay.monthlySalary() - monthlySaving);
+      long monthlyInvestment =
+          hasAppliedStrategy
+              ? input.appliedStrategy().monthlyInvestmentAmount()
+              : Math.min(
+                  Math.max(0L, pay.monthlySalary() - spending - monthlySaving),
+                  Math.max(0L, requiredSaving - monthlySaving));
       long maturityBonus =
           savings.stream()
               .filter(saving -> month.equals(saving.maturityMonth()))
@@ -68,7 +87,7 @@ public class CashflowCalculator {
       long assetBeforeMonth = asset;
       asset += pay.monthlySalary() - spending + maturityBonus;
       expectedSalary += pay.monthlySalary();
-      if (!hasSoldierSavings) expectedSavingAmount += monthlySaving;
+      if (hasAppliedStrategy || !hasSoldierSavings) expectedSavingAmount += monthlySaving;
       if (index == 0) firstMonthSpendingLimit = spendingLimit;
       if (financialDischargeDate == null) {
         financialDischargeDate =
@@ -81,11 +100,12 @@ public class CashflowCalculator {
               pay.rankName(),
               pay.monthlySalary(),
               monthlySaving,
+              monthlyInvestment,
               spending,
               asset));
     }
 
-    if (hasSoldierSavings) {
+    if (hasSoldierSavings && !hasAppliedStrategy) {
       expectedSavingAmount = savings.stream().mapToLong(SavingMaturity::maturityPayout).sum();
     }
 
@@ -102,6 +122,33 @@ public class CashflowCalculator {
   private long requiredSaving(long targetAmount, long asset, int remainingMonths) {
     long remainingAmount = Math.max(0L, targetAmount - asset);
     return (remainingAmount + remainingMonths - 1) / remainingMonths;
+  }
+
+  private void validateAppliedStrategy(
+      AppliedCashflowStrategy strategy, long referenceMonthlyIncome) {
+    if (strategy.monthlySpendingAmount() < 0
+        || strategy.monthlySavingAmount() < 0
+        || strategy.monthlySavingAmount() > DEFAULT_MONTHLY_SAVING_AMOUNT
+        || strategy.monthlyInvestmentAmount() < 0
+        || strategy.expectedReturnRate() == null
+        || strategy.expectedReturnRate().signum() < 0) {
+      throw new CashflowException(
+          CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 금액이 유효하지 않습니다.");
+    }
+    try {
+      long allocated =
+          Math.addExact(
+              Math.addExact(
+                  strategy.monthlySpendingAmount(), strategy.monthlySavingAmount()),
+              strategy.monthlyInvestmentAmount());
+      if (allocated > referenceMonthlyIncome) {
+        throw new CashflowException(
+            CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 합계가 해당 월 군 월급을 초과합니다.");
+      }
+    } catch (ArithmeticException exception) {
+      throw new CashflowException(
+          CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 합계를 계산할 수 없습니다.");
+    }
   }
 
   /**

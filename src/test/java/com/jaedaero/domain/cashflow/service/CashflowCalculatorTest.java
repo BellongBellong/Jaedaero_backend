@@ -2,8 +2,10 @@ package com.jaedaero.domain.cashflow.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.jaedaero.domain.auth.common.enums.SoldierType;
+import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -161,6 +163,57 @@ class CashflowCalculatorTest {
     assertEquals(700_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(1_200_000L, result.months().get(1).expectedSavingAmount());
     assertNull(result.financialDischargeDate());
+  }
+
+  @Test
+  void appliedAiStrategyOverridesSpendingAndSavingForEveryForecastMonth() {
+    AppliedCashflowStrategy strategy =
+        new AppliedCashflowStrategy(
+            9L, 50_000L, 100_000L, 50_000L, new BigDecimal("5.00"));
+    CashflowInput input =
+        new CashflowInput(
+            0L,
+            10_000_000L,
+            999_999L,
+            SoldierType.ARMY,
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2026, 2, 1),
+            List.of(),
+            strategy);
+
+    CashflowForecastCalculation result =
+        calculator.calculate(input, LocalDate.of(2026, 1, 10));
+
+    assertEquals(50_000L, result.monthlySpendingLimit());
+    assertEquals(200_000L, result.expectedSavingAmount());
+    assertEquals(300_000L, result.expectedAsset());
+    assertEquals(50_000L, result.months().get(0).expectedSpendingAmount());
+    assertEquals(100_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(50_000L, result.months().get(0).expectedInvestmentAmount());
+    assertEquals(50_000L, result.months().get(1).expectedSpendingAmount());
+    assertEquals(100_000L, result.months().get(1).expectedSavingAmount());
+    assertEquals(50_000L, result.months().get(1).expectedInvestmentAmount());
+  }
+
+  @Test
+  void appliedAiStrategyOverMonthlySalaryIsRejected() {
+    AppliedCashflowStrategy strategy =
+        new AppliedCashflowStrategy(
+            9L, 100_000L, 100_000L, 1L, new BigDecimal("5.00"));
+    CashflowInput input =
+        new CashflowInput(
+            0L,
+            10_000_000L,
+            0L,
+            SoldierType.ARMY,
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2026, 1, 31),
+            List.of(),
+            strategy);
+
+    assertThrows(
+        CashflowException.class,
+        () -> calculator.calculate(input, LocalDate.of(2026, 1, 10)));
   }
 
   private CashflowInput input(

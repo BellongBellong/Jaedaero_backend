@@ -11,7 +11,7 @@
     </sql>
 
     <sql id="recommendedScenarioColumns">
-        scenario_id, user_id, monthly_saving_amount, investment_ratio,
+        scenario_id, user_id, monthly_saving_amount, monthly_investment_amount,
         expected_return_rate, monthly_spending_amount, expected_asset,
         financial_discharge_date, recommend_reason, created_at
     </sql>
@@ -48,10 +48,10 @@
             parameterType="com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo"
             useGeneratedKeys="true" keyProperty="scenarioId">
         INSERT INTO ai_recommended_scenario (
-            user_id, monthly_saving_amount, investment_ratio, expected_return_rate,
+            user_id, monthly_saving_amount, monthly_investment_amount, expected_return_rate,
             monthly_spending_amount, expected_asset, financial_discharge_date, recommend_reason
         ) VALUES (
-            #{userId}, #{monthlySavingAmount}, #{investmentRatio}, #{expectedReturnRate},
+            #{userId}, #{monthlySavingAmount}, #{monthlyInvestmentAmount}, #{expectedReturnRate},
             #{monthlySpendingAmount}, #{expectedAsset}, #{financialDischargeDate}, #{recommendReason}
         )
     </insert>

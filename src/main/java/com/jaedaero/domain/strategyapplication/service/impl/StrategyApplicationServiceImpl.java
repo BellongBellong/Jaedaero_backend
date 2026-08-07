@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jaedaero.domain.aianalysis.dto.AiAnalysisResult;
 import com.jaedaero.domain.aianalysis.dto.AiRecommendedScenarioResponse;
 import com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper;
-import com.jaedaero.domain.aianalysis.service.AiAnalysisInputProvider;
 import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
 import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
@@ -19,6 +18,7 @@ import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationSourceType;
 import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +28,6 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
 
   private final StrategyApplicationMapper strategyApplicationMapper;
   private final AiAnalysisMapper aiAnalysisMapper;
-  private final AiAnalysisInputProvider aiAnalysisInputProvider;
   private final CashflowService cashflowService;
   private final ObjectMapper objectMapper;
 
@@ -40,22 +39,37 @@ public class StrategyApplicationServiceImpl implements StrategyApplicationServic
       throw new StrategyApplicationException(
           StrategyApplicationErrorCode.NOT_FOUND, "적용할 AI 분석 결과를 찾을 수 없습니다.");
     }
+    StrategyApplicationVo existing =
+        strategyApplicationMapper.findByAnalysisIdAndUserId(analysisId, userId);
+    if (existing != null) {
+      return StrategyApplicationResponse.from(existing);
+    }
 
     AiRecommendedScenarioVo recommendation = recommendation(analysis, userId);
-    long beforeExpectedAsset = aiAnalysisInputProvider.load(userId).expectedAsset();
+    long beforeExpectedAsset = cashflowService.generate(userId).getExpectedAsset();
 
     StrategyApplicationVo application =
         StrategyApplicationVo.builder()
             .userId(userId)
             .sourceType(StrategyApplicationSourceType.AI_RECOMMENDATION)
+            .analysisId(analysisId)
             .aiScenarioId(recommendation.getScenarioId())
             .appliedMonthlySavingAmount(recommendation.getMonthlySavingAmount())
-            .appliedInvestmentRatio(recommendation.getInvestmentRatio())
+            .appliedMonthlyInvestmentAmount(recommendation.getMonthlyInvestmentAmount())
             .appliedExpectedReturnRate(recommendation.getExpectedReturnRate())
             .appliedMonthlySpendingAmount(recommendation.getMonthlySpendingAmount())
             .beforeExpectedAsset(beforeExpectedAsset)
             .build();
-    strategyApplicationMapper.insert(application);
+    try {
+      strategyApplicationMapper.insert(application);
+    } catch (DuplicateKeyException exception) {
+      StrategyApplicationVo concurrentlyApplied =
+          strategyApplicationMapper.findByAnalysisIdAndUserId(analysisId, userId);
+      if (concurrentlyApplied != null) {
+        return StrategyApplicationResponse.from(concurrentlyApplied);
+      }
+      throw exception;
+    }
 
     // 최신 strategy_application이 현재 적용 상태다. 새 상태로 캐시플로우를 즉시 다시 계산한다.
     CashflowForecastResponse recalculated = cashflowService.generate(userId);

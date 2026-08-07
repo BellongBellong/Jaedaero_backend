@@ -16,6 +16,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
 
   private final InvestmentPreferenceMapper investmentPreferenceMapper;
 
+  /** 사용자의 투자 성향과 목표 금액을 저장합니다. */
   @Override
   @Transactional
   public InvestmentPreferenceResponse registerInvestmentPreference(
@@ -31,6 +32,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
         true, request.getInvestmentPreference(), request.getTargetAmount());
   }
 
+  /** 투자 성향 및 목표 금액 입력값을 검증합니다. */
   private void validateRequest(InvestmentPreferenceRequest request) {
     if (request == null
         || request.getInvestmentPreference() == null
