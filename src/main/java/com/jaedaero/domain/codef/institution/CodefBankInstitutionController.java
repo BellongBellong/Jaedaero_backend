@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import springfox.documentation.annotations.ApiIgnore;
 
-/** Supplies the bank-button catalogue to the frontend. */
+/** 프런트엔드에 은행 버튼 목록을 제공합니다. */
 @Api(tags = "CODEF 연결 가능 금융기관")
 @RestController
 @ApiIgnore

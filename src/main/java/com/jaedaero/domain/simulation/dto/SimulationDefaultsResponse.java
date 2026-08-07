@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Getter;
 
-/** What-if 화면 최초 진입 시 사용할 서버 계산 기본값이다. */
+/** 가정 시뮬레이션 화면 최초 진입 시 사용할 서버 계산 기본값입니다. */
 @Getter
 @Builder
 public class SimulationDefaultsResponse {

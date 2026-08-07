@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** Fixed spending categories selectable by a user for a transaction. */
+/** 사용자가 거래에 선택할 수 있는 고정 지출 분류입니다. */
 @ApiModel(description = "거래 카테고리")
 public enum TransactionCategory {
   SALARY("급여"),
@@ -55,7 +55,7 @@ public enum TransactionCategory {
     return displayName;
   }
 
-  /** Resolves a withdrawal description to a rule-based spending category. */
+  /** 출금 설명을 규칙 기반 지출 분류로 변환합니다. */
   public static TransactionCategory fromDescription(String description) {
     String normalizedDescription = normalize(description);
     if (normalizedDescription.isBlank()) {
@@ -68,7 +68,7 @@ public enum TransactionCategory {
         .orElse(ETC);
   }
 
-  /** Accepts both API codes (for example, FOOD) and Korean display names (식비). */
+  /** API 코드(예: FOOD)와 한국어 표시명(식비)을 모두 허용합니다. */
   @JsonCreator
   public static TransactionCategory from(String value) {
     if (value == null) {

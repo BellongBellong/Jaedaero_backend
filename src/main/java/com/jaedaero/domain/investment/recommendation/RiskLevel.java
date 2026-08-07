@@ -1,6 +1,6 @@
 package com.jaedaero.domain.investment.recommendation;
 
-/** Internal risk classification for allocating ETFs between safe and risk assets. */
+/** ETF를 안전자산과 위험자산으로 배분하기 위한 내부 위험등급입니다. */
 public enum RiskLevel {
   LOW,
   MEDIUM,

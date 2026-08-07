@@ -1,12 +1,11 @@
 package com.jaedaero.domain.codef.institution;
 
 /**
- * CODEF bank (BK) organization catalogue used by the bank-selection UI.
+ * 은행 선택 UI에서 사용하는 CODEF 은행(BK) 기관 목록입니다.
  *
- * <p>The list is isolated in one enum so it can be replaced with a database-managed catalogue when
- * CODEF institution/login-support information is synchronized. An organization can support a
- * different login method over time; the frontend must display only methods confirmed in CODEF's
- * current institution guide.
+ * <p>기관·로그인 지원 정보를 동기화할 수 있게 되면 DB 기반 목록으로 교체할 수 있도록 하나의 enum에
+ * 분리했습니다. 기관마다 시간이 지나며 지원 로그인 방식이 달라질 수 있으므로, 프런트엔드는 CODEF의
+ * 최신 기관 가이드에서 확인된 방식만 표시해야 합니다.
  */
 public enum CodefBankInstitution {
   KOREA_DEVELOPMENT_BANK("0002", "산업은행"),

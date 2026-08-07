@@ -1,6 +1,6 @@
 package com.jaedaero.domain.codef.institution;
 
-/** CODEF securities (ST) organization catalogue used by the JSP demonstration. */
+/** CODEF 증권(ST) 기관 목록입니다. */
 public enum CodefSecuritiesInstitution {
   YUANTA("0209", "유안타증권"),
   KB("0218", "KB증권"),

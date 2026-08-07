@@ -19,7 +19,7 @@ public class DischargeReportServiceImpl implements DischargeReportService {
   @Override
   @Transactional
   public DischargeReportResponse get(long userId) {
-    // DashboardService generates an initial forecast when none exists.
+    // 예측 데이터가 없으면 DashboardService가 초기 예측을 생성합니다.
     DashboardResponse dashboard = dashboardService.get(userId);
     CashflowForecastResponse cashflow = cashflowService.getLatest(userId);
     return DischargeReportResponse.from(cashflow, dashboard);

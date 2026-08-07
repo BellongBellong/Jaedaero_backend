@@ -10,9 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 팀 캐시플로우 API 연동 전까지 사용하는 개발용 Provider.
+ * 팀 현금흐름 API 연동 전까지 사용하는 개발용 제공자입니다.
  *
- * <p>MockDB의 연동 계좌 잔액과 목표·복무 정보를 읽어 What-if 계산기에 전달한다.
+ * <p>목 DB의 연동 계좌 잔액과 목표·복무 정보를 읽어 가정 시뮬레이션 계산기에 전달합니다.
  */
 @Component
 @RequiredArgsConstructor

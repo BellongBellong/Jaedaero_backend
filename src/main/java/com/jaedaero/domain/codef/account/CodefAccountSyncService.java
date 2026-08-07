@@ -16,7 +16,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Synchronizes CODEF account-list data into the local database. */
+/** CODEF 계좌 목록 데이터를 로컬 데이터베이스에 동기화합니다. */
 @Service
 public class CodefAccountSyncService {
   private static final String ACCOUNT_LIST_PATH = "/v1/kr/bank/p/account/account-list";

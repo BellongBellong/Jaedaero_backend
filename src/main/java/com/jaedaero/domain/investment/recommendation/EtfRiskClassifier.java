@@ -6,8 +6,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * A transparent initial classifier based on KRX product and underlying-index names.
- * It is an internal allocation policy, not a fund manager's official risk rating.
+ * KRX 상품명과 기초지수명을 기준으로 하는 투명한 초기 분류기입니다.
+ * 운용사의 공식 위험등급이 아닌 내부 자산 배분 정책입니다.
  */
 @Component
 public class EtfRiskClassifier {

@@ -260,7 +260,7 @@ public class CodefPersistenceRepository {
     return rows.stream().findFirst();
   }
 
-  /** Finds a locally seeded account after an idempotent account upsert. */
+  /** 멱등 계좌 upsert 후 로컬에 준비된 계좌를 찾습니다. */
   public Optional<Long> findAccountIdByConnectionInstitutionAndAccountHash(
       long connectionId, String institutionCode, String accountNumberHash) {
     List<Long> accountIds =
@@ -321,7 +321,7 @@ public class CodefPersistenceRepository {
         externalTransactionKey);
   }
 
-  /** Sets a rule category without overwriting an existing (including user-selected) category. */
+  /** 기존 분류(사용자 선택 분류 포함)를 덮어쓰지 않고 규칙 분류를 설정합니다. */
   public void fillTransactionCategoryIfEmpty(
       long accountId, String externalTransactionKey, String category) {
     jdbcTemplate.update(
@@ -378,7 +378,7 @@ public class CodefPersistenceRepository {
         java.sql.Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
   }
 
-  /** Returns only transactions belonging to the user, optionally narrowed by account and category. */
+  /** 계좌와 분류로 선택 범위를 좁힐 수 있는 사용자의 거래내역만 반환합니다. */
   public List<StoredTransaction> findTransactionsByUser(
       long userId, Long accountId, LocalDate startDate, LocalDate endDate, String category) {
     StringBuilder query =
@@ -418,7 +418,7 @@ public class CodefPersistenceRepository {
         parameters.toArray());
   }
 
-  /** Updates a transaction only when it belongs to the requesting user. */
+  /** 요청한 사용자에게 속한 거래내역만 수정합니다. */
   public int updateTransactionCategoryByUser(long transactionId, long userId, String category) {
     return jdbcTemplate.update(
         "UPDATE transaction_history th "

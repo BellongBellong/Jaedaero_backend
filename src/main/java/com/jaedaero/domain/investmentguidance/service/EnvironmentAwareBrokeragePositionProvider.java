@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-/** Selects the mock DB provider locally and the CODEF provider in other environments. */
+/** 로컬에서는 목 DB 제공자를, 다른 환경에서는 CODEF 제공자를 선택합니다. */
 @Primary
 @Component
 public class EnvironmentAwareBrokeragePositionProvider implements BrokeragePositionProvider {

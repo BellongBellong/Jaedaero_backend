@@ -10,7 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** Development-only filter. It accepts X-User-Id solely to exercise authenticated endpoints locally. */
+/** 개발 환경 전용 필터입니다. 로컬에서 인증 API를 시험할 때만 X-User-Id를 허용합니다. */
 public class DevelopmentAuthenticationFilter extends OncePerRequestFilter {
 
   @Override
