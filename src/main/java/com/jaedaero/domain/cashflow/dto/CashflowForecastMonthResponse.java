@@ -12,6 +12,7 @@ public class CashflowForecastMonthResponse {
   private final String expectedRank;
   private final Long expectedSalary;
   private final Long expectedSavingAmount;
+  private final Long expectedInvestmentAmount;
   private final Long expectedSpendingAmount;
   private final Long expectedEndingAsset;
 
@@ -21,6 +22,7 @@ public class CashflowForecastMonthResponse {
         .expectedRank(month.getExpectedRank())
         .expectedSalary(month.getExpectedSalary())
         .expectedSavingAmount(month.getExpectedSavingAmount())
+        .expectedInvestmentAmount(month.getExpectedInvestmentAmount())
         .expectedSpendingAmount(month.getExpectedSpendingAmount())
         .expectedEndingAsset(month.getExpectedEndingAsset())
         .build();

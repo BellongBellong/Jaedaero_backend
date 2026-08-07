@@ -20,6 +20,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
 
   private final MilitaryInfoMapper militaryInfoMapper;
 
+  /** 사용자의 군 복무 정보를 저장하고 챌린지 그룹에 등록합니다. */
   @Override
   @Transactional
   public SoldierProfileResponse registerMilitaryInfo(long userId, MilitaryInfoRequest request) {
@@ -53,7 +54,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
         challengeGroupTargetAmountAverage);
   }
 
-  // 군종별 전역일 계산 로직
+  /** 군종별 복무 기간을 기준으로 전역일을 계산합니다. */
   private LocalDate calculateDischargeDate(SoldierType soldierType, LocalDate enlistmentDate) {
     if (soldierType == null || enlistmentDate == null) {
       throw new MilitaryInfoException(AuthErrorCode.INVALID_MILITARY_INFO, "군종과 입대일은 필수입니다.");
@@ -72,6 +73,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
     }
   }
 
+  /** 군 복무 정보 입력값을 검증합니다. */
   private void validateRequest(MilitaryInfoRequest request) {
     if (request == null
         || request.getRankName() == null
@@ -81,6 +83,7 @@ public class MilitaryInfoServiceImpl implements MilitaryInfoService {
     }
   }
 
+  /** 입대 월과 군종 기준 챌린지 그룹에 사용자를 등록합니다. */
   private long registerChallengeMember(
       long userId, SoldierType soldierType, LocalDate enlistmentDate) {
     int enlistmentYear = enlistmentDate.getYear();

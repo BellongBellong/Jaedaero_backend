@@ -20,6 +20,9 @@ public interface StrategyApplicationMapper {
   StrategyApplicationVo findByIdAndUserId(
       @Param("applicationId") long applicationId, @Param("userId") long userId);
 
+  StrategyApplicationVo findByAnalysisIdAndUserId(
+      @Param("analysisId") long analysisId, @Param("userId") long userId);
+
   StrategyApplicationVo findLatestByUserId(@Param("userId") long userId);
 
   StrategyApplicationVo findByGuidanceSelection(

@@ -106,6 +106,7 @@ public class CashflowServiceImpl implements CashflowService {
         .expectedRank(month.expectedRank())
         .expectedSalary(month.expectedSalary())
         .expectedSavingAmount(month.expectedSavingAmount())
+        .expectedInvestmentAmount(month.expectedInvestmentAmount())
         .expectedSpendingAmount(month.expectedSpendingAmount())
         .expectedEndingAsset(month.expectedEndingAsset())
         .build();

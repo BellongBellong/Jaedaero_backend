@@ -31,6 +31,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
   private final JwtTokenProvider jwtTokenProvider;
   private final Sha256Hasher sha256Hasher;
 
+  /** 소셜 로그인 후 사용자와 인증 토큰을 반환합니다. */
   @Override
   @Transactional
   public LoginResponse login(LoginRequest request) {
@@ -54,6 +55,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
             user.isOnboardingCompleted()));
   }
 
+  /** 리프레시 토큰을 검증하고 새로운 인증 토큰을 발급합니다. */
   @Override
   @Transactional
   public RefreshTokenResponse refresh(RefreshTokenRequest request) {
@@ -70,6 +72,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     return tokenResponse;
   }
 
+  /** 사용자의 모든 리프레시 토큰을 삭제합니다. */
   @Override
   @Transactional
   public void logout(long userId) {
@@ -77,6 +80,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     log.info("로그아웃 완료. userId={}", userId);
   }
 
+  /** 소셜 식별자로 기존 사용자를 조회하거나 새 사용자를 생성합니다. */
   private AuthUserVo findOrCreateUser(SocialType socialType, AuthUserVo profile) {
     AuthUserVo user =
         authUserMapper.findActiveBySocialIdentity(socialType.name(), profile.getSocialId());
@@ -101,6 +105,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     return user;
   }
 
+  /** 리프레시 토큰을 발급하고 해시값을 저장합니다. */
   private String issueRefreshToken(long userId) {
     String refreshToken = jwtTokenProvider.createRefreshToken();
     authUserMapper.insertRefreshToken(
@@ -110,6 +115,7 @@ public class SocialLoginServiceImpl implements SocialLoginService {
     return refreshToken;
   }
 
+  /** 액세스 토큰과 리프레시 토큰 응답을 생성합니다. */
   private RefreshTokenResponse createTokenResponse(long userId) {
     return new RefreshTokenResponse(
         jwtTokenProvider.createAccessToken(userId),

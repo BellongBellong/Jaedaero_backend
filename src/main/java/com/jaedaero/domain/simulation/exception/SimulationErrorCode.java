@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum SimulationErrorCode implements ErrorCode {
   UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "SIMULATION_UNAUTHENTICATED"),
+  INVALID_REQUEST(HttpStatus.BAD_REQUEST, "SIMULATION_INVALID_REQUEST"),
   NOT_FOUND(HttpStatus.NOT_FOUND, "SIMULATION_NOT_FOUND"),
   INPUT_NOT_READY(HttpStatus.CONFLICT, "SIMULATION_INPUT_NOT_READY");
 
