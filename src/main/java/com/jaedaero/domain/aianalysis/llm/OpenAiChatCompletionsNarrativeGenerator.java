@@ -63,7 +63,7 @@ public class OpenAiChatCompletionsNarrativeGenerator implements AiCoachNarrative
                 "type", "json_schema",
                 "json_schema",
                 Map.of(
-                    "name", "ai_coach_narrative",
+                    "name", "ai_coach_narrative_v4_spending_pattern",
                     "strict", true,
                     "schema",
                     Map.of(

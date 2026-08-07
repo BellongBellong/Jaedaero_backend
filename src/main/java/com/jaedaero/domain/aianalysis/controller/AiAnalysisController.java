@@ -32,7 +32,7 @@ public class AiAnalysisController {
   private final StrategyApplicationService strategyApplicationService;
   @PostMapping
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
-  @ApiOperation(value = "AI 분석 생성", notes = "목 데이터 기준 AI 분석과 추천 시나리오를 생성합니다. AI 코칭 모델은 서버 정책에 따라 gpt-4o-mini를 사용합니다.")
+  @ApiOperation(value = "AI 분석 생성", notes = "현재월과 전월 동일 일수의 실제 거래 집계를 기반으로 소비 패턴·개선안·예상 효과와 추천 시나리오를 생성합니다. 금액과 비율은 서버가 계산하고 gpt-4o-mini는 설명만 생성합니다.")
   public ResponseEntity<AiAnalysisResponse> analyze(@ApiIgnore Authentication auth, @RequestBody(required = false) AiAnalysisRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.analyze(userId(auth), request == null ? new AiAnalysisRequest() : request));
   }

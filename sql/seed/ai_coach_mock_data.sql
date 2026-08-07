@@ -179,9 +179,17 @@ INSERT INTO transaction_history (
     transaction_type, category, category_source, transaction_description, external_transaction_key
 ) VALUES
     (@mock_narasarang_account_id, '2026-07-03 12:10:00', 12500, 1862500, 'WITHDRAW', '식비', 'RULE', 'PX', SHA2('mock-transaction-900001', 256)),
+    (@mock_narasarang_account_id, '2026-07-04 18:10:00', 49900, 1812600, 'WITHDRAW', 'FOOD', 'RULE', '외식', SHA2('mock-transaction-900005', 256)),
+    (@mock_narasarang_account_id, '2026-07-05 09:00:00', 17000, 1795600, 'WITHDRAW', 'LEISURE', 'AI', '넷플릭스', SHA2('mock-transaction-900006', 256)),
+    (@mock_narasarang_account_id, '2026-07-05 20:10:00', 29300, 1766300, 'WITHDRAW', 'SHOPPING', 'RULE', '쿠팡', SHA2('mock-transaction-900012', 256)),
+    (@mock_narasarang_account_id, '2026-07-06 09:00:00', 550000, 1245600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900007', 256)),
     (@mock_narasarang_account_id, '2026-07-08 19:30:00', 48000, 1814500, 'WITHDRAW', '여가', 'AI', '외출 식사', SHA2('mock-transaction-900002', 256)),
     (@mock_narasarang_account_id, '2026-07-15 09:00:00', 350000, 2164500, 'DEPOSIT', NULL, NULL, '월급', SHA2('mock-transaction-900003', 256)),
-    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 614500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900004', 256))
+    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 614500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900004', 256)),
+    (@mock_narasarang_account_id, '2026-08-02 12:30:00', 82400, 1467600, 'WITHDRAW', 'FOOD', 'RULE', '외식', SHA2('mock-transaction-900008', 256)),
+    (@mock_narasarang_account_id, '2026-08-04 09:00:00', 17000, 1450600, 'WITHDRAW', 'LEISURE', 'AI', '넷플릭스', SHA2('mock-transaction-900009', 256)),
+    (@mock_narasarang_account_id, '2026-08-05 09:00:00', 550000, 900600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900010', 256)),
+    (@mock_narasarang_account_id, '2026-08-06 20:10:00', 29300, 871300, 'WITHDRAW', 'SHOPPING', 'RULE', '쿠팡', SHA2('mock-transaction-900011', 256))
 ON DUPLICATE KEY UPDATE
     amount = VALUES(amount),
     balance_after = VALUES(balance_after),

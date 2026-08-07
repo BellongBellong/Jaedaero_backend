@@ -24,6 +24,7 @@ public class MyPageServiceImpl implements MyPageService {
   private final MyPageMapper myPageMapper;
   private final AuthUserMapper authUserMapper;
 
+  /** 사용자의 마이페이지 프로필과 뱃지 현황을 조회합니다. */
   @Override
   @Transactional(readOnly = true)
   public MyPageProfileResponse getProfile(long userId) {
@@ -42,6 +43,7 @@ public class MyPageServiceImpl implements MyPageService {
         toInvestmentBadgeStatus(myPageMapper.findInvestmentBadgeStatus(userId)));
   }
 
+  /** 뱃지 상태 VO를 마이페이지 응답 DTO로 변환합니다. */
   private InvestmentBadgeStatusResponse toInvestmentBadgeStatus(InvestmentBadgeStatusVo badgeStatus) {
     if (badgeStatus == null) {
       return new InvestmentBadgeStatusResponse(null, null, null, null, 0, 0, 0);
@@ -56,6 +58,7 @@ public class MyPageServiceImpl implements MyPageService {
         badgeStatus.getSafeMissionCount() + badgeStatus.getAggressiveMissionCount());
   }
 
+  /** 사용자가 획득한 투자 뱃지를 페이지 단위로 조회합니다. */
   @Override
   @Transactional(readOnly = true)
   public List<InvestmentBadgeResponse> getInvestmentBadges(long userId) {
@@ -74,6 +77,7 @@ public class MyPageServiceImpl implements MyPageService {
         .collect(Collectors.toList());
   }
 
+  /** 사용자를 탈퇴 처리하고 인증 토큰을 삭제합니다. */
   @Override
   @Transactional
   public void withdraw(long userId) {

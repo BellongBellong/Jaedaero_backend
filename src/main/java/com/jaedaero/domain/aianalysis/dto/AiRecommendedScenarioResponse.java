@@ -17,7 +17,7 @@ import lombok.Setter;
 public class AiRecommendedScenarioResponse {
   private Long scenarioId;
   private Long monthlySavingAmount;
-  private BigDecimal investmentRatio;
+  private Long monthlyInvestmentAmount;
   private BigDecimal expectedReturnRate;
   private Long monthlySpendingAmount;
   private Long expectedAsset;
@@ -26,7 +26,7 @@ public class AiRecommendedScenarioResponse {
 
   public static AiRecommendedScenarioResponse from(AiRecommendedScenarioVo source) {
     return builder().scenarioId(source.getScenarioId()).monthlySavingAmount(source.getMonthlySavingAmount())
-        .investmentRatio(source.getInvestmentRatio()).expectedReturnRate(source.getExpectedReturnRate())
+        .monthlyInvestmentAmount(source.getMonthlyInvestmentAmount()).expectedReturnRate(source.getExpectedReturnRate())
         .monthlySpendingAmount(source.getMonthlySpendingAmount()).expectedAsset(source.getExpectedAsset())
         .financialDischargeDate(source.getFinancialDischargeDate()).recommendReason(source.getRecommendReason()).build();
   }

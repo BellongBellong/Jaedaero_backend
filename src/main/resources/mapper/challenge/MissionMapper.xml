@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.challenge.mapper.MissionMapper">
+
+    <resultMap id="missionResultMap" type="com.jaedaero.domain.challenge.vo.MissionVo">
+        <id property="missionId" column="mission_id"/>
+        <result property="missionCategory" column="mission_category"
+                javaType="com.jaedaero.domain.challenge.common.enums.MissionCategory"/>
+        <result property="missionType" column="mission_type"
+                javaType="com.jaedaero.domain.challenge.common.enums.MissionType"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="actionType" column="action_type"/>
+        <result property="displayOrder" column="display_order"/>
+        <result property="completed" column="completed"/>
+    </resultMap>
+
+    <resultMap id="investmentBadgeStatusResultMap"
+               type="com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo">
+        <result property="safeCount" column="safe_count"/>
+        <result property="safeGrade" column="safe_grade"/>
+        <result property="aggressiveCount" column="aggressive_count"/>
+        <result property="aggressiveGrade" column="aggressive_grade"/>
+    </resultMap>
+
+    <sql id="missionColumns">
+        m.mission_id,
+        m.mission_category,
+        m.mission_type,
+        m.title,
+        m.description,
+        m.action_type,
+        m.display_order,
+        EXISTS (
+            SELECT 1
+            FROM user_mission_completion umc
+            WHERE umc.user_id = #{userId}
+              AND umc.mission_id = m.mission_id
+              AND umc.completion_date = CURDATE()
+        ) AS completed
+    </sql>
+
+    <select id="findDailyMissions" resultMap="missionResultMap">
+        SELECT
+        <include refid="missionColumns"/>
+        FROM mission m
+        WHERE m.is_active = TRUE
+          AND m.mission_category = 'DAILY'
+          AND m.mission_type IS NULL
+        ORDER BY m.display_order, m.mission_id
+        LIMIT 2
+    </select>
+
+    <select id="findRecommendedMission" resultMap="missionResultMap">
+        SELECT
+        <include refid="missionColumns"/>
+        FROM mission m
+        WHERE m.is_active = TRUE
+          AND m.mission_category = 'RECOMMENDED'
+          AND m.mission_type = #{missionType}
+        ORDER BY m.display_order, m.mission_id
+        LIMIT 1
+    </select>
+
+    <select id="findEventMission" resultMap="missionResultMap">
+        SELECT
+        <include refid="missionColumns"/>
+        FROM mission m
+        LEFT JOIN soldier_profile sp ON sp.user_id = #{userId}
+        WHERE m.is_active = TRUE
+          AND m.mission_category = 'EVENT'
+          AND (
+              (m.trigger_type = 'DAYS_TO_DISCHARGE'
+                  AND DATEDIFF(sp.discharge_date, CURDATE()) = m.trigger_value)
+              OR (m.trigger_type = 'LEAVE_SCHEDULED'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM leave_mode lm
+                      WHERE lm.user_id = #{userId}
+                        AND lm.start_date = CURDATE()
+                  ))
+              OR (m.trigger_type = 'PAYDAY'
+                  AND DAY(CURDATE()) = m.trigger_value)
+          )
+        ORDER BY m.event_priority, m.display_order, m.mission_id
+        LIMIT 1
+    </select>
+
+    <select id="findActiveMissionById" resultMap="missionResultMap">
+        SELECT
+            m.mission_id,
+            m.mission_category,
+            m.mission_type,
+            m.title,
+            m.description,
+            m.action_type,
+            m.display_order,
+            FALSE AS completed
+        FROM mission m
+        WHERE m.mission_id = #{missionId}
+          AND m.is_active = TRUE
+    </select>
+
+    <select id="existsCompletionToday" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM user_mission_completion
+            WHERE user_id = #{userId}
+              AND mission_id = #{missionId}
+              AND completion_date = CURDATE()
+        )
+    </select>
+
+    <select id="existsAnyCompletion" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM user_mission_completion
+            WHERE user_id = #{userId}
+              AND mission_id = #{missionId}
+        )
+    </select>
+
+    <insert id="insertCompletion">
+        INSERT INTO user_mission_completion (
+            user_id,
+            mission_id,
+            completion_date
+        ) VALUES (
+            #{userId},
+            #{missionId},
+            #{completionDate}
+        )
+    </insert>
+
+    <insert id="initializeInvestmentBadge">
+        INSERT INTO investment_badge (user_id)
+        VALUES (#{userId})
+        ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
+    </insert>
+
+    <update id="incrementSafeMissionCount">
+        UPDATE investment_badge
+        SET safe_count = safe_count + 1
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="incrementAggressiveMissionCount">
+        UPDATE investment_badge
+        SET aggressive_count = aggressive_count + 1
+        WHERE user_id = #{userId}
+    </update>
+
+    <select id="findInvestmentBadgeStatus" resultMap="investmentBadgeStatusResultMap">
+        SELECT safe_count, safe_grade, aggressive_count, aggressive_grade
+        FROM investment_badge
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findGradeByCompletionCount" resultType="string">
+        SELECT grade
+        FROM badge
+        WHERE mission_type = #{missionType}
+          AND is_active = TRUE
+          AND required_completion_count &lt;= #{completionCount}
+        ORDER BY required_completion_count DESC
+        LIMIT 1
+    </select>
+
+    <update id="updateInvestmentBadgeGrade">
+        UPDATE investment_badge
+        <set>
+            <if test="missionType.name() == 'SAFE'">
+                safe_grade = #{grade},
+            </if>
+            <if test="missionType.name() == 'AGGRESSIVE'">
+                aggressive_grade = #{grade},
+            </if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <insert id="incrementMonthlyChallengeMissionCount">
+        INSERT INTO challenge_monthly_result (
+            member_id,
+            result_month,
+            mission_completion_count
+        )
+        SELECT
+            cm.member_id,
+            DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) - 1 DAY),
+            1
+        FROM challenge_member cm
+        WHERE cm.user_id = #{userId}
+        ON DUPLICATE KEY UPDATE
+            mission_completion_count = mission_completion_count + 1
+    </insert>
+
+    <insert id="incrementTotalChallengeMissionCount">
+        INSERT INTO challenge_member_summary (
+            member_id,
+            total_mission_count
+        )
+        SELECT cm.member_id, 1
+        FROM challenge_member cm
+        WHERE cm.user_id = #{userId}
+        ON DUPLICATE KEY UPDATE
+            total_mission_count = total_mission_count + 1
+    </insert>
+</mapper>

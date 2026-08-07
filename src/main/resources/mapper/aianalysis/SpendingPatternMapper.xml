@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.aianalysis.mapper.SpendingPatternMapper">
+
+    <select id="aggregateByCategory"
+            resultType="com.jaedaero.domain.aianalysis.vo.SpendingCategoryAggregateVo">
+        SELECT COALESCE(th.category, 'ETC') AS category,
+               COALESCE(SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{currentStart}
+                    AND th.transaction_datetime &lt; #{currentEndExclusive}
+                   THEN th.amount ELSE 0 END), 0) AS current_amount,
+               COALESCE(SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{previousStart}
+                    AND th.transaction_datetime &lt; #{previousEndExclusive}
+                   THEN th.amount ELSE 0 END), 0) AS previous_amount,
+               SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{currentStart}
+                    AND th.transaction_datetime &lt; #{currentEndExclusive}
+                   THEN 1 ELSE 0 END) AS current_transaction_count,
+               SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{previousStart}
+                    AND th.transaction_datetime &lt; #{previousEndExclusive}
+                   THEN 1 ELSE 0 END) AS previous_transaction_count
+        FROM transaction_history th
+        INNER JOIN connected_account account ON account.account_id = th.account_id
+        INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+        WHERE connection.user_id = #{userId}
+          AND account.status = 'ACTIVE'
+          AND th.transaction_type = 'WITHDRAW'
+          AND (
+              (th.transaction_datetime &gt;= #{previousStart}
+               AND th.transaction_datetime &lt; #{previousEndExclusive})
+              OR
+              (th.transaction_datetime &gt;= #{currentStart}
+               AND th.transaction_datetime &lt; #{currentEndExclusive})
+          )
+        GROUP BY COALESCE(th.category, 'ETC')
+        ORDER BY current_amount DESC, category ASC
+    </select>
+
+    <select id="findRecurringPayments"
+            resultType="com.jaedaero.domain.aianalysis.vo.RecurringPaymentAggregateVo">
+        SELECT TRIM(th.transaction_description) AS description,
+               COALESCE(SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{currentStart}
+                    AND th.transaction_datetime &lt; #{currentEndExclusive}
+                   THEN th.amount ELSE 0 END), 0) AS current_amount,
+               COALESCE(SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{previousStart}
+                    AND th.transaction_datetime &lt; #{previousEndExclusive}
+                   THEN th.amount ELSE 0 END), 0) AS previous_amount,
+               SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{currentStart}
+                    AND th.transaction_datetime &lt; #{currentEndExclusive}
+                   THEN 1 ELSE 0 END) AS current_transaction_count,
+               SUM(CASE
+                   WHEN th.transaction_datetime &gt;= #{previousStart}
+                    AND th.transaction_datetime &lt; #{previousEndExclusive}
+                   THEN 1 ELSE 0 END) AS previous_transaction_count
+        FROM transaction_history th
+        INNER JOIN connected_account account ON account.account_id = th.account_id
+        INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
+        WHERE connection.user_id = #{userId}
+          AND account.status = 'ACTIVE'
+          AND th.transaction_type = 'WITHDRAW'
+          AND COALESCE(th.category, 'ETC') NOT IN ('ASSET', '자산', '저축')
+          AND th.transaction_description IS NOT NULL
+          AND TRIM(th.transaction_description) &lt;&gt; ''
+          AND (
+              (th.transaction_datetime &gt;= #{previousStart}
+               AND th.transaction_datetime &lt; #{previousEndExclusive})
+              OR
+              (th.transaction_datetime &gt;= #{currentStart}
+               AND th.transaction_datetime &lt; #{currentEndExclusive})
+        )
+        GROUP BY TRIM(th.transaction_description)
+        HAVING current_transaction_count &gt; 0
+           AND previous_transaction_count &gt; 0
+           AND ABS(current_amount - previous_amount)
+               &lt;= GREATEST(1000, previous_amount * 0.10)
+        ORDER BY current_amount DESC, description ASC
+        LIMIT 5
+    </select>
+</mapper>

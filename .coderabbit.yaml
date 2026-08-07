@@ -1,0 +1,70 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "ko-KR"
+early_access: false
+
+reviews:
+    profile: "assertive"
+    request_changes_workflow: false
+    high_level_summary: true
+    poem: false
+    review_status: true
+    review_details: false
+    collapse_walkthrough: false
+
+    auto_review:
+        enabled: true
+        drafts: false
+        base_branches:
+            - "develop" # 실제 브랜치명이 dev면 dev로 변경
+            - "main"
+        ignore_title_keywords:
+            - "WIP"
+            - "DO NOT MERGE"
+            - "[skip review]"
+        labels:
+            - "!do-not-review"
+
+    path_filters:
+        - "!**/*.md"
+        - "!**/*.lock"
+        - "!**/generated/**"
+        - "!**/build/**"
+        - "!**/target/**"
+
+    path_instructions:
+        - path: "src/main/java/**/*.java"
+          instructions: |
+              - Controller가 Mapper를 직접 호출하지 않고 Service 계층을 통해 처리하는지 확인한다.
+              - 업무 규칙이 Controller나 SQL에 구현되지 않았는지 확인한다.
+              - 외부 서비스 DTO가 내부 계층으로 직접 전달되지 않는지 확인한다.
+              - 트랜잭션 범위, null 처리, 매직 넘버와 민감정보 로그 노출을 확인한다.
+              - JWT 인증 정책과 토큰 검증이 일관되게 적용되는지 확인한다.
+
+        - path: "src/main/java/**/controller/**/*.java"
+          instructions: |
+              - 요청과 응답에 DTO를 사용하고 입력 검증이 적용됐는지 확인한다.
+              - 사용자 식별자를 요청값이 아닌 인증 정보에서 가져오는지 확인한다.
+              - 인증과 인가가 필요한 API에서 누락되지 않았는지 확인한다.
+
+        - path: "src/main/resources/**/*.xml"
+          instructions: |
+              - MyBatis Mapper 메서드와 statement id, 파라미터 및 결과 매핑이 일치하는지 확인한다.
+              - SQL에 업무 규칙이 구현되지 않았는지 확인한다.
+              - 불필요한 전체 조회, 누락된 사용자 소유권 조건, 과도한 쿼리 실행 가능성을 확인한다.
+
+        - path: "src/test/**/*.java"
+          instructions: |
+              - 변경된 핵심 정상·실패·경계 경로가 검증되는지 확인한다.
+              - 인증이 필요한 기능은 미인증 및 권한 오류 경로를 확인한다.
+              - 구현 세부사항보다 외부 동작을 검증하는지 확인한다.
+
+        - path: "**/*.sql"
+          instructions: |
+              - 마이그레이션의 데이터 보존, 외래 키와 인덱스 영향, 위험한 DROP/TRUNCATE/UPDATE/DELETE를 검토한다.
+
+    tools:
+        gitleaks:
+            enabled: true
+
+chat:
+    auto_reply: true

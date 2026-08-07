@@ -333,11 +333,12 @@ public class CodefPersistenceRepository {
         externalTransactionKey);
   }
 
-  /** Sets an initial fixture/rule category without overwriting a user-selected category. */
+  /** Sets a rule category without overwriting an existing (including user-selected) category. */
   public void fillTransactionCategoryIfEmpty(
       long accountId, String externalTransactionKey, String category) {
     jdbcTemplate.update(
-        "UPDATE transaction_history SET category = COALESCE(category, ?) "
+        "UPDATE transaction_history SET category = COALESCE(category, ?), "
+            + "category_source = CASE WHEN category IS NULL THEN 'RULE' ELSE category_source END "
             + "WHERE account_id = ? AND external_transaction_key = ?",
         category,
         accountId,
@@ -435,7 +436,7 @@ public class CodefPersistenceRepository {
         "UPDATE transaction_history th "
             + "JOIN connected_account ca ON ca.account_id = th.account_id "
             + "JOIN codef_connection cc ON cc.connection_id = ca.connection_id "
-            + "SET th.category = ? "
+            + "SET th.category = ?, th.category_source = 'USER' "
             + "WHERE th.transaction_id = ? AND cc.user_id = ? AND ca.status = 'ACTIVE'",
         category,
         transactionId,

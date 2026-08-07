@@ -28,7 +28,7 @@ public class DashboardController {
   @GetMapping
   @ApiOperation(
       value = "홈 대시보드 요약 조회",
-      notes = "가장 최근 생성된 캐시플로우 예측을 기준으로 자산·전역일·이번 달 소비/저축 요약을 반환합니다.")
+      notes = "가장 최근 생성된 캐시플로우 예측과 최신 적용 전략을 기준으로 자산·전역일·월별 투자/소비 목표 요약을 반환합니다.")
   @ApiResponses({
     @ApiResponse(code = 200, message = "조회 성공", response = DashboardResponse.class),
     @ApiResponse(code = 401, message = "인증 필요 (CASHFLOW_UNAUTHENTICATED)"),

@@ -16,6 +16,7 @@ public class ProfileAppearanceServiceImpl implements ProfileAppearanceService {
 
   private final AuthUserMapper authUserMapper;
 
+  /** 사용자의 프로필 이미지와 배경을 변경합니다. */
   @Override
   @Transactional
   public void updateProfileAppearance(
