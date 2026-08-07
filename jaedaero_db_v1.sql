@@ -54,8 +54,8 @@ CREATE TABLE users (
                        social_type  ENUM('KAKAO', 'GOOGLE') NOT NULL COMMENT '소셜 로그인 유형',
                        social_id    VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
                        nickname     VARCHAR(50) NULL COMMENT '닉네임',
-                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
-                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색. 6종 중 선택',
+                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NOT NULL DEFAULT 'ARMY' COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
+                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NOT NULL DEFAULT 'GREEN' COMMENT '프로필 배경색. 6종 중 선택',
                        is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at TIMESTAMP NULL COMMENT '탈퇴 일시',
                        created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -229,7 +229,33 @@ CREATE TABLE codef_connection (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 9. connected_account : CODEF 연동 계좌
+-- 9. codef_institution_connection : 기관별 CODEF 로그인 정보
+-- ---------------------------------------------
+CREATE TABLE codef_institution_connection (
+    institution_connection_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    connection_id BIGINT NOT NULL,
+    institution_code VARCHAR(20) NOT NULL,
+    business_type ENUM('BK', 'ST') NOT NULL,
+    login_type VARCHAR(10) NOT NULL,
+    login_id_encrypted VARCHAR(1024) NULL,
+    login_password_encrypted VARCHAR(1024) NOT NULL,
+    birth_date_encrypted VARCHAR(1024) NULL,
+    status ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE',
+    last_sync_at TIMESTAMP NULL,
+    last_sync_error_message VARCHAR(500) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_codef_institution_connection
+        UNIQUE (connection_id, institution_code, business_type),
+    CONSTRAINT fk_codef_institution_connection_connection
+        FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
+            ON DELETE CASCADE,
+    INDEX idx_codef_institution_connection_status (connection_id, status)
+) DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 10. connected_account : CODEF 연동 계좌
 -- ---------------------------------------------
 CREATE TABLE connected_account (
     account_id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '연동 계좌 ID',
