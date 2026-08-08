@@ -6,16 +6,26 @@
 <mapper namespace="com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper">
 
     <sql id="dailyMarketReportColumns">
-        report_id, report_date, content, valid_from, valid_until, created_at
+        report_id, report_date, content, market_condition, report_status, generation_source,
+        model_name, prompt_version, valid_from, valid_until, created_at
     </sql>
 
-    <insert id="upsert" parameterType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+    <insert id="upsert" parameterType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo"
+            useGeneratedKeys="true" keyProperty="reportId">
         INSERT INTO daily_market_report (
-            report_date, content, valid_from, valid_until
+            report_date, content, market_condition, report_status, generation_source,
+            model_name, prompt_version, valid_from, valid_until
         ) VALUES (
-            #{reportDate}, #{content}, #{validFrom}, #{validUntil}
+            #{reportDate}, #{content}, #{marketCondition}, #{reportStatus}, #{generationSource},
+            #{modelName}, #{promptVersion}, #{validFrom}, #{validUntil}
         ) ON DUPLICATE KEY UPDATE
+            report_id = LAST_INSERT_ID(report_id),
             content = VALUES(content),
+            market_condition = VALUES(market_condition),
+            report_status = VALUES(report_status),
+            generation_source = VALUES(generation_source),
+            model_name = VALUES(model_name),
+            prompt_version = VALUES(prompt_version),
             valid_from = VALUES(valid_from),
             valid_until = VALUES(valid_until)
     </insert>
@@ -28,4 +38,27 @@
         ORDER BY report_date DESC
         LIMIT 1
     </select>
+
+    <select id="findLatest" resultType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+        SELECT <include refid="dailyMarketReportColumns"/>
+        FROM daily_market_report
+        ORDER BY report_date DESC
+        LIMIT 1
+    </select>
+
+    <select id="countByReportDate" resultType="int">
+        SELECT COUNT(*)
+        FROM daily_market_report
+        WHERE report_date = #{reportDate}
+    </select>
+
+    <insert id="claimReportDate">
+        INSERT IGNORE INTO daily_market_report (
+            report_date, content, market_condition, report_status, generation_source,
+            model_name, prompt_version, valid_from, valid_until
+        ) VALUES (
+            #{reportDate}, '', 'NEUTRAL', 'PARTIAL', 'FALLBACK', 'pending', 'pending',
+            #{validFrom}, #{validUntil}
+        )
+    </insert>
 </mapper>
