@@ -2,6 +2,7 @@
 -- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
 -- MySQL 8.0+
 -- ============================================================
+SET NAMES utf8mb4;
 
 -- ---------------------------------------------
 -- Drop existing tables in reverse dependency order
@@ -36,6 +37,7 @@ DROP TABLE IF EXISTS `asset_snapshot`;
 DROP TABLE IF EXISTS `transaction_history`;
 DROP TABLE IF EXISTS `soldier_saving`;
 DROP TABLE IF EXISTS `connected_account`;
+DROP TABLE IF EXISTS `codef_institution_connection`;
 DROP TABLE IF EXISTS `codef_connection`;
 DROP TABLE IF EXISTS `cashflow_forecast_month`;
 DROP TABLE IF EXISTS `cashflow_forecast`;
@@ -54,8 +56,8 @@ CREATE TABLE users (
                        social_type  ENUM('KAKAO', 'GOOGLE') NOT NULL COMMENT '소셜 로그인 유형',
                        social_id    VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
                        nickname     VARCHAR(50) NULL COMMENT '닉네임',
-                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
-                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색. 6종 중 선택',
+                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NOT NULL DEFAULT 'ARMY' COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
+                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NOT NULL DEFAULT 'GREEN' COMMENT '프로필 배경색. 6종 중 선택',
                        is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at TIMESTAMP NULL COMMENT '탈퇴 일시',
                        created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -225,6 +227,31 @@ CREATE TABLE codef_connection (
                                       FOREIGN KEY (user_id) REFERENCES users(user_id)
                                           ON DELETE CASCADE
 ) COMMENT='CODEF 금융기관 연동'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 8-1. codef_institution_connection : CODEF 기관별 연결
+-- ---------------------------------------------
+CREATE TABLE codef_institution_connection (
+                                                 institution_connection_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '기관별 연결 ID',
+                                                 connection_id BIGINT NOT NULL COMMENT 'CODEF 금융 연결 ID',
+                                                 institution_code VARCHAR(20) NOT NULL COMMENT 'CODEF 기관 코드',
+                                                 business_type ENUM('BK', 'ST') NOT NULL COMMENT 'CODEF 업무 구분',
+                                                 login_type VARCHAR(10) NOT NULL COMMENT '로그인 유형',
+                                                 login_id_encrypted VARCHAR(1024) NULL COMMENT '암호화된 로그인 ID',
+                                                 login_password_encrypted VARCHAR(1024) NOT NULL COMMENT '암호화된 로그인 비밀번호',
+                                                 birth_date_encrypted VARCHAR(1024) NULL COMMENT '암호화된 생년월일',
+                                                 status ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE' COMMENT '연동 상태',
+                                                 last_sync_at TIMESTAMP NULL COMMENT '기관별 마지막 동기화 일시',
+                                                 last_sync_error_message VARCHAR(500) NULL COMMENT '최근 동기화 실패 사유',
+                                                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                 CONSTRAINT uq_codef_institution_connection UNIQUE (connection_id, institution_code, business_type),
+                                                 CONSTRAINT fk_codef_institution_connection_connection
+                                                     FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id) ON DELETE CASCADE,
+                                                 INDEX idx_codef_institution_connection_status (connection_id, status)
+) COMMENT='CODEF 기관별 연결 정보'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
