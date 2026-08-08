@@ -64,12 +64,12 @@ public class MissionServiceImpl implements MissionService {
         .build();
   }
 
-  /** 오늘 노출할 공통·추천·이벤트 미션을 조회합니다. */
+  /** 오늘 노출할 지원 화면 연결 미션을 조회합니다. */
   private List<MissionVo> findTodayMissionVos(long userId) {
     List<MissionVo> missions = new ArrayList<>(missionMapper.findDailyMissions(userId));
     addIfPresent(missions, missionMapper.findRecommendedMission(userId, MissionType.SAFE));
     addIfPresent(missions, missionMapper.findRecommendedMission(userId, MissionType.AGGRESSIVE));
-    addIfPresent(missions, missionMapper.findEventMission(userId));
+    addIfPresent(missions, missionMapper.findOneTimeMission(userId));
     return missions;
   }
 
