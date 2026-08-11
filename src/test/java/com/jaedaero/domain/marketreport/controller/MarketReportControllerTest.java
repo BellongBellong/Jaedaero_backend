@@ -10,12 +10,9 @@ import com.jaedaero.domain.marketreport.exception.MarketReportException;
 import com.jaedaero.domain.marketreport.service.MarketReportGenerationService;
 import com.jaedaero.domain.marketreport.service.MarketReportService;
 import java.time.Clock;
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 class MarketReportControllerTest {
 
@@ -33,15 +30,12 @@ class MarketReportControllerTest {
                           .url("https://example.com/test")
                           .build()))
               .build();
-  private static final UsernamePasswordAuthenticationToken AUTHENTICATED =
-      new UsernamePasswordAuthenticationToken("7", "password", Collections.emptyList());
-
   @Test
-  void getTodayReturnsOkForAuthenticatedUser() {
+  void getTodayReturnsCommonReportWithoutUserContext() {
     MarketReportController controller =
         new MarketReportController(FAKE_SERVICE, recordingGenerationService(), "production");
 
-    var response = controller.getToday(AUTHENTICATED);
+    var response = controller.getToday();
 
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(1L, response.getBody().getReportId());
@@ -50,31 +44,12 @@ class MarketReportControllerTest {
   }
 
   @Test
-  void getTodayRejectsMissingAuthentication() {
-    MarketReportController controller =
-        new MarketReportController(FAKE_SERVICE, recordingGenerationService(), "production");
-
-    assertThrows(MarketReportException.class, () -> controller.getToday(null));
-  }
-
-  @Test
-  void getTodayRejectsAnonymousAuthentication() {
-    MarketReportController controller =
-        new MarketReportController(FAKE_SERVICE, recordingGenerationService(), "production");
-    var anonymous =
-        new AnonymousAuthenticationToken(
-            "key", "anonymousUser", java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ANONYMOUS")));
-
-    assertThrows(MarketReportException.class, () -> controller.getToday(anonymous));
-  }
-
-  @Test
-  void generateNowTriggersServiceWhenLocalEnvironment() {
+  void generateNowTriggersServiceWithoutUserContextWhenLocalEnvironment() {
     RecordingGenerationService generationService = recordingGenerationService();
     MarketReportController controller =
         new MarketReportController(FAKE_SERVICE, generationService, "local");
 
-    var response = controller.generateNow(AUTHENTICATED);
+    var response = controller.generateNow();
 
     assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
     assertEquals(1L, response.getBody().getReportId());
@@ -89,7 +64,7 @@ class MarketReportControllerTest {
     MarketReportController controller =
         new MarketReportController(FAKE_SERVICE, generationService, "production");
 
-    assertThrows(MarketReportException.class, () -> controller.generateNow(AUTHENTICATED));
+    assertThrows(MarketReportException.class, controller::generateNow);
     assertEquals(0, generationService.callCount);
   }
 
