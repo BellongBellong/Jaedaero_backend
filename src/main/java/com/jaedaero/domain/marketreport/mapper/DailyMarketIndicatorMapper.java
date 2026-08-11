@@ -9,5 +9,7 @@ import org.apache.ibatis.annotations.Param;
 public interface DailyMarketIndicatorMapper {
   int insert(DailyMarketIndicatorVo indicator);
 
+  int deleteByReportId(@Param("reportId") long reportId);
+
   List<DailyMarketIndicatorVo> findByReportId(@Param("reportId") long reportId);
 }

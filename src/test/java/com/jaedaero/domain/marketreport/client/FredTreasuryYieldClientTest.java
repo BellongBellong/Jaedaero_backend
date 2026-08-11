@@ -37,14 +37,22 @@ class FredTreasuryYieldClientTest {
   @Test
   void getRecentObservationsSendsApiKeyAndSeriesId() {
     AtomicReference<String> query = new AtomicReference<>();
+    AtomicReference<String> path = new AtomicReference<>();
+    AtomicReference<String> method = new AtomicReference<>();
     server.createContext(
         "/fred/series/observations",
         exchange -> {
+          method.set(exchange.getRequestMethod());
+          path.set(exchange.getRequestURI().getPath());
           query.set(exchange.getRequestURI().getQuery());
           respond(
               exchange,
               """
-              {"observations":[{"date":"2026-08-06","value":"4.25"},{"date":"2026-08-05","value":"."},{"date":"2026-08-04","value":"4.20"}]}
+              {"realtime_start":"2026-08-11","realtime_end":"2026-08-11","count":3,
+               "observations":[
+                 {"realtime_start":"2026-08-06","realtime_end":"2026-08-06","date":"2026-08-06","value":"4.25"},
+                 {"realtime_start":"2026-08-05","realtime_end":"2026-08-05","date":"2026-08-05","value":"."},
+                 {"realtime_start":"2026-08-04","realtime_end":"2026-08-04","date":"2026-08-04","value":"4.20"}]}
               """);
         });
 
@@ -53,6 +61,11 @@ class FredTreasuryYieldClientTest {
 
     assertTrue(query.get().contains("series_id=DGS10"));
     assertTrue(query.get().contains("api_key=test-fred-key"));
+    assertTrue(query.get().contains("file_type=json"));
+    assertTrue(query.get().contains("sort_order=desc"));
+    assertTrue(query.get().contains("limit=10"));
+    assertEquals("GET", method.get());
+    assertEquals("/fred/series/observations", path.get());
     assertEquals("4.25", response.observations().get(0).value());
   }
 

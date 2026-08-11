@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum MarketReportErrorCode implements ErrorCode {
-  UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "MARKET_REPORT_UNAUTHENTICATED"),
   NOT_FOUND(HttpStatus.NOT_FOUND, "MARKET_REPORT_NOT_FOUND");
 
   private final HttpStatus status;

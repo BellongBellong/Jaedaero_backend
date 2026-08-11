@@ -1,6 +1,5 @@
 package com.jaedaero.domain.marketreport.vo;
 
-import com.jaedaero.domain.marketreport.dto.MarketCondition;
 import com.jaedaero.domain.marketreport.dto.MarketReportGenerationSource;
 import com.jaedaero.domain.marketreport.dto.MarketReportStatus;
 import java.time.LocalDate;
@@ -20,8 +19,9 @@ public class DailyMarketReportVo {
 
   private Long reportId;
   private LocalDate reportDate;
+  private String title;
+  private String summary;
   private String content;
-  private MarketCondition marketCondition;
   private MarketReportStatus reportStatus;
   private MarketReportGenerationSource generationSource;
   private String modelName;

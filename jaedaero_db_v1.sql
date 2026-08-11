@@ -9,6 +9,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `notification_history`;
 DROP TABLE IF EXISTS `device_token`;
+DROP TABLE IF EXISTS `daily_market_report_source`;
 DROP TABLE IF EXISTS `daily_market_indicator`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
@@ -56,8 +57,8 @@ CREATE TABLE users (
                        social_type  ENUM('KAKAO', 'GOOGLE') NOT NULL COMMENT '소셜 로그인 유형',
                        social_id    VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
                        nickname     VARCHAR(50) NULL COMMENT '닉네임',
-                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NOT NULL DEFAULT 'ARMY' COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
-                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NOT NULL DEFAULT 'GREEN' COMMENT '프로필 배경색. 6종 중 선택',
+                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
+                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색. 6종 중 선택',
                        is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at TIMESTAMP NULL COMMENT '탈퇴 일시',
                        created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -1016,19 +1017,71 @@ CREATE TABLE leave_mode (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 31. daily_market_report : 오늘의 AI투자리포트
+-- 31. daily_market_report : 오늘의 AI 시장 리포트
 -- ---------------------------------------------
 CREATE TABLE daily_market_report (
                                      report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
                                      report_date        DATE NOT NULL COMMENT '서비스 기준일(18:00~익일 17:59 노출 구간의 기준 날짜)',
-                                     content            TEXT NOT NULL COMMENT 'Gemini API가 생성한 오늘의 시장 경향 리포트 텍스트',
+                                     title              VARCHAR(200) NOT NULL COMMENT '오늘의 AI 시장 리포트 제목',
+                                     summary            VARCHAR(500) NOT NULL COMMENT '오늘의 AI 시장 리포트 한줄 요약',
+                                     content            TEXT NOT NULL COMMENT '선별된 Finnhub 뉴스에 근거해 Gemini가 생성한 사실 기반 시장 리포트 본문',
+                                     report_status      ENUM('NORMAL', 'PARTIAL', 'STALE') NOT NULL DEFAULT 'NORMAL' COMMENT '리포트 전체 상태 — PARTIAL: 일부 지표 DELAYED/MISSING, STALE: 당일 배치 실패로 이전 리포트 노출 중',
+                                     generation_source  ENUM('GEMINI', 'FALLBACK') NOT NULL COMMENT '본문 생성 경로 — Gemini 성공 또는 안전한 대체 상태',
+                                     model_name         VARCHAR(100) NOT NULL COMMENT '생성에 사용한 모델명(gemini-3.6-flash)',
+                                     prompt_version     VARCHAR(100) NOT NULL COMMENT 'Gemini Interactions 프롬프트 버전',
                                      valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 18:00)',
                                      valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 17:59)',
                                      created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                      CONSTRAINT uq_daily_market_report_date
                                          UNIQUE (report_date)
-) COMMENT='오늘의 AI투자리포트 — 전체 사용자 공통 1일 1건'
+) COMMENT='오늘의 AI 시장 리포트 — 전체 사용자 공통 1일 1건'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 31-B. daily_market_indicator : 오늘의 AI 시장 리포트 지표 원본값
+-- ---------------------------------------------
+CREATE TABLE daily_market_indicator (
+                                         indicator_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '지표 ID',
+                                         report_id        BIGINT NOT NULL COMMENT '소속 리포트',
+                                         indicator_type   ENUM('KOSPI', 'KOSDAQ', 'US_TREASURY_10Y', 'USD_KRW') NOT NULL COMMENT '지표 종류',
+                                         data_as_of       TIMESTAMP NULL COMMENT '해당 지표 값의 실제 기준 시각(MISSING이면 NULL)',
+                                         source           VARCHAR(100) NOT NULL COMMENT '제공처명',
+                                         observed_value   DECIMAL(18,4) NULL COMMENT '관측값(지수·금리·환율, MISSING이면 NULL)',
+                                         change_value     DECIMAL(18,4) NULL COMMENT '전일 대비 변화량',
+                                         change_rate      DECIMAL(6,2) NULL COMMENT '전일 대비 변화율(%)',
+                                         status           ENUM('NORMAL', 'DELAYED', 'MISSING') NOT NULL COMMENT '지표 단위 수집 상태',
+                                         created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                                         CONSTRAINT uq_daily_market_indicator
+                                             UNIQUE (report_id, indicator_type),
+                                         CONSTRAINT fk_daily_market_indicator_report
+                                             FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
+                                                 ON DELETE CASCADE
+) COMMENT='오늘의 AI 시장 리포트 지표별 원본값 — 리포트 1건당 4행'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 31-C. daily_market_report_source : 오늘의 AI 시장 리포트 인용 출처
+-- ---------------------------------------------
+CREATE TABLE daily_market_report_source (
+                                             source_id       BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '출처 ID',
+                                             report_id       BIGINT NOT NULL COMMENT '소속 리포트',
+                                             source_order    SMALLINT UNSIGNED NOT NULL COMMENT '리포트 응답에 노출할 출처 순서',
+                                             title           VARCHAR(500) NOT NULL COMMENT '인용 출처 제목',
+                                             url             VARCHAR(2048) NOT NULL COMMENT '인용 출처 URL(http/https만 허용)',
+                                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                                             CONSTRAINT uq_daily_market_report_source_order
+                                                 UNIQUE (report_id, source_order),
+                                             CONSTRAINT chk_daily_market_report_source_url
+                                                 CHECK (LOWER(url) REGEXP '^(http|https)://'),
+                                             CONSTRAINT fk_daily_market_report_source_report
+                                                 FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
+                                                     ON DELETE CASCADE
+) COMMENT='오늘의 AI 시장 리포트가 사용한 인용 출처 메타데이터 — 기사 전문은 저장하지 않음'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 

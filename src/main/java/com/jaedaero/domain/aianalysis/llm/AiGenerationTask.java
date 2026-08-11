@@ -4,7 +4,6 @@ package com.jaedaero.domain.aianalysis.llm;
 public enum AiGenerationTask {
   AI_COACH(OpenAiModel.GPT_4O_MINI),
   TRANSACTION_CATEGORY(OpenAiModel.GPT_5_NANO),
-  DAILY_MARKET_REPORT(OpenAiModel.GPT_5_NANO),
   DISCHARGE_REPORT(OpenAiModel.GPT_4O_MINI);
 
   private final OpenAiModel model;

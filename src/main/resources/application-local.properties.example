@@ -22,9 +22,25 @@ llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.clo
 # 모델은 서버 작업 정책이 지정하며 클라이언트는 선택하지 않습니다.
 llm.api-key=your_llm_api_key
 
-# 한 번만 생성하세요: openssl rand -base64 32
-# 실제 키는 절대 커밋하지 마세요. 키를 잃으면 저장된 Connected ID와 계좌번호를 읽을 수 없습니다.
+# Gemini Developer API generateContent. 실제 키는 커밋하지 않는다.
+gemini.api-key=your_gemini_api_key
+gemini.generate-content-url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent
+
+# Generate once with: openssl rand -base64 32
+# Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
 app.crypto.master-key-base64=your_32_byte_aes256_key_base64
 
-# KRX Open API 인증키
+# JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
+codef.demo.user-id=1
+# KRX Open API 인증키 — ETF 기능에서만 사용
 krx.api.auth-key=YOUR_KRX_AUTH_KEY
+# 금융위원회_지수시세정보 공공데이터포털 서비스키 — KOSPI/KOSDAQ 시장 리포트
+# 공공데이터포털에서 제공한 일반 인증키(Decoding) 또는 URL 인코딩 인증키를 설정한다.
+market-index.api.service-key=YOUR_DATA_GO_KR_SERVICE_KEY
+# 로컬에서도 실제 provider를 호출한다. 키가 없거나 유효하지 않으면 해당 지표는 MISSING으로 저장된다.
+# 한국수출입은행 Open API 인증키
+eximbank.api.key=YOUR_EXIMBANK_API_KEY
+# FRED API 인증키
+fred.api.key=YOUR_FRED_API_KEY
+# Finnhub Market News API 인증키
+finnhub.api.key=YOUR_FINNHUB_API_KEY

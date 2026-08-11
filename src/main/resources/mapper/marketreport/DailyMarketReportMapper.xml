@@ -6,22 +6,23 @@
 <mapper namespace="com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper">
 
     <sql id="dailyMarketReportColumns">
-        report_id, report_date, content, market_condition, report_status, generation_source,
+        report_id, report_date, title, summary, content, report_status, generation_source,
         model_name, prompt_version, valid_from, valid_until, created_at
     </sql>
 
     <insert id="upsert" parameterType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo"
             useGeneratedKeys="true" keyProperty="reportId">
         INSERT INTO daily_market_report (
-            report_date, content, market_condition, report_status, generation_source,
+            report_date, title, summary, content, report_status, generation_source,
             model_name, prompt_version, valid_from, valid_until
         ) VALUES (
-            #{reportDate}, #{content}, #{marketCondition}, #{reportStatus}, #{generationSource},
+            #{reportDate}, #{title}, #{summary}, #{content}, #{reportStatus}, #{generationSource},
             #{modelName}, #{promptVersion}, #{validFrom}, #{validUntil}
         ) ON DUPLICATE KEY UPDATE
             report_id = LAST_INSERT_ID(report_id),
+            title = VALUES(title),
+            summary = VALUES(summary),
             content = VALUES(content),
-            market_condition = VALUES(market_condition),
             report_status = VALUES(report_status),
             generation_source = VALUES(generation_source),
             model_name = VALUES(model_name),
@@ -54,11 +55,33 @@
 
     <insert id="claimReportDate">
         INSERT IGNORE INTO daily_market_report (
-            report_date, content, market_condition, report_status, generation_source,
+            report_date, title, summary, content, report_status, generation_source,
             model_name, prompt_version, valid_from, valid_until
         ) VALUES (
-            #{reportDate}, '', 'NEUTRAL', 'PARTIAL', 'FALLBACK', 'pending', 'pending',
+            #{reportDate}, '오늘의 AI 시장 리포트', 'Gemini가 인용 가능한 사실 기반 리포트를 준비 중입니다.', '오늘의 시장 리포트 생성이 진행 중입니다. 인용 가능한 사실 기반 본문이 준비되기 전까지 내용을 제공하지 않습니다.', 'PARTIAL', 'FALLBACK', 'gemini-3.6-flash', 'pending',
             #{validFrom}, #{validUntil}
         )
     </insert>
+
+    <select id="findByReportDateForUpdate" resultType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+        SELECT <include refid="dailyMarketReportColumns"/>
+        FROM daily_market_report
+        WHERE report_date = #{reportDate}
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <update id="markGenerationInProgress">
+        UPDATE daily_market_report
+        SET title = '오늘의 AI 시장 리포트',
+            summary = 'Gemini가 인용 가능한 사실 기반 리포트를 준비 중입니다.',
+            content = '오늘의 시장 리포트 생성이 진행 중입니다. 인용 가능한 사실 기반 본문이 준비되기 전까지 내용을 제공하지 않습니다.',
+            report_status = 'PARTIAL',
+            generation_source = 'FALLBACK',
+            model_name = 'gemini-3.6-flash',
+            prompt_version = 'in-progress'
+        WHERE report_id = #{reportId}
+          AND COALESCE(generation_source, 'FALLBACK') &lt;&gt; 'GEMINI'
+          AND COALESCE(prompt_version, '') &lt;&gt; 'in-progress'
+    </update>
 </mapper>
