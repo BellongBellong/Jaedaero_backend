@@ -37,8 +37,24 @@
             FROM user_mission_completion umc
             WHERE umc.user_id = #{userId}
               AND umc.mission_id = m.mission_id
-              AND umc.completion_date = CURDATE()
+              AND (
+                  m.mission_category = 'ONE_TIME'
+                  OR umc.completion_date = CURDATE()
+              )
         ) AS completed
+    </sql>
+
+    <sql id="supportedActionTypes">
+        AND m.action_type IN (
+            'VIEW_FINANCE_REPORT',
+            'VIEW_AI_REPORT',
+            'VIEW_TRANSACTION_HISTORY',
+            'VIEW_SPENDING_ANALYSIS',
+            'VIEW_ASSET_STATUS',
+            'VIEW_DEPOSIT_PRODUCT',
+            'VIEW_REBALANCING',
+            'RUN_WHAT_IF_SIMULATION'
+        )
     </sql>
 
     <select id="findDailyMissions" resultMap="missionResultMap">
@@ -48,6 +64,7 @@
         WHERE m.is_active = TRUE
           AND m.mission_category = 'DAILY'
           AND m.mission_type IS NULL
+        <include refid="supportedActionTypes"/>
         ORDER BY m.display_order, m.mission_id
         LIMIT 2
     </select>
@@ -59,6 +76,24 @@
         WHERE m.is_active = TRUE
           AND m.mission_category = 'RECOMMENDED'
           AND m.mission_type = #{missionType}
+        <include refid="supportedActionTypes"/>
+        ORDER BY m.display_order, m.mission_id
+        LIMIT 1
+    </select>
+
+    <select id="findOneTimeMission" resultMap="missionResultMap">
+        SELECT
+        <include refid="missionColumns"/>
+        FROM mission m
+        WHERE m.is_active = TRUE
+          AND m.mission_category = 'ONE_TIME'
+        <include refid="supportedActionTypes"/>
+          AND NOT EXISTS (
+              SELECT 1
+              FROM user_mission_completion umc
+              WHERE umc.user_id = #{userId}
+                AND umc.mission_id = m.mission_id
+          )
         ORDER BY m.display_order, m.mission_id
         LIMIT 1
     </select>

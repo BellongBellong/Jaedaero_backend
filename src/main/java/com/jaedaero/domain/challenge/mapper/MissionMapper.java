@@ -18,6 +18,9 @@ public interface MissionMapper {
   MissionVo findRecommendedMission(
       @Param("userId") long userId, @Param("missionType") MissionType missionType);
 
+  /** 아직 완료하지 않은 한 번 미션을 조회합니다. */
+  MissionVo findOneTimeMission(@Param("userId") long userId);
+
   /** 오늘 조건을 충족한 이벤트 미션을 조회합니다. */
   MissionVo findEventMission(@Param("userId") long userId);
 
