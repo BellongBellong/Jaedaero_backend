@@ -20,7 +20,7 @@ import springfox.documentation.annotations.ApiIgnore;
 
 @RestController
 @RequestMapping("/api/v1/market-reports")
-@Api(tags = "오늘의 AI 투자 리포트")
+@Api(tags = "오늘의 AI 시장 리포트")
 public class MarketReportController {
 
   private final MarketReportService marketReportService;
@@ -37,7 +37,7 @@ public class MarketReportController {
   }
 
   @GetMapping("/today")
-  @ApiOperation(value = "오늘의 시장 리포트 조회")
+  @ApiOperation(value = "오늘의 AI 시장 리포트 조회")
   @ApiImplicitParam(
       name = "X-User-Id",
       value = "개발 환경에서 사용할 목 데이터 사용자 ID",
@@ -52,22 +52,23 @@ public class MarketReportController {
 
   @PostMapping("/generate")
   @ApiOperation(
-      value = "[로컬 전용] 오늘의 시장 리포트 수동 생성",
+      value = "[로컬 전용] 오늘의 AI 시장 리포트 수동 생성",
       notes =
           "app.environment=local일 때만 동작한다. 매일 17:00 KST 배치를 기다리지 않고 즉시"
-              + " generateForToday()를 실행해 gpt-5-nano 서술 생성을 바로 확인할 수 있다. 이미 오늘자"
-              + " 리포트가 있으면 배치와 동일하게 아무 것도 하지 않는다.")
+              + " FALLBACK 또는 pending 당일 행만 Gemini 재시험한다. 성공 GEMINI 리포트와 동시"
+              + " in-progress 실행은 재호출하지 않으며, 응답 본문으로 현재 상태와 출처를 확인할 수 있다.")
   @ApiImplicitParam(
       name = "X-User-Id",
       value = "개발 환경에서 사용할 목 데이터 사용자 ID",
       required = true,
       paramType = "header",
       example = "1")
-  public ResponseEntity<Void> generateNow(@ApiIgnore Authentication authentication) {
+  public ResponseEntity<TodayMarketReportResponse> generateNow(
+      @ApiIgnore Authentication authentication) {
     requireAuthenticated(authentication);
     requireLocalEnvironment();
-    marketReportGenerationService.generateForToday();
-    return ResponseEntity.accepted().build();
+    marketReportGenerationService.generateForTodayForLocalRetry();
+    return ResponseEntity.accepted().body(marketReportService.getToday());
   }
 
   private void requireAuthenticated(Authentication authentication) {

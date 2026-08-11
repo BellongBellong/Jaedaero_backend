@@ -14,6 +14,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
@@ -21,6 +22,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -149,10 +151,23 @@ public class RootConfig {
     }
 
     @Bean
+    @Primary
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(10000);
         requestFactory.setReadTimeout(10000);
+        return new RestTemplate(requestFactory);
+    }
+
+    /** Gemini의 구조화 리포트 생성은 일반 외부 API보다 응답이 오래 걸릴 수 있어 전용 timeout을 사용한다. */
+    @Bean
+    @Qualifier("geminiRestTemplate")
+    public RestTemplate geminiRestTemplate(
+            @Value("${gemini.connect-timeout-ms:10000}") int connectTimeoutMs,
+            @Value("${gemini.read-timeout-ms:90000}") int readTimeoutMs) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(connectTimeoutMs);
+        requestFactory.setReadTimeout(readTimeoutMs);
         return new RestTemplate(requestFactory);
     }
 

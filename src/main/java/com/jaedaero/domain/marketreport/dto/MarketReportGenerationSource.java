@@ -1,7 +1,7 @@
 package com.jaedaero.domain.marketreport.dto;
 
-/** 리포트 서술 생성 출처. */
+/** 리포트 본문 생성 경로. */
 public enum MarketReportGenerationSource {
-  OPENAI,
+  GEMINI,
   FALLBACK
 }

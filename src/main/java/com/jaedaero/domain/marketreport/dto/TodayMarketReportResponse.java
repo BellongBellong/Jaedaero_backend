@@ -12,11 +12,11 @@ public class TodayMarketReportResponse {
   private final Long reportId;
   private final LocalDate reportDate;
   private final MarketReportStatus reportStatus;
-  private final MarketCondition marketCondition;
+  private final String title;
+  private final String summary;
   private final String content;
-  private final String recommendedAction;
   private final List<MarketIndicatorItem> indicators;
-  private final MilitaryProductSummaryItem militaryProductSummary;
+  private final List<MarketReportSourceItem> sources;
   private final MarketReportGenerationSource generationSource;
   private final String modelName;
   private final String promptVersion;

@@ -35,7 +35,7 @@ class MarketReportBatchSchedulerTest {
     private int calls;
 
     RecordingGenerationService() {
-      super(null, null, null, null, Clock.systemUTC());
+      super(null, null, null, null, null, null, Clock.systemUTC());
     }
 
     @Override
