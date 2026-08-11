@@ -36,45 +36,20 @@
     </resultMap>
 
     <sql id="rankedMembersCte">
-        WITH ranked_members AS (
+        WITH member_scores AS (
             SELECT
                 cm.member_id,
                 cm.user_id,
                 <choose>
                     <when test="rankingPeriod.name() == 'MONTHLY'">
                         COALESCE(cmr.mission_completion_count, 0) AS mission_completion_count,
-                        cmr.created_at AS updated_at,
+                        cmr.created_at AS updated_at
                     </when>
                     <otherwise>
                         COALESCE(cms.total_mission_count, 0) AS mission_completion_count,
-                        cms.updated_at,
+                        cms.updated_at AS updated_at
                     </otherwise>
                 </choose>
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    DESC, cm.member_id ASC
-                ) AS ranking_no,
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    ASC, cm.member_id ASC
-                ) AS ascending_row_no,
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    DESC, cm.member_id ASC
-                ) AS descending_row_no,
-                COUNT(*) OVER () AS member_count
             FROM challenge_member cm
             INNER JOIN users member_user ON member_user.user_id = cm.user_id
             LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
@@ -84,7 +59,26 @@
             WHERE cm.group_id = #{groupId}
               AND member_user.is_withdrawn = FALSE
         ),
-        highest_badges AS (
+        ranked_members AS (
+            SELECT
+                member_scores.*,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    mission_completion_count DESC,
+                    member_id ASC
+                ) AS ranking_no,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    mission_completion_count ASC,
+                    member_id ASC
+                ) AS ascending_row_no,
+                COUNT(*) OVER () AS member_count
+            FROM member_scores
+        )
+    </sql>
+
+    <sql id="highestBadgesCte">
+        , highest_badges AS (
             SELECT
                 ub.user_id,
                 b.mission_type AS highest_badge_type,
@@ -99,7 +93,9 @@
                 ) AS badge_ranking_no
             FROM user_badge ub
             INNER JOIN badge b ON b.badge_id = ub.badge_id
-            INNER JOIN ranked_members rm ON rm.user_id = ub.user_id
+            INNER JOIN ranked_members rm
+                ON rm.user_id = ub.user_id
+               AND rm.ranking_no &lt;= 3
             WHERE b.is_active = TRUE
         )
     </sql>
@@ -119,6 +115,7 @@
 
     <select id="findTopRankersByGroupId" resultMap="rankingMemberResultMap">
         <include refid="rankedMembersCte"/>
+        <include refid="highestBadgesCte"/>
         SELECT
             rm.ranking_no,
             rm.member_count,
@@ -165,7 +162,7 @@
             ) AS bottom_quarter_average_mission_completion_count,
             MAX(
                 CASE
-                    WHEN descending_row_no = CEILING(member_count * 0.10)
+                    WHEN ranking_no = CEILING(member_count * 0.10)
                     THEN mission_completion_count
                 END
             ) AS top_ten_percent_threshold,
