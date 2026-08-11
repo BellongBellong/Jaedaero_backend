@@ -411,7 +411,6 @@ CREATE TABLE challenge_monthly_result (
                                           member_id           BIGINT NOT NULL COMMENT '챌린지 참여 ID',
                                           result_month         DATE NOT NULL COMMENT '결과 월의 첫날',
                                           mission_completion_count INT NOT NULL DEFAULT 0 COMMENT '해당 월 미션 완료 수',
-                                          ranking_no           INT NULL COMMENT '동기 그룹 내 순위',
                                           created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                           CONSTRAINT uq_challenge_monthly_result
@@ -421,7 +420,7 @@ CREATE TABLE challenge_monthly_result (
                                                   ON DELETE CASCADE,
                                           CONSTRAINT chk_challenge_monthly_result_completion_count
                                               CHECK (mission_completion_count >= 0)
-) COMMENT='월별 챌린지 결과 — 월별 미션 완료 수와 동기 그룹 내 순위 이력'
+) COMMENT='월별 챌린지 결과 — 월별 미션 완료 수 집계'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -431,7 +430,6 @@ CREATE TABLE challenge_monthly_result (
 CREATE TABLE challenge_member_summary (
                                            member_id               BIGINT PRIMARY KEY COMMENT '챌린지 참여 ID',
                                            total_mission_count     INT NOT NULL DEFAULT 0 COMMENT '누적 미션 완료 수',
-                                           overall_ranking_no      INT NULL COMMENT '전체 기간 동기 그룹 내 순위',
                                            updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                                                ON UPDATE CURRENT_TIMESTAMP COMMENT '집계 갱신 일시',
 
@@ -440,7 +438,7 @@ CREATE TABLE challenge_member_summary (
                                                    ON DELETE CASCADE,
                                            CONSTRAINT chk_challenge_member_summary_mission_count
                                                CHECK (total_mission_count >= 0)
-) COMMENT='챌린지 참여자의 누적 미션 완료 수와 전체 동기 랭킹용 집계값'
+) COMMENT='챌린지 참여자의 누적 미션 완료 수 집계값'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
