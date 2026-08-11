@@ -2,6 +2,7 @@ package com.jaedaero.domain.investment.recommendation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
 import com.jaedaero.domain.auth.mapper.InvestmentPreferenceMapper;
@@ -28,9 +29,9 @@ class ProductRecommendationServiceTest {
                 "20260807",
                 "20260807",
                 List.of(
-                    item("069500", "KODEX 200", "50000", "코스피 200"),
-                    item("122630", "KODEX 레버리지", "10000", "코스피 200"),
-                    item("999999", "해외 주식", "500000", "MSCI World")));
+                    item("069500", "KODEX 200", "50000", "50000", "1000", "10000", "코스피 200"),
+                    item("122630", "KODEX 레버리지", "10000", "10000", "100000", "100000", "코스피 200"),
+                    item("999999", "해외 주식", "500000", "499000", "500", "5000", "MSCI World")));
           }
         };
     RecurringInvestmentPlanVo plan =
@@ -42,7 +43,7 @@ class ProductRecommendationServiceTest {
         new ProductRecommendationService(
             overviewService,
             new EtfRiskClassifier(),
-            preferenceMapper(),
+            preferenceMapper(InvestmentPreference.AGGRESSIVE),
             planMapper(plan),
             userId -> LocalDate.now().plusDays(90));
 
@@ -54,21 +55,77 @@ class ProductRecommendationServiceTest {
     PersonalizedEtfRecommendation held = response.personalizedRecommendations().stream()
         .filter(item -> item.isuCd().equals("069500")).findFirst().orElseThrow();
     assertEquals(-75, held.scoreBreakdown().adjustmentScore());
-    assertEquals(0, held.scoreBreakdown().liquidityScore());
-    assertEquals(0, held.scoreBreakdown().navGapScore());
+    assertEquals(15, held.scoreBreakdown().liquidityScore());
+    assertEquals(10, held.scoreBreakdown().navGapScore());
+    assertEquals(10, held.scoreBreakdown().sizeScore());
+    assertEquals(25, held.suitabilityScore());
   }
 
-  private static EtfMarketOverviewItem item(String code, String name, String price, String indexName) {
+  @Test
+  void returnsNoPersonalizedRecommendationsWhenPreferenceOrPlanIsMissing() {
+    EtfMarketOverviewService overviewService = overviewService("20260807");
+
+    ProductRecommendationResponse missingPreference =
+        new ProductRecommendationService(
+                overviewService, new EtfRiskClassifier(), preferenceMapper(null), planMapper(plan("999999")), userId -> null)
+            .getEtfRecommendations(1L, LocalDate.of(2026, 8, 7));
+    ProductRecommendationResponse missingPlan =
+        new ProductRecommendationService(
+                overviewService, new EtfRiskClassifier(), preferenceMapper(InvestmentPreference.AGGRESSIVE), planMapper(null), userId -> null)
+            .getEtfRecommendations(1L, LocalDate.of(2026, 8, 7));
+
+    assertTrue(missingPreference.personalizedRecommendations().isEmpty());
+    assertTrue(missingPlan.personalizedRecommendations().isEmpty());
+  }
+
+  @Test
+  void usesActualMarketDateForHistoricalRecommendationAdjustment() {
+    RecurringInvestmentPlanVo plan = plan("999999");
+    ProductRecommendationService service =
+        new ProductRecommendationService(
+            overviewService("20250101"),
+            new EtfRiskClassifier(),
+            preferenceMapper(InvestmentPreference.AGGRESSIVE),
+            planMapper(plan),
+            userId -> LocalDate.of(2025, 12, 1));
+
+    PersonalizedEtfRecommendation recommendation =
+        service.getEtfRecommendations(1L, LocalDate.of(2025, 1, 1)).personalizedRecommendations().get(0);
+
+    assertEquals(-15, recommendation.scoreBreakdown().adjustmentScore());
+  }
+
+  private static EtfMarketOverviewService overviewService(String marketDate) {
+    return new EtfMarketOverviewService(null) {
+      @Override
+      public EtfMarketOverviewResponse getOverview(LocalDate date) {
+        return new EtfMarketOverviewResponse(
+            marketDate,
+            marketDate,
+            List.of(item("069500", "KODEX 200", "50000", "50000", "1000", "10000", "코스피 200")));
+      }
+    };
+  }
+
+  private static RecurringInvestmentPlanVo plan(String investmentProductCode) {
+    return RecurringInvestmentPlanVo.builder()
+        .maximumMonthlyAmount(100_000L)
+        .investmentProductCode(investmentProductCode)
+        .build();
+  }
+
+  private static EtfMarketOverviewItem item(
+      String code, String name, String price, String nav, String tradingValue, String marketCap, String indexName) {
     return new EtfMarketOverviewItem(
-        new EtfDailyTradingInfo("20260807", code, name, price, null, null, null, null, null, null,
-            null, null, null, null, null, indexName, null, null, null),
+        new EtfDailyTradingInfo("20260807", code, name, price, null, null, nav, null, null, null,
+            null, tradingValue, marketCap, null, null, indexName, null, null, null),
         List.of());
   }
 
-  private static InvestmentPreferenceMapper preferenceMapper() {
+  private static InvestmentPreferenceMapper preferenceMapper(InvestmentPreference preference) {
     return new InvestmentPreferenceMapper() {
       @Override public int countActiveUserByUserId(long userId) { return 1; }
-      @Override public InvestmentPreference findInitialPreferenceByUserId(long userId) { return InvestmentPreference.AGGRESSIVE; }
+      @Override public InvestmentPreference findInitialPreferenceByUserId(long userId) { return preference; }
       @Override public void upsertInitialPreference(long userId, InvestmentPreference preference) {}
       @Override public void upsertGoalTargetAmount(long userId, long targetAmount) {}
     };

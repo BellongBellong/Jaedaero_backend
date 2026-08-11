@@ -10,6 +10,7 @@ import com.jaedaero.domain.recurringinvestment.mapper.RecurringInvestmentPlanMap
 import com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -61,7 +62,8 @@ public class ProductRecommendationService {
                 overview.items(),
                 preference,
                 plan,
-                dashboardMapper.findActualDischargeDateByUserId(userId));
+                dashboardMapper.findActualDischargeDateByUserId(userId),
+                overviewDate(overview, asOfDate));
     return new ProductRecommendationResponse(
         overview.requestedAsOfDate(),
         overview.asOfDate(),
@@ -76,7 +78,8 @@ public class ProductRecommendationService {
       List<EtfMarketOverviewItem> items,
       InvestmentPreference preference,
       RecurringInvestmentPlanVo plan,
-      LocalDate dischargeDate) {
+      LocalDate dischargeDate,
+      LocalDate dataReferenceDate) {
     RecommendationScoreReference reference = RecommendationScoreReference.from(items, riskClassifier);
     String heldIndex =
         items.stream()
@@ -87,7 +90,10 @@ public class ProductRecommendationService {
             .findFirst()
             .orElse(null);
     return items.stream()
-        .map(item -> personalized(item.etf(), preference, plan, heldIndex, dischargeDate, reference))
+        .map(
+            item ->
+                personalized(
+                    item.etf(), preference, plan, heldIndex, dischargeDate, dataReferenceDate, reference))
         .filter(java.util.Objects::nonNull)
         .sorted(Comparator.comparingInt(PersonalizedEtfRecommendation::suitabilityScore).reversed())
         .limit(5)
@@ -100,6 +106,7 @@ public class ProductRecommendationService {
       RecurringInvestmentPlanVo plan,
       String heldIndex,
       LocalDate dischargeDate,
+      LocalDate dataReferenceDate,
       RecommendationScoreReference reference) {
     EtfRiskClassification classification = riskClassifier.classify(etf);
     if (!classification.eligibleForRecommendation()) return null;
@@ -129,7 +136,7 @@ public class ProductRecommendationService {
       warnings.add("1주 가격이 월 투자 목표금액에 가까워 분할 매수 여유가 적습니다.");
     }
     if (dischargeDate != null && classification.riskLevel() == RiskLevel.HIGH) {
-      long days = ChronoUnit.DAYS.between(LocalDate.now(), dischargeDate);
+      long days = ChronoUnit.DAYS.between(dataReferenceDate, dischargeDate);
       if (days <= 180) {
         adjustmentScore -= 35;
         warnings.add("전역 예정일이 6개월 이내여서 고위험 ETF 비중을 보수적으로 반영했습니다.");
@@ -182,8 +189,18 @@ public class ProductRecommendationService {
   }
 
   private String navGapReason(com.jaedaero.domain.investment.etf.EtfDailyTradingInfo etf, int score) {
-    if (decimal(etf.nav()).signum() <= 0) return "NAV 정보가 없어 NAV 괴리율 점수는 0/10점입니다.";
+    if (decimal(etf.tddClsprc()).signum() <= 0 || decimal(etf.nav()).signum() <= 0) {
+      return "종가 또는 NAV 정보가 없어 NAV 괴리율 점수는 0/10점입니다.";
+    }
     return "종가와 NAV의 괴리율을 반영해 " + score + "/10점을 부여했습니다.";
+  }
+
+  private LocalDate overviewDate(EtfMarketOverviewResponse overview, LocalDate fallback) {
+    try {
+      return LocalDate.parse(overview.asOfDate(), DateTimeFormatter.BASIC_ISO_DATE);
+    } catch (RuntimeException exception) {
+      return fallback;
+    }
   }
 
   private boolean sameCode(String first, String second) {

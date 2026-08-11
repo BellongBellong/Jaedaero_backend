@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import springfox.documentation.annotations.ApiIgnore;
 
-/** 로컬 동기화 거래 캐시를 사용하는 읽기 전용 거래내역 API입니다. */
+/** 로컬 동기화 거래 캐시를 사용하는 거래내역 조회 및 수정 API입니다. */
 @RestController
 @RequestMapping("/api/v1/transactions")
 @Api(tags = "거래내역")

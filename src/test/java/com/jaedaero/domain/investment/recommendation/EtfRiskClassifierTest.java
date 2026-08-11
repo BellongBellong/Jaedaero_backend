@@ -37,6 +37,13 @@ class EtfRiskClassifierTest {
     assertEquals(AssetBucket.RISK, result.assetBucket());
   }
 
+  @Test
+  void classifiesOnlyOneYearGovernmentBondAsLowRisk() {
+    assertEquals(RiskLevel.LOW, classifier.classify(etf("국고채 1년", "국고채 1년 지수")).riskLevel());
+    assertEquals(RiskLevel.LOW, classifier.classify(etf("국고채1년", "국고채1년 지수")).riskLevel());
+    assertEquals(RiskLevel.MEDIUM, classifier.classify(etf("국고채 10년", "국고채 10년 지수")).riskLevel());
+  }
+
   private EtfDailyTradingInfo etf(String name, String indexName) {
     return new EtfDailyTradingInfo(
         "20260806",

@@ -14,6 +14,8 @@ codef.client-secret=${CODEF_CLIENT_SECRET}
 codef.public-key=${CODEF_PUBLIC_KEY}
 codef.api.base-url=https://development.codef.io
 codef.debug.account-create-enabled=true
+# 로컬 CODEF 요청 전에는 POST /api/v1/auth/login으로 사용자를 생성하고,
+# 응답의 userId를 CODEF 요청에 사용하세요. X-User-Id 헤더만으로는 users 행이 생성되지 않습니다.
 
 # OpenAI Chat Completions 호환 프록시입니다. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
 llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.cloudtype.app/v1/chat/completions

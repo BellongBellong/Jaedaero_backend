@@ -22,7 +22,7 @@ public class EtfRiskClassifier {
           false,
           List.of("레버리지·인버스·파생형 성격의 ETF는 초기 리밸런싱 추천에서 제외합니다."));
     }
-    if (containsAny(text, "mmf", "머니마켓", "kofr", "cd금리", "통안채", "단기국채", "국고채 1", "국고채1", "초단기")) {
+    if (containsAny(text, "mmf", "머니마켓", "kofr", "cd금리", "통안채", "단기국채", "국고채 1년", "국고채1년", "초단기")) {
       return new EtfRiskClassification(
           RiskLevel.LOW,
           AssetBucket.SAFE,

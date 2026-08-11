@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** 사용자가 거래에 선택할 수 있는 고정 지출 분류입니다. */
+/** 사용자가 거래에 선택할 수 있는 고정 거래 분류입니다. */
 @ApiModel(description = "거래 카테고리")
 public enum TransactionCategory {
   SALARY("급여"),
