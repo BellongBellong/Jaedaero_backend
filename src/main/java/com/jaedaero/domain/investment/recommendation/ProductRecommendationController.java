@@ -28,7 +28,7 @@ public class ProductRecommendationController {
   @GetMapping("/recommendations")
   @ApiOperation(
       value = "ETF 위험등급별 상품 분류 조회",
-      notes = "KRX ETF 시세를 LOW·MEDIUM·HIGH·VERY_HIGH로 분류합니다. VERY_HIGH(레버리지·인버스·파생형)는 초기 리밸런싱 추천에서 제외됩니다.",
+      notes = "KRX ETF 시세를 LOW·MEDIUM·HIGH·VERY_HIGH로 분류합니다. 맞춤 추천은 자산배분 적합도(40), 위험등급(25), 거래대금(15), NAV 괴리율(10), 시가총액(10)을 합산합니다. VERY_HIGH(레버리지·인버스·파생형)는 초기 리밸런싱 추천에서 제외됩니다.",
       response = ProductRecommendationResponse.class)
   @ApiResponses({
     @ApiResponse(code = 200, message = "조회 성공", response = ProductRecommendationResponse.class),

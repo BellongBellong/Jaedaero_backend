@@ -5,7 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
 import java.util.List;
 
-@ApiModel(description = "KRX ETF 위험등급별 상품 분류 응답")
+@ApiModel(description = "KRX ETF 위험등급별 상품 분류 및 맞춤 추천 응답")
 public record ProductRecommendationResponse(
     @ApiModelProperty(value = "요청한 기준일", example = "20260806") String requestedAsOfDate,
     @ApiModelProperty(value = "실제 적용 거래일", example = "20260805") String asOfDate,

@@ -51,9 +51,11 @@ class ProductRecommendationServiceTest {
     assertEquals(InvestmentPreference.AGGRESSIVE, response.investmentPreference());
     assertEquals(100_000L, response.monthlyInvestmentBudget());
     assertFalse(response.personalizedRecommendations().stream().anyMatch(item -> item.isuCd().equals("122630")));
-    assertEquals("999999", response.personalizedRecommendations().get(0).isuCd());
-    assertEquals(20, response.personalizedRecommendations().stream()
-        .filter(item -> item.isuCd().equals("069500")).findFirst().orElseThrow().suitabilityScore());
+    PersonalizedEtfRecommendation held = response.personalizedRecommendations().stream()
+        .filter(item -> item.isuCd().equals("069500")).findFirst().orElseThrow();
+    assertEquals(-75, held.scoreBreakdown().adjustmentScore());
+    assertEquals(0, held.scoreBreakdown().liquidityScore());
+    assertEquals(0, held.scoreBreakdown().navGapScore());
   }
 
   private static EtfMarketOverviewItem item(String code, String name, String price, String indexName) {
