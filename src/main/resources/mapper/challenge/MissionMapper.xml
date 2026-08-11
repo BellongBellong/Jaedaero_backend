@@ -202,17 +202,23 @@
         LIMIT 1
     </select>
 
-    <insert id="insertUserBadgeByGrade">
+    <insert id="syncEligibleUserBadges">
         INSERT INTO user_badge (
             user_id,
             badge_id
         )
         SELECT
-            #{userId},
+            ib.user_id,
             b.badge_id
-        FROM badge b
-        WHERE b.mission_type = #{missionType}
-          AND b.grade = #{grade}
+        FROM investment_badge ib
+        INNER JOIN badge b
+            ON (
+                (b.mission_type = 'SAFE'
+                    AND b.required_completion_count &lt;= ib.safe_count)
+                OR (b.mission_type = 'AGGRESSIVE'
+                    AND b.required_completion_count &lt;= ib.aggressive_count)
+            )
+        WHERE ib.user_id = #{userId}
           AND b.is_active = TRUE
         ON DUPLICATE KEY UPDATE
             user_id = VALUES(user_id)

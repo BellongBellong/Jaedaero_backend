@@ -106,6 +106,8 @@ public class MissionServiceImpl implements MissionService {
       missionMapper.incrementAggressiveMissionCount(userId);
     }
 
+    // 누락된 과거 뱃지를 포함해 현재 완료 수 기준의 뱃지 이력을 보정합니다.
+    missionMapper.syncEligibleUserBadges(userId);
     InvestmentBadgeStatusVo badgeStatus = missionMapper.findInvestmentBadgeStatus(userId);
     updateGrade(userId, MissionType.SAFE, badgeStatus.getSafeCount());
     updateGrade(userId, MissionType.AGGRESSIVE, badgeStatus.getAggressiveCount());
@@ -116,8 +118,5 @@ public class MissionServiceImpl implements MissionService {
   private void updateGrade(long userId, MissionType missionType, int completionCount) {
     String grade = missionMapper.findGradeByCompletionCount(missionType, completionCount);
     missionMapper.updateInvestmentBadgeGrade(userId, missionType, grade);
-    if (grade != null) {
-      missionMapper.insertUserBadgeByGrade(userId, missionType, grade);
-    }
   }
 }
