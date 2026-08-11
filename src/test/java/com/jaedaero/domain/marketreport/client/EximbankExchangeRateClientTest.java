@@ -45,8 +45,10 @@ class EximbankExchangeRateClientTest {
           respond(
               exchange,
               """
-              [{"result":1,"cur_unit":"USD","cur_nm":"미국 달러","deal_bas_r":"1,320.50"},
-               {"result":1,"cur_unit":"JPY(100)","cur_nm":"일본 옌","deal_bas_r":"890.10"}]
+              [{"result":1,"cur_unit":"USD","cur_nm":"미국 달러","ttb":"1,300.00",
+                "tts":"1,340.00","deal_bas_r":"1,320.50","bkpr":"1,320"},
+               {"result":1,"cur_unit":"JPY(100)","cur_nm":"일본 옌","ttb":"880.00",
+                "tts":"900.00","deal_bas_r":"890.10","bkpr":"890"}]
               """);
         });
 

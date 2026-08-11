@@ -1,8 +1,7 @@
 package com.jaedaero.domain.marketreport.service;
 
-import com.jaedaero.domain.marketreport.client.KrxIndexClient;
-import com.jaedaero.domain.marketreport.client.KrxIndexDailyTradingInfo;
-import com.jaedaero.domain.marketreport.client.KrxIndexDailyTradingResponse;
+import com.jaedaero.domain.marketreport.client.FinancialMarketIndexClient;
+import com.jaedaero.domain.marketreport.client.FinancialMarketIndexItem;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,13 +14,14 @@ import org.springframework.stereotype.Component;
 public class KosdaqIndicatorSource implements MarketIndicatorSource {
 
   private static final int MAX_LOOKBACK_DAYS = 10;
+  private static final String INDEX_NAME = "코스닥";
   private static final DateTimeFormatter BASE_DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyyMMdd");
 
-  private final KrxIndexClient krxIndexClient;
+  private final FinancialMarketIndexClient marketIndexClient;
 
-  public KosdaqIndicatorSource(KrxIndexClient krxIndexClient) {
-    this.krxIndexClient = krxIndexClient;
+  public KosdaqIndicatorSource(FinancialMarketIndexClient marketIndexClient) {
+    this.marketIndexClient = marketIndexClient;
   }
 
   @Override
@@ -31,24 +31,21 @@ public class KosdaqIndicatorSource implements MarketIndicatorSource {
 
   @Override
   public Optional<MarketIndicatorObservation> fetch(LocalDate businessDate) {
-    for (int offset = 0; offset <= MAX_LOOKBACK_DAYS; offset++) {
-      LocalDate candidate = businessDate.minusDays(offset);
-      KrxIndexDailyTradingResponse response =
-          krxIndexClient.getKosdaqDailyTrading(candidate.format(BASE_DATE_FORMAT));
-      List<KrxIndexDailyTradingInfo> rows =
-          response == null || response.outBlock1() == null
-              ? List.of()
-              : response.outBlock1();
+    for (int daysBefore = 1; daysBefore <= MAX_LOOKBACK_DAYS; daysBefore++) {
+      LocalDate candidate = businessDate.minusDays(daysBefore);
+      List<FinancialMarketIndexItem> rows =
+          marketIndexClient.getStockMarketIndex(
+              candidate.format(BASE_DATE_FORMAT), INDEX_NAME);
       if (!rows.isEmpty()) {
-        KrxIndexDailyTradingInfo row = rows.get(0);
+        FinancialMarketIndexItem row = rows.get(0);
         return Optional.of(
             new MarketIndicatorObservation(
                 type(),
-                LocalDate.parse(row.basDd(), BASE_DATE_FORMAT),
-                "KRX Open API",
-                new BigDecimal(row.clsprcIdx()),
-                new BigDecimal(row.cmpprevddIdx()),
-                new BigDecimal(row.flucRtIdx())));
+                LocalDate.parse(row.basDt(), BASE_DATE_FORMAT),
+                "금융위원회 지수시세정보",
+                new BigDecimal(row.clpr()),
+                new BigDecimal(row.vs()),
+                new BigDecimal(row.fltRt())));
       }
     }
     return Optional.empty();

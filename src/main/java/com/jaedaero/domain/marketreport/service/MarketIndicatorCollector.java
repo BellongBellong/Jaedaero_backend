@@ -6,10 +6,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.context.annotation.Primary;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Slf4j
+@Primary
 @Component
 public class MarketIndicatorCollector implements MarketIndicatorProvider {
 
@@ -25,7 +27,7 @@ public class MarketIndicatorCollector implements MarketIndicatorProvider {
   public List<MarketIndicatorResult> collect(LocalDate businessDate) {
     return sources.stream()
         .map(source -> collectOne(source, businessDate))
-        .sorted(Comparator.comparing(MarketIndicatorResult::type))
+        .sorted(Comparator.comparingInt(result -> result.type().ordinal()))
         .toList();
   }
 
