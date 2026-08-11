@@ -104,7 +104,6 @@ class AiAnalysisServiceImplTest {
   void generationTasksUseServerAssignedModels() {
     assertEquals(OpenAiModel.GPT_4O_MINI, AiGenerationTask.AI_COACH.model());
     assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.TRANSACTION_CATEGORY.model());
-    assertEquals(OpenAiModel.GPT_5_NANO, AiGenerationTask.DAILY_MARKET_REPORT.model());
     assertEquals(OpenAiModel.GPT_4O_MINI, AiGenerationTask.DISCHARGE_REPORT.model());
   }
 

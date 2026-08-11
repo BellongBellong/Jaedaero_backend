@@ -1,7 +1,13 @@
 package com.jaedaero.domain.marketreport.llm;
 
-import com.jaedaero.domain.aianalysis.llm.OpenAiModel;
+import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
+import java.util.List;
 
 public interface MarketReportNarrativeGenerator {
-  MarketReportNarrative generate(OpenAiModel model, String prompt);
+  MarketReportNarrative generate(String prompt);
+
+  default MarketReportNarrative generate(
+      String prompt, List<MarketReportSourceItem> availableSources) {
+    return generate(prompt);
+  }
 }

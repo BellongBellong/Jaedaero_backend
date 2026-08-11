@@ -21,6 +21,11 @@
         )
     </insert>
 
+    <delete id="deleteByReportId">
+        DELETE FROM daily_market_indicator
+        WHERE report_id = #{reportId}
+    </delete>
+
     <select id="findByReportId"
             resultType="com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo">
         SELECT <include refid="dailyMarketIndicatorColumns"/>
