@@ -24,7 +24,8 @@ class AiStrategyMapperXmlValidationTest {
           "mapper/investmentguidance/InvestmentGuidanceInputMapper.xml",
           "mapper/investmentguidance/MockDbBrokeragePositionMapper.xml",
           "mapper/investmentguidance/InvestmentGuidanceMapper.xml",
-          "mapper/marketreport/DailyMarketReportMapper.xml");
+          "mapper/marketreport/DailyMarketReportMapper.xml",
+          "mapper/marketreport/DailyMarketIndicatorMapper.xml");
 
   @Test
   void aiStrategyMapperXmls_areParsedByMyBatis() throws Exception {
@@ -90,5 +91,20 @@ class AiStrategyMapperXmlValidationTest {
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.upsert"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.findLatest"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.countByReportDate"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper.claimReportDate"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper.insert"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper.findByReportId"));
   }
 }

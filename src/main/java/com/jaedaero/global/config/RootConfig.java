@@ -25,6 +25,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -38,6 +39,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Configuration
 @EnableTransactionManagement
+@EnableScheduling
 @MapperScan(basePackages = "com.jaedaero.domain", annotationClass = Mapper.class)
 @ComponentScan(
         basePackages = {"com.jaedaero.domain", "com.jaedaero.global.security"},
@@ -68,8 +70,6 @@ public class RootConfig {
                 new ClassPathResource("application-local.properties")
         );
         configurer.setIgnoreResourceNotFound(true);
-        configurer.setLocalOverride(true);
-
         return configurer;
     }
 

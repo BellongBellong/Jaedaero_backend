@@ -1,0 +1,10 @@
+.git
+.gradle
+.idea
+build
+node_modules
+.env
+src/main/resources/.env
+src/main/resources/application-local.properties
+src/main/resources/application-secret.properties
+*.log

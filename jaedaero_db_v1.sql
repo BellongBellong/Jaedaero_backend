@@ -9,6 +9,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `notification_history`;
 DROP TABLE IF EXISTS `device_token`;
+DROP TABLE IF EXISTS `daily_market_indicator`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
 DROP TABLE IF EXISTS `investment_badge`;
