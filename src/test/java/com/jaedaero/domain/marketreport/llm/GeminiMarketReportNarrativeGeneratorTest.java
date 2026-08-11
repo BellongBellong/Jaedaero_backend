@@ -2,6 +2,7 @@ package com.jaedaero.domain.marketreport.llm;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,6 +74,9 @@ class GeminiMarketReportNarrativeGeneratorTest {
           assertEquals(
               "ARRAY", schema.path("properties").path("sourceIds").path("type").asText());
           assertTrue(schema.path("required").toString().contains("sourceIds"));
+          assertEquals(
+              "[\"title\",\"summary\",\"content\",\"sourceIds\"]",
+              schema.path("propertyOrdering").toString());
 
           respond(
               exchange,
@@ -154,15 +158,16 @@ class GeminiMarketReportNarrativeGeneratorTest {
     assertTrue(exception.getMessage().contains("HTTP 429"));
     assertTrue(exception.getMessage().contains("RESOURCE_EXHAUSTED"));
     assertFalse(exception.getMessage().contains("test-gemini-key"));
+    assertTrue(exception.getCause() instanceof org.springframework.web.client.RestClientResponseException);
   }
 
   @Test
-  void generateRetriesTemporary503AndThenSucceeds() {
+  void generateRetriesTemporary503ThreeTimesAndThenSucceeds() {
     AtomicInteger calls = new AtomicInteger();
     server.createContext(
         "/v1beta/models/gemini-3.6-flash:generateContent",
         exchange -> {
-          if (calls.incrementAndGet() == 1) {
+          if (calls.incrementAndGet() <= 3) {
             respond(
                 exchange,
                 503,
@@ -180,10 +185,10 @@ class GeminiMarketReportNarrativeGeneratorTest {
 
     MarketReportNarrative narrative =
         new GeminiMarketReportNarrativeGenerator(
-                new RestTemplate(), objectMapper, "test-gemini-key", endpoint, 3, 0L)
+                new RestTemplate(), objectMapper, "test-gemini-key", endpoint, 4, 0L)
             .generate("프롬프트", availableSources());
 
-    assertEquals(2, calls.get());
+    assertEquals(4, calls.get());
     assertEquals("제목", narrative.title());
   }
 
@@ -210,6 +215,20 @@ class GeminiMarketReportNarrativeGeneratorTest {
                 .generate("프롬프트", availableSources()));
 
     assertEquals(1, calls.get());
+  }
+
+  @Test
+  void generatePreservesResponseParsingCause() {
+    server.createContext(
+        "/v1beta/models/gemini-3.6-flash:generateContent",
+        exchange -> respond(exchange, 200, "{\"candidates\": ["));
+
+    AiCoachNarrativeGenerationException exception =
+        assertThrows(
+            AiCoachNarrativeGenerationException.class,
+            () -> generator("test-gemini-key").generate("응답 해석", availableSources()));
+
+    assertNotNull(exception.getCause(), exception.getMessage());
   }
 
   @Test

@@ -59,10 +59,17 @@ public class ImportantMarketNewsSelector {
 
     List<ScoredArticle> selected = new ArrayList<>();
     Map<String, Integer> sourceCounts = new HashMap<>();
-    deduplicated.stream()
-        .filter(article -> "forex".equals(article.category()))
-        .limit(MIN_FOREX_NEWS_COUNT)
-        .forEach(article -> addIfAllowed(selected, sourceCounts, article));
+    int selectedForexCount = 0;
+    for (ScoredArticle article : deduplicated) {
+      if (selected.size() >= MAX_SELECTED_NEWS_COUNT
+          || selectedForexCount >= MIN_FOREX_NEWS_COUNT) {
+        break;
+      }
+      if ("forex".equals(article.category())
+          && addIfAllowed(selected, sourceCounts, article)) {
+        selectedForexCount++;
+      }
+    }
     for (ScoredArticle article : deduplicated) {
       if (selected.size() >= MAX_SELECTED_NEWS_COUNT) {
         break;
@@ -124,7 +131,8 @@ public class ImportantMarketNewsSelector {
     long ageHours = Math.max(0, Duration.between(publishedAt, asOf).toHours());
     int score = ageHours < 6 ? 40 : ageHours < 12 ? 30 : ageHours < 24 ? 20 : 10;
     String searchable =
-        (item.headline() + " " + safeText(item.summary(), "", 2000)).toLowerCase(Locale.ROOT);
+        (" " + item.headline() + " " + safeText(item.summary(), "", 2000) + " ")
+            .toLowerCase(Locale.ROOT);
     for (Map.Entry<String, Integer> keyword : KEYWORD_WEIGHTS.entrySet()) {
       if (searchable.contains(keyword.getKey())) {
         score += keyword.getValue();
@@ -157,19 +165,20 @@ public class ImportantMarketNewsSelector {
     return new ArrayList<>(byUrl.values());
   }
 
-  private void addIfAllowed(
+  private boolean addIfAllowed(
       List<ScoredArticle> selected,
       Map<String, Integer> sourceCounts,
       ScoredArticle article) {
     if (selected.contains(article)) {
-      return;
+      return false;
     }
     String sourceKey = article.source().toLowerCase(Locale.ROOT);
     if (sourceCounts.getOrDefault(sourceKey, 0) >= MAX_NEWS_PER_SOURCE) {
-      return;
+      return false;
     }
     selected.add(article);
     sourceCounts.merge(sourceKey, 1, Integer::sum);
+    return true;
   }
 
   private String normalizeHeadline(String value) {

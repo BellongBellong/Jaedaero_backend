@@ -2,17 +2,13 @@ package com.jaedaero.domain.marketreport.service;
 
 import com.jaedaero.domain.aianalysis.llm.AiCoachNarrativeGenerationException;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorStatus;
+import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
 import com.jaedaero.domain.marketreport.dto.MarketReportGenerationSource;
 import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
 import com.jaedaero.domain.marketreport.dto.MarketReportStatus;
 import com.jaedaero.domain.marketreport.llm.GeminiMarketReportNarrativeGenerator;
 import com.jaedaero.domain.marketreport.llm.MarketReportNarrative;
 import com.jaedaero.domain.marketreport.llm.MarketReportNarrativeGenerator;
-import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
-import com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper;
-import com.jaedaero.domain.marketreport.mapper.DailyMarketReportSourceMapper;
-import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
-import com.jaedaero.domain.marketreport.vo.DailyMarketReportSourceVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
 import java.net.URI;
 import java.time.Clock;
@@ -25,7 +21,6 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Slf4j
@@ -44,63 +39,39 @@ public class MarketReportGenerationService {
           + "KOSPI, KOSDAQ, 미국채 10년물, 원/달러 환율은 별도의 수집 결과와 기준일 및 상태를 통해 확인해야 하며, 이 본문은 그 지표의 값이나 변화를 대신하지 않습니다. "
           + "다음 생성 시도에서 인증·할당량·검색 결과·응답 형식이 정상인지 확인한 뒤, 서로 다른 유효 URL 두 개 이상의 인용으로 뒷받침되는 한국어 리포트를 다시 저장할 수 있습니다. "
           + "그 전까지는 사실로 확인되지 않은 원인이나 전망, 투자 조언, 수익 보장을 제공하지 않으며, 현재 응답이 안전한 부분 상태라는 점만 안내합니다.";
+  /** daily_market_report_source.title VARCHAR(500) 저장 컬럼과 동일한 검증 한도. */
+  static final int MAX_SOURCE_TITLE_CHAR_COUNT = 500;
+  /** daily_market_report_source.url VARCHAR(2048) 저장 컬럼과 동일한 검증 한도. */
+  static final int MAX_SOURCE_URL_CHAR_COUNT = 2048;
 
-  private final DailyMarketReportMapper reportMapper;
   private final MarketReportClaimService claimService;
-  private final DailyMarketIndicatorMapper indicatorMapper;
-  private final DailyMarketReportSourceMapper sourceMapper;
   private final MarketIndicatorProvider indicatorCollector;
   private final MarketNewsProvider newsProvider;
   private final MarketReportNarrativeGenerator narrativeGenerator;
+  private final MarketReportPersistenceService persistenceService;
   private final Clock clock;
 
   @Autowired
   public MarketReportGenerationService(
-      DailyMarketReportMapper reportMapper,
       MarketReportClaimService claimService,
-      DailyMarketIndicatorMapper indicatorMapper,
-      DailyMarketReportSourceMapper sourceMapper,
       MarketIndicatorProvider indicatorCollector,
       MarketNewsProvider newsProvider,
       MarketReportNarrativeGenerator narrativeGenerator,
+      MarketReportPersistenceService persistenceService,
       Clock clock) {
-    this.reportMapper = reportMapper;
     this.claimService = claimService;
-    this.indicatorMapper = indicatorMapper;
-    this.sourceMapper = sourceMapper;
     this.indicatorCollector = indicatorCollector;
     this.newsProvider = newsProvider;
     this.narrativeGenerator = narrativeGenerator;
+    this.persistenceService = persistenceService;
     this.clock = clock;
   }
 
-  /** 테스트·레거시 생성자. 운영 Spring 주입은 Finnhub 제공자를 받는 생성자를 사용한다. */
-  public MarketReportGenerationService(
-      DailyMarketReportMapper reportMapper,
-      MarketReportClaimService claimService,
-      DailyMarketIndicatorMapper indicatorMapper,
-      DailyMarketReportSourceMapper sourceMapper,
-      MarketIndicatorProvider indicatorCollector,
-      MarketReportNarrativeGenerator narrativeGenerator,
-      Clock clock) {
-    this(
-        reportMapper,
-        claimService,
-        indicatorMapper,
-        sourceMapper,
-        indicatorCollector,
-        ignored -> List.of(),
-        narrativeGenerator,
-        clock);
-  }
-
-  @Transactional
   public void generateForToday() {
     generateForToday(false);
   }
 
   /** 로컬 전용 수동 재시험: 성공 Gemini 리포트는 다시 호출하지 않는다. */
-  @Transactional
   public void generateForTodayForLocalRetry() {
     generateForToday(true);
   }
@@ -160,57 +131,16 @@ public class MarketReportGenerationService {
             .validFrom(validFrom)
             .validUntil(validUntil)
             .build();
-    reportMapper.upsert(report);
-    if (report.getReportId() == null) {
-      throw new IllegalStateException("저장된 시장 리포트 ID를 확인할 수 없습니다.");
-    }
-
-    indicatorMapper.deleteByReportId(report.getReportId());
-    sourceMapper.deleteByReportId(report.getReportId());
-    for (MarketIndicatorResult result : indicators) {
-      indicatorMapper.insert(toIndicatorVo(report.getReportId(), result));
-    }
-    for (int index = 0; index < sources.size(); index++) {
-      sourceMapper.insert(toSourceVo(report.getReportId(), index + 1, sources.get(index)));
-    }
+    persistenceService.persist(report, indicators, sources);
   }
 
   private MarketReportStatus deriveReportStatus(
       List<MarketIndicatorResult> indicators, boolean generatedByGemini) {
     boolean allNormal =
-        indicators.size() == 4
+        indicators.size() == MarketIndicatorType.values().length
             && indicators.stream()
                 .allMatch(result -> result.status() == MarketIndicatorStatus.NORMAL);
     return allNormal && generatedByGemini ? MarketReportStatus.NORMAL : MarketReportStatus.PARTIAL;
-  }
-
-  private DailyMarketIndicatorVo toIndicatorVo(
-      long reportId, MarketIndicatorResult result) {
-    DailyMarketIndicatorVo.DailyMarketIndicatorVoBuilder builder =
-        DailyMarketIndicatorVo.builder()
-            .reportId(reportId)
-            .indicatorType(result.type())
-            .status(result.status());
-    if (result.observation() == null) {
-      return builder.dataAsOf(null).source("N/A").observedValue(null).build();
-    }
-    return builder
-        .dataAsOf(result.observation().dataAsOf().atStartOfDay())
-        .source(result.observation().source())
-        .observedValue(result.observation().observedValue())
-        .changeValue(result.observation().change())
-        .changeRate(result.observation().changeRate())
-        .build();
-  }
-
-  private DailyMarketReportSourceVo toSourceVo(
-      long reportId, int sourceOrder, MarketReportSourceItem source) {
-    return DailyMarketReportSourceVo.builder()
-        .reportId(reportId)
-        .sourceOrder(sourceOrder)
-        .title(source.getTitle())
-        .url(source.getUrl())
-        .build();
   }
 
   private List<MarketReportSourceItem> toAvailableSources(List<MarketNewsArticle> news) {
@@ -289,7 +219,8 @@ public class MarketReportGenerationService {
         .append("기사 전문을 복사하지 말고 사실을 종합하세요. ")
         .append("응답은 JSON 객체로만 반환하고 title, summary, content, sourceIds 필드를 모두 포함하세요. ")
         .append("title은 리포트 제목, summary는 한 줄 요약, content는 한국어 300자 이상의 본문이어야 합니다. ")
-        .append("sourceIds에는 본문 작성에 실제로 사용한 뉴스의 N번호만 중복 없이 2개 이상 넣으세요.")
+        .append("sourceIds에는 본문 작성에 실제로 사용한 뉴스의 N번호만 중복 없이 2개 이상 넣으세요. ")
+        .append("각 값은 정규식 N[1-9][0-9]*에 맞는 양의 정수 번호의 JSON 문자열이어야 하며, 예시는 [\"N1\", \"N3\"]입니다.")
         .toString();
   }
 
@@ -315,9 +246,10 @@ public class MarketReportGenerationService {
     for (MarketReportSourceItem source : narrative.sources()) {
       if (source == null
           || !StringUtils.hasText(source.getTitle())
-          || source.getTitle().codePointCount(0, source.getTitle().length()) > 500
+          || source.getTitle().codePointCount(0, source.getTitle().length())
+              > MAX_SOURCE_TITLE_CHAR_COUNT
           || !isHttpUrl(source.getUrl())
-          || source.getUrl().codePointCount(0, source.getUrl().length()) > 2048
+          || source.getUrl().codePointCount(0, source.getUrl().length()) > MAX_SOURCE_URL_CHAR_COUNT
           || !urls.add(source.getUrl())) {
         throw new AiCoachNarrativeGenerationException(
             "Gemini 응답의 인용 출처가 비어 있거나 허용되지 않은 URL을 포함합니다.");

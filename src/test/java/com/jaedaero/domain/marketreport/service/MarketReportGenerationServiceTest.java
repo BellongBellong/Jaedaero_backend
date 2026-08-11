@@ -1,6 +1,8 @@
 package com.jaedaero.domain.marketreport.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +23,7 @@ import com.jaedaero.domain.marketreport.vo.DailyMarketReportSourceVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
 import java.math.BigDecimal;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -35,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 class MarketReportGenerationServiceTest {
@@ -51,6 +55,20 @@ class MarketReportGenerationServiceTest {
           + "따라서 독자는 본문과 출처 목록을 함께 확인하고, 인용되지 않은 판단은 이 문서의 결론으로 해석하지 않아야 합니다. ";
 
   @Test
+  void keepsExternalGenerationOutsideTransactionAndPersistenceAtomic() throws NoSuchMethodException {
+    Method generate = MarketReportGenerationService.class.getMethod("generateForToday");
+    Method localRetry =
+        MarketReportGenerationService.class.getMethod("generateForTodayForLocalRetry");
+    Method persist =
+        MarketReportPersistenceService.class.getMethod(
+            "persist", DailyMarketReportVo.class, List.class, List.class);
+
+    assertNull(generate.getAnnotation(Transactional.class));
+    assertNull(localRetry.getAnnotation(Transactional.class));
+    assertNotNull(persist.getAnnotation(Transactional.class));
+  }
+
+  @Test
   void generatePersistsNormalGeminiReportFourIndicatorsAndSources() {
     RecordingReportMapper reports = new RecordingReportMapper();
     RecordingIndicatorMapper indicators = new RecordingIndicatorMapper();
@@ -58,12 +76,11 @@ class MarketReportGenerationServiceTest {
     SucceedingNarrativeGenerator generator = new SucceedingNarrativeGenerator();
 
     new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            indicators,
-            sources,
             collector(false, false),
+            ignored -> List.of(),
             generator,
+            new MarketReportPersistenceService(reports, indicators, sources),
             FIXED_CLOCK)
         .generateForToday();
 
@@ -84,6 +101,8 @@ class MarketReportGenerationServiceTest {
     assertTrue(generator.prompt.contains("Finnhub Market News"));
     assertTrue(generator.prompt.contains("title, summary, content, sourceIds 필드"));
     assertTrue(generator.prompt.contains("한국어 300자 이상의 본문"));
+    assertTrue(generator.prompt.contains("양의 정수"));
+    assertTrue(generator.prompt.contains("[\"N1\", \"N3\"]"));
   }
 
   @Test
@@ -91,12 +110,12 @@ class MarketReportGenerationServiceTest {
     RecordingReportMapper reports = new RecordingReportMapper();
 
     new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            new RecordingIndicatorMapper(),
-            new RecordingSourceMapper(),
             collector(true, false),
+            ignored -> List.of(),
             new SucceedingNarrativeGenerator(),
+            new MarketReportPersistenceService(
+                reports, new RecordingIndicatorMapper(), new RecordingSourceMapper()),
             FIXED_CLOCK)
         .generateForToday();
 
@@ -109,12 +128,11 @@ class MarketReportGenerationServiceTest {
     RecordingIndicatorMapper indicators = new RecordingIndicatorMapper();
 
     new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            indicators,
-            new RecordingSourceMapper(),
             collector(false, true),
+            ignored -> List.of(),
             new SucceedingNarrativeGenerator(),
+            new MarketReportPersistenceService(reports, indicators, new RecordingSourceMapper()),
             FIXED_CLOCK)
         .generateForToday();
 
@@ -136,12 +154,12 @@ class MarketReportGenerationServiceTest {
     FailingNarrativeGenerator generator = new FailingNarrativeGenerator();
     MarketReportGenerationService service =
         new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            new RecordingIndicatorMapper(),
-            sources,
             collector(false, false),
+            ignored -> List.of(),
             generator,
+            new MarketReportPersistenceService(
+                reports, new RecordingIndicatorMapper(), sources),
             FIXED_CLOCK);
 
     service.generateForToday();
@@ -161,11 +179,9 @@ class MarketReportGenerationServiceTest {
     RecordingReportMapper reports = new RecordingReportMapper();
 
     new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            new RecordingIndicatorMapper(),
-            new RecordingSourceMapper(),
             collector(false, false),
+            ignored -> List.of(),
             prompt ->
                 new MarketReportNarrative(
                     "오늘의 AI 시장 리포트",
@@ -176,6 +192,8 @@ class MarketReportGenerationServiceTest {
                             .title("단일 출처")
                             .url("https://example.com/only-source")
                             .build())),
+            new MarketReportPersistenceService(
+                reports, new RecordingIndicatorMapper(), new RecordingSourceMapper()),
             FIXED_CLOCK)
         .generateForToday();
 
@@ -190,11 +208,9 @@ class MarketReportGenerationServiceTest {
     RecordingReportMapper reports = new RecordingReportMapper();
 
     new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            new RecordingIndicatorMapper(),
-            new RecordingSourceMapper(),
             collector(false, false),
+            ignored -> List.of(),
             prompt ->
                 new MarketReportNarrative(
                     "가".repeat(201),
@@ -209,6 +225,8 @@ class MarketReportGenerationServiceTest {
                             .title("두 번째 출처")
                             .url("https://example.org/second")
                             .build())),
+            new MarketReportPersistenceService(
+                reports, new RecordingIndicatorMapper(), new RecordingSourceMapper()),
             FIXED_CLOCK)
         .generateForToday();
 
@@ -243,12 +261,11 @@ class MarketReportGenerationServiceTest {
         };
     MarketReportGenerationService service =
         new MarketReportGenerationService(
-            reports,
             new MarketReportClaimService(reports),
-            indicators,
-            sources,
             collector(false, false),
+            testNewsProvider(),
             generator,
+            new MarketReportPersistenceService(reports, indicators, sources),
             FIXED_CLOCK);
 
     service.generateForToday();
@@ -282,10 +299,7 @@ class MarketReportGenerationServiceTest {
       RecordingSourceMapper sources = new RecordingSourceMapper();
       MarketReportGenerationService service =
           new MarketReportGenerationService(
-              reports,
               new MarketReportClaimService(reports),
-              new RecordingIndicatorMapper(),
-              sources,
               collector(false, false),
               testNewsProvider(),
               new GeminiMarketReportNarrativeGenerator(
@@ -295,6 +309,8 @@ class MarketReportGenerationServiceTest {
                   "http://localhost:"
                       + server.getAddress().getPort()
                       + "/v1beta/models/gemini-3.6-flash:generateContent"),
+              new MarketReportPersistenceService(
+                  reports, new RecordingIndicatorMapper(), sources),
               FIXED_CLOCK);
 
       service.generateForToday();
@@ -521,7 +537,9 @@ class MarketReportGenerationServiceTest {
 
     @Override
     public List<DailyMarketReportSourceVo> findByReportId(long reportId) {
-      return inserted;
+      return inserted.stream()
+          .filter(source -> Long.valueOf(reportId).equals(source.getReportId()))
+          .toList();
     }
   }
 

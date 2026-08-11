@@ -62,16 +62,12 @@ public class FinnhubMarketNewsClient {
       String base = baseUri.toString().replaceFirst("/+$", "");
       URI uri =
           URI.create(
-              base
-                  + NEWS_PATH
-                  + "?category="
-                  + encode(category)
-                  + "&token="
-                  + encode(apiKey));
+              base + NEWS_PATH + "?category=" + encode(category));
       HttpRequest request =
           HttpRequest.newBuilder(uri)
               .timeout(REQUEST_TIMEOUT)
               .header("Accept", "application/json")
+              .header("X-Finnhub-Token", apiKey)
               .GET()
               .build();
       HttpResponse<String> response =

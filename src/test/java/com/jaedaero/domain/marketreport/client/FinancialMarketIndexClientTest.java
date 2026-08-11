@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jaedaero.domain.marketreport.model.MarketIndex;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -69,7 +70,7 @@ class FinancialMarketIndexClientTest {
               """);
         });
 
-    List<FinancialMarketIndexItem> items =
+    List<MarketIndex> items =
         newClient("test+service/key=").getStockMarketIndex("20260807", "코스피");
 
     String query = URLDecoder.decode(rawQuery.get(), StandardCharsets.UTF_8);
@@ -80,9 +81,11 @@ class FinancialMarketIndexClientTest {
     assertTrue(query.contains("numOfRows=1"));
     assertTrue(query.contains("basDt=20260807"));
     assertTrue(query.contains("idxNm=코스피"));
-    assertEquals("2650.12", items.get(0).clpr());
-    assertEquals("12.30", items.get(0).vs());
-    assertEquals("0.47", items.get(0).fltRt());
+    assertEquals("2026-08-07", items.get(0).baseDate().toString());
+    assertEquals("코스피", items.get(0).indexName());
+    assertEquals("2650.12", items.get(0).closingPrice().toString());
+    assertEquals("12.30", items.get(0).change().toString());
+    assertEquals("0.47", items.get(0).changeRate().toString());
   }
 
   @Test
@@ -99,11 +102,11 @@ class FinancialMarketIndexClientTest {
                 "clpr":"845.30","vs":"-3.10","fltRt":"-0.37"}}}}}
                 """));
 
-    List<FinancialMarketIndexItem> items =
+    List<MarketIndex> items =
         newClient("test-key").getStockMarketIndex("20260807", "코스닥");
 
     assertEquals(1, items.size());
-    assertEquals("코스닥", items.get(0).idxNm());
+    assertEquals("코스닥", items.get(0).indexName());
   }
 
   @Test

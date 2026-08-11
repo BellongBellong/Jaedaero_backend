@@ -45,7 +45,9 @@ class MarketReportServiceImplTest {
     assertEquals(MarketIndicatorType.USD_KRW, response.getIndicators().get(3).getIndicatorType());
     assertEquals(2, response.getSources().size());
     assertEquals("출처 제목", response.getSources().get(0).getTitle());
+    assertEquals("https://example.com/source", response.getSources().get(0).getUrl());
     assertEquals("두 번째 출처", response.getSources().get(1).getTitle());
+    assertEquals("https://example.org/source", response.getSources().get(1).getUrl());
     assertEquals(MarketReportGenerationSource.GEMINI, response.getGenerationSource());
   }
 

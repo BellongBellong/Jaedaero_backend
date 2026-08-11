@@ -1,0 +1,79 @@
+package com.jaedaero.domain.marketreport.service;
+
+import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
+import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
+import com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper;
+import com.jaedaero.domain.marketreport.mapper.DailyMarketReportSourceMapper;
+import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
+import com.jaedaero.domain.marketreport.vo.DailyMarketReportSourceVo;
+import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
+import java.util.List;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/** 외부 수집·생성 결과를 짧은 원자적 저장 구간에서 리포트와 함께 반영한다. */
+@Component
+public class MarketReportPersistenceService {
+
+  private final DailyMarketReportMapper reportMapper;
+  private final DailyMarketIndicatorMapper indicatorMapper;
+  private final DailyMarketReportSourceMapper sourceMapper;
+
+  public MarketReportPersistenceService(
+      DailyMarketReportMapper reportMapper,
+      DailyMarketIndicatorMapper indicatorMapper,
+      DailyMarketReportSourceMapper sourceMapper) {
+    this.reportMapper = reportMapper;
+    this.indicatorMapper = indicatorMapper;
+    this.sourceMapper = sourceMapper;
+  }
+
+  @Transactional
+  public void persist(
+      DailyMarketReportVo report,
+      List<MarketIndicatorResult> indicators,
+      List<MarketReportSourceItem> sources) {
+    reportMapper.upsert(report);
+    Long reportId = report == null ? null : report.getReportId();
+    if (reportId == null || reportId <= 0) {
+      throw new IllegalStateException("저장된 시장 리포트 ID를 확인할 수 없습니다.");
+    }
+
+    indicatorMapper.deleteByReportId(reportId);
+    sourceMapper.deleteByReportId(reportId);
+    for (MarketIndicatorResult result : indicators) {
+      indicatorMapper.insert(toIndicatorVo(reportId, result));
+    }
+    for (int index = 0; index < sources.size(); index++) {
+      sourceMapper.insert(toSourceVo(reportId, index + 1, sources.get(index)));
+    }
+  }
+
+  private DailyMarketIndicatorVo toIndicatorVo(long reportId, MarketIndicatorResult result) {
+    DailyMarketIndicatorVo.DailyMarketIndicatorVoBuilder builder =
+        DailyMarketIndicatorVo.builder()
+            .reportId(reportId)
+            .indicatorType(result.type())
+            .status(result.status());
+    if (result.observation() == null) {
+      return builder.dataAsOf(null).source("N/A").observedValue(null).build();
+    }
+    return builder
+        .dataAsOf(result.observation().dataAsOf().atStartOfDay())
+        .source(result.observation().source())
+        .observedValue(result.observation().observedValue())
+        .changeValue(result.observation().change())
+        .changeRate(result.observation().changeRate())
+        .build();
+  }
+
+  private DailyMarketReportSourceVo toSourceVo(
+      long reportId, int sourceOrder, MarketReportSourceItem source) {
+    return DailyMarketReportSourceVo.builder()
+        .reportId(reportId)
+        .sourceOrder(sourceOrder)
+        .title(source.getTitle())
+        .url(source.getUrl())
+        .build();
+  }
+}

@@ -1,6 +1,7 @@
 package com.jaedaero.domain.marketreport.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,12 +34,14 @@ class FinnhubMarketNewsClientTest {
   }
 
   @Test
-  void requestsCategoryAndParsesMarketNewsWithoutExposingToken() {
+  void requestsCategoryAndHeaderTokenWithoutExposingTokenInUri() {
     AtomicReference<String> query = new AtomicReference<>();
+    AtomicReference<String> tokenHeader = new AtomicReference<>();
     server.createContext(
         "/api/v1/news",
         exchange -> {
           query.set(exchange.getRequestURI().getRawQuery());
+          tokenHeader.set(exchange.getRequestHeaders().getFirst("X-Finnhub-Token"));
           byte[] body =
               """
               [{
@@ -70,7 +73,10 @@ class FinnhubMarketNewsClientTest {
     assertEquals(101, result.get(0).id());
     assertEquals("Reuters", result.get(0).source());
     assertTrue(query.get().contains("category=general"));
-    assertTrue(query.get().contains("token=test%20key"));
+    assertEquals("test key", tokenHeader.get());
+    assertFalse(query.get().contains("token"));
+    assertFalse(query.get().contains("test%20key"));
+    assertFalse(query.get().contains("test+key"));
   }
 
   @Test

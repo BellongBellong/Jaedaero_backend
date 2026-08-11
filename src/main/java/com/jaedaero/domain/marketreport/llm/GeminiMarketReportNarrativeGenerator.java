@@ -51,7 +51,7 @@ public class GeminiMarketReportNarrativeGenerator implements MarketReportNarrati
       @Value("${gemini.api-key:}") String apiKey,
       @Value("${gemini.generate-content-url:" + DEFAULT_GENERATE_CONTENT_URL + "}")
           String generateContentUrl,
-      @Value("${gemini.max-attempts:3}") int maxAttempts,
+      @Value("${gemini.max-attempts:4}") int maxAttempts,
       @Value("${gemini.retry-initial-delay-ms:1500}") long retryInitialDelayMs) {
     this.restTemplate = restTemplate;
     this.objectMapper = objectMapper;
@@ -112,17 +112,21 @@ public class GeminiMarketReportNarrativeGenerator implements MarketReportNarrati
             "Gemini generateContent 호출이 HTTP "
                 + exception.getRawStatusCode()
                 + "로 실패했습니다. "
-                + safeHttpErrorDetail(exception));
+                + safeHttpErrorDetail(exception),
+            exception);
       } catch (RestClientException exception) {
         if (attempt < maxAttempts) {
           waitBeforeRetry(attempt, exception.getClass().getSimpleName());
           continue;
         }
         throw new AiCoachNarrativeGenerationException(
-            "Gemini generateContent 호출에 실패했습니다. " + safeText(exception.getMessage()));
+            "Gemini generateContent 호출에 실패했습니다. " + safeText(exception.getMessage()),
+            exception);
       } catch (IllegalArgumentException exception) {
         throw new AiCoachNarrativeGenerationException(
-            "Gemini generateContent URL이 올바르지 않습니다. " + safeText(exception.getMessage()));
+            "Gemini generateContent URL이 올바르지 않습니다. "
+                + safeText(exception.getMessage()),
+            exception);
       }
     }
     throw new AiCoachNarrativeGenerationException("Gemini generateContent 재시도가 종료되었습니다.");
@@ -152,7 +156,8 @@ public class GeminiMarketReportNarrativeGenerator implements MarketReportNarrati
       Thread.sleep(delayMs);
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
-      throw new AiCoachNarrativeGenerationException("Gemini generateContent 재시도 대기가 중단되었습니다.");
+      throw new AiCoachNarrativeGenerationException(
+          "Gemini generateContent 재시도 대기가 중단되었습니다.", exception);
     }
   }
 
@@ -180,7 +185,8 @@ public class GeminiMarketReportNarrativeGenerator implements MarketReportNarrati
           "Gemini 응답을 시장 리포트로 해석하지 못했습니다. "
               + exception.getClass().getSimpleName()
               + ": "
-              + safeText(exception.getMessage()));
+              + safeText(exception.getMessage()),
+          exception);
     }
   }
 
@@ -246,6 +252,8 @@ public class GeminiMarketReportNarrativeGenerator implements MarketReportNarrati
                 "content", Map.of("type", "STRING"),
                 "sourceIds", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
             "required",
+            List.of("title", "summary", "content", "sourceIds"),
+            "propertyOrdering",
             List.of("title", "summary", "content", "sourceIds"));
     return Map.of("responseMimeType", "application/json", "responseSchema", schema);
   }

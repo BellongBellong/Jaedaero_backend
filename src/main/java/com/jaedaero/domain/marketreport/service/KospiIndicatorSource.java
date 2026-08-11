@@ -1,9 +1,8 @@
 package com.jaedaero.domain.marketreport.service;
 
 import com.jaedaero.domain.marketreport.client.FinancialMarketIndexClient;
-import com.jaedaero.domain.marketreport.client.FinancialMarketIndexItem;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
-import java.math.BigDecimal;
+import com.jaedaero.domain.marketreport.model.MarketIndex;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -33,19 +32,19 @@ public class KospiIndicatorSource implements MarketIndicatorSource {
   public Optional<MarketIndicatorObservation> fetch(LocalDate businessDate) {
     for (int daysBefore = 1; daysBefore <= MAX_LOOKBACK_DAYS; daysBefore++) {
       LocalDate candidate = businessDate.minusDays(daysBefore);
-      List<FinancialMarketIndexItem> rows =
+      List<MarketIndex> rows =
           marketIndexClient.getStockMarketIndex(
               candidate.format(BASE_DATE_FORMAT), INDEX_NAME);
       if (!rows.isEmpty()) {
-        FinancialMarketIndexItem row = rows.get(0);
+        MarketIndex row = rows.get(0);
         return Optional.of(
             new MarketIndicatorObservation(
                 type(),
-                LocalDate.parse(row.basDt(), BASE_DATE_FORMAT),
+                row.baseDate(),
                 "금융위원회 지수시세정보",
-                new BigDecimal(row.clpr()),
-                new BigDecimal(row.vs()),
-                new BigDecimal(row.fltRt())));
+                row.closingPrice(),
+                row.change(),
+                row.changeRate()));
       }
     }
     return Optional.empty();

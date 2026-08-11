@@ -2,6 +2,8 @@ package com.jaedaero.domain.marketreport.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jaedaero.domain.marketreport.model.MarketIndex;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -9,6 +11,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +27,8 @@ public class FinancialMarketIndexClient {
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
   private static final String STOCK_MARKET_INDEX_PATH = "/getStockMarketIndex";
   private static final String NORMAL_RESULT_CODE = "00";
+  private static final DateTimeFormatter BASE_DATE_FORMAT =
+      DateTimeFormatter.ofPattern("yyyyMMdd");
 
   private final URI baseUri;
   private final String serviceKey;
@@ -50,7 +56,7 @@ public class FinancialMarketIndexClient {
     this.objectMapper = objectMapper;
   }
 
-  public List<FinancialMarketIndexItem> getStockMarketIndex(String basDt, String idxNm) {
+  public List<MarketIndex> getStockMarketIndex(String basDt, String idxNm) {
     if (!StringUtils.hasText(serviceKey)) {
       throw new FinancialMarketIndexApiException(
           "금융위원회 지수시세정보 서비스키가 설정되지 않았습니다. "
@@ -111,7 +117,7 @@ public class FinancialMarketIndexClient {
     return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
   }
 
-  private List<FinancialMarketIndexItem> parse(String responseBody) throws Exception {
+  private List<MarketIndex> parse(String responseBody) throws Exception {
     JsonNode root = objectMapper.readTree(responseBody);
     JsonNode response = root.path("response");
     JsonNode header = response.path("header");
@@ -130,23 +136,30 @@ public class FinancialMarketIndexClient {
       return List.of();
     }
 
-    List<FinancialMarketIndexItem> items = new ArrayList<>();
+    List<MarketIndex> items = new ArrayList<>();
     if (itemNode.isArray()) {
       for (JsonNode item : itemNode) {
-        items.add(toItem(item));
+        items.add(toMarketIndex(item));
       }
     } else if (itemNode.isObject()) {
-      items.add(toItem(itemNode));
+      items.add(toMarketIndex(itemNode));
     }
     return List.copyOf(items);
   }
 
-  private FinancialMarketIndexItem toItem(JsonNode item) {
-    return new FinancialMarketIndexItem(
-        item.path("basDt").asText(""),
-        item.path("idxNm").asText(""),
-        item.path("clpr").asText(""),
-        item.path("vs").asText(""),
-        item.path("fltRt").asText(""));
+  private MarketIndex toMarketIndex(JsonNode item) {
+    FinancialMarketIndexItem externalItem =
+        new FinancialMarketIndexItem(
+            item.path("basDt").asText(""),
+            item.path("idxNm").asText(""),
+            item.path("clpr").asText(""),
+            item.path("vs").asText(""),
+            item.path("fltRt").asText(""));
+    return new MarketIndex(
+        LocalDate.parse(externalItem.basDt(), BASE_DATE_FORMAT),
+        externalItem.idxNm(),
+        new BigDecimal(externalItem.clpr()),
+        new BigDecimal(externalItem.vs()),
+        new BigDecimal(externalItem.fltRt()));
   }
 }

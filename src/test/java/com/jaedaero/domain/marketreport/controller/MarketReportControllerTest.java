@@ -76,7 +76,7 @@ class MarketReportControllerTest {
     private int callCount;
 
     RecordingGenerationService() {
-      super(null, null, null, null, null, null, Clock.systemDefaultZone());
+      super(null, null, null, null, null, Clock.systemDefaultZone());
     }
 
     @Override
