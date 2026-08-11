@@ -11,7 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import lombok.RequiredArgsConstructor;
 
-/** Production JWT filter. Enable it in SecurityConfig when development header authentication is removed. */
+/** 운영 환경 JWT 필터입니다. 개발용 헤더 인증을 제거할 때 SecurityConfig에서 활성화합니다. */
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

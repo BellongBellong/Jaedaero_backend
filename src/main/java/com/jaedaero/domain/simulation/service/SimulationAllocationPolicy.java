@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.stereotype.Component;
 
-/** What-if 월 배분금액의 제약과 표시용 비율 계산을 담당한다. */
+/** 가정 시뮬레이션 월 배분금액의 제약과 표시용 비율 계산을 담당합니다. */
 @Component
 public class SimulationAllocationPolicy {
 

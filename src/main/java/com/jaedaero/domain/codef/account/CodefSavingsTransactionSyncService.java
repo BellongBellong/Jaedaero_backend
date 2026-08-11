@@ -16,7 +16,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Synchronizes CODEF installment-savings transactions and military-savings details. */
+/** CODEF 적금 거래내역과 장병내일준비적금 상세 정보를 동기화합니다. */
 @Service
 public class CodefSavingsTransactionSyncService {
 

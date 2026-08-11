@@ -10,7 +10,7 @@
     </settings>
 
     <typeAliases>
-        <!-- domain 별칭 example -->
+        <!-- 도메인 별칭 예시 -->
         <typeAlias alias="AuthUserVo" type="com.jaedaero.domain.auth.vo.AuthUserVo"/>
     </typeAliases>
 </configuration>

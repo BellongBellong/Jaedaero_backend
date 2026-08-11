@@ -1,10 +1,10 @@
-# Copy this file to application-local.properties and fill in local values.
+# 이 파일을 application-local.properties로 복사한 뒤 로컬 값을 입력하세요.
 db.driver=com.mysql.cj.jdbc.Driver
 db.url=jdbc:mysql://localhost:3306/jaedaero?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 db.username=your_username
 db.password=your_password
 
-# Social login credentials are read from Jaedaero_backend/.env.
+# 소셜 로그인 자격 증명은 Jaedaero_backend/.env에서 읽습니다.
 google.client-id=${GOOGLE_CLIENT_ID}
 google.client-secret=${GOOGLE_CLIENT_SECRET}
 kakao.client-id=${KAKAO_CLIENT_ID}
@@ -14,17 +14,17 @@ codef.client-secret=${CODEF_CLIENT_SECRET}
 codef.public-key=${CODEF_PUBLIC_KEY}
 codef.api.base-url=https://development.codef.io
 codef.debug.account-create-enabled=true
+# 로컬 CODEF 요청 전에는 POST /api/v1/auth/login으로 사용자를 생성하고,
+# 응답의 userId를 CODEF 요청에 사용하세요. X-User-Id 헤더만으로는 users 행이 생성되지 않습니다.
 
-# OpenAI Chat Completions 호환 프록시. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
+# OpenAI Chat Completions 호환 프록시입니다. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
 llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.cloudtype.app/v1/chat/completions
-# Models are assigned by server task policy; clients do not select them.
+# 모델은 서버 작업 정책이 지정하며 클라이언트는 선택하지 않습니다.
 llm.api-key=your_llm_api_key
 
-# Generate once with: openssl rand -base64 32
-# Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
+# 한 번만 생성하세요: openssl rand -base64 32
+# 실제 키는 절대 커밋하지 마세요. 키를 잃으면 저장된 Connected ID와 계좌번호를 읽을 수 없습니다.
 app.crypto.master-key-base64=your_32_byte_aes256_key_base64
 
-# JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
-codef.demo.user-id=1
 # KRX Open API 인증키
 krx.api.auth-key=YOUR_KRX_AUTH_KEY

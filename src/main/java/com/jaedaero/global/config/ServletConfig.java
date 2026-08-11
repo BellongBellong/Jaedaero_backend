@@ -17,8 +17,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 /**
- * 🌐 Spring MVC Web Context 설정 클래스
- * - Spring MVC의 웹 계층(Presentation Layer)을 담당하는 컨텍스트 설정 클래스
+ * 🌐 Spring MVC 웹 컨텍스트 설정 클래스
+ * - Spring MVC의 웹 계층(프레젠테이션 계층)을 담당하는 컨텍스트 설정 클래스
  * - 사용자 요청 처리와 관련된 모든 웹 컴포넌트들을 관리하고 설정함
  */
 @Configuration
@@ -59,7 +59,7 @@ public class ServletConfig implements WebMvcConfigurer {
         registry.addViewController("/")
                 .setViewName("forward:/resources/index.html");
 
-        // Springfox 3 Swagger UI entry point.
+        // Springfox 3 Swagger UI 진입 경로입니다.
         registry.addViewController("/swagger-ui.html")
                 .setViewName("redirect:/swagger-ui/index.html");
     }
@@ -74,7 +74,7 @@ public class ServletConfig implements WebMvcConfigurer {
                 .addResourceHandler("/resources/**")
                 .addResourceLocations("/resources/");
 
-        // 프론트엔드 assets 핸들러
+        // 프론트엔드 정적 자원 핸들러
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("/resources/assets/");
 
@@ -101,7 +101,7 @@ public class ServletConfig implements WebMvcConfigurer {
         return resolver;
     }
 
-    /** JSP view name (for example, codef-demo/login) to WEB-INF JSP path mapping. */
+    /** JSP 뷰 이름을 WEB-INF 아래 JSP 경로로 매핑합니다. */
     @Bean
     public InternalResourceViewResolver jspViewResolver() {
         InternalResourceViewResolver resolver = new InternalResourceViewResolver();

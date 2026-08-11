@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Converts expected CODEF failures into an API response instead of a Tomcat error page. */
+/** 예상 가능한 CODEF 실패를 Tomcat 오류 페이지 대신 API 응답으로 변환합니다. */
 @RestControllerAdvice(basePackages = "com.jaedaero")
 public class CodefApiExceptionHandler {
 

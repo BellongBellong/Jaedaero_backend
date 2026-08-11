@@ -1,4 +1,4 @@
-# 제대로 Backend
+# 제대로 백엔드
 
 군인의 확정소득을 기반으로 전역 예상 자산을 계산하고 AI 금융 코칭을 제공하는 `제대로(JaedaeRo)`의 백엔드 저장소입니다.
 
@@ -40,5 +40,6 @@ com.jaedaero
     │   └── token
     └── investment
         ├── etf      # KRX ETF 시세·수익률 조회
+        └── recommendation # KRX ETF 위험등급별 분류
         └── exception
 ```

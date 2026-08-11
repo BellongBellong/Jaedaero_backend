@@ -14,10 +14,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Server-side client for CODEF OAuth token issuance.
+ * CODEF OAuth 토큰 발급을 위한 서버 측 클라이언트입니다.
  *
- * <p>Client credentials must be supplied through application-local.properties or deployment
- * environment variables. They must never be sent to the frontend or written to logs.
+ * <p>클라이언트 자격 증명은 application-local.properties 또는 배포 환경 변수로만 제공해야 합니다.
+ * 프런트엔드에 전송하거나 로그에 남겨서는 안 됩니다.
  */
 @Component
 public class CodefTokenClient {
