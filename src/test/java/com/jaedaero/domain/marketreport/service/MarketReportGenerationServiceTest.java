@@ -99,6 +99,8 @@ class MarketReportGenerationServiceTest {
     assertTrue(generator.prompt.contains("한국 표준시(KST, Asia/Seoul) 기준 서비스 날짜: 2026-08-06"));
     assertTrue(generator.prompt.contains("최신성·시장 관련성·매체 다양성으로 선별한 뉴스 후보"));
     assertTrue(generator.prompt.contains("Finnhub Market News"));
+    assertTrue(generator.prompt.contains("지표 값·등락·상태를 반복하거나 별도로 해설하지 마세요"));
+    assertTrue(generator.prompt.contains("핵심 사건, 시장 반응과 주요 쟁점"));
     assertTrue(generator.prompt.contains("title, summary, content, sourceIds 필드"));
     assertTrue(generator.prompt.contains("한국어 300자 이상의 본문"));
     assertTrue(generator.prompt.contains("양의 정수"));

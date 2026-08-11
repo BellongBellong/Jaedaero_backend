@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
 @Component
 public class MarketReportGenerationService {
 
-  static final String PROMPT_VERSION = "gemini-finnhub-v4-structured-market-report";
+  static final String PROMPT_VERSION = "gemini-finnhub-v5-news-focused-market-report";
   static final int MINIMUM_CONTENT_CHAR_COUNT =
       GeminiMarketReportNarrativeGenerator.MINIMUM_CONTENT_CHAR_COUNT;
   static final String FALLBACK_TITLE = "오늘의 AI 시장 리포트";
@@ -213,7 +213,9 @@ public class MarketReportGenerationService {
       }
     }
     return builder
-        .append("\n위 지표와 뉴스 후보에 명시된 사실만 사용해 한국어 일일 시장 리포트를 작성하세요. ")
+        .append("\n위 뉴스 후보에 명시된 사실을 중심으로 한국어 일일 시장 리포트를 작성하세요. ")
+        .append("4개 시장 지표는 화면 상단에 별도로 표시되므로 title, summary, content에서 지표 값·등락·상태를 반복하거나 별도로 해설하지 마세요. ")
+        .append("선별 뉴스에서 확인되는 핵심 사건, 시장 반응과 주요 쟁점을 중심으로 종합하세요. ")
         .append("서로 다른 기사 2개 이상을 실제로 근거로 사용하고, 기사 간 내용이 다르면 불확실성을 명시하세요. ")
         .append("제공되지 않은 최신 사실을 추가하거나 원인을 추측하거나 투자 조언·수익 보장을 쓰지 마세요. ")
         .append("기사 전문을 복사하지 말고 사실을 종합하세요. ")
