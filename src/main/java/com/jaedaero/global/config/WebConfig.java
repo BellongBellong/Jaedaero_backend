@@ -22,7 +22,7 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
     final int FILE_SIZE_THRESHOLD = 1024 * 1024 * 5;   // 5MB
 
     /**
-     * 🌱 Root Application Context 설정 클래스 지정
+     * 🌱 루트 애플리케이션 컨텍스트 설정 클래스를 지정합니다.
      */
     @Override
     protected Class<?>[] getRootConfigClasses() {
@@ -33,7 +33,7 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
     }
 
     /**
-     * 🌐 Servlet Application Context 설정 클래스 지정
+     * 🌐 서블릿 애플리케이션 컨텍스트 설정 클래스를 지정합니다.
      */
     @Override
     protected Class<?>[] getServletConfigClasses() {
@@ -43,11 +43,11 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
 
     /**
      * 🎯 DispatcherServlet URL 매핑 패턴 설정
-     * - Spring MVC의 Front Controller인 DispatcherServlet이 처리할 URL 패턴 정의
+     * - Spring MVC의 프런트 컨트롤러인 DispatcherServlet이 처리할 URL 패턴을 정의합니다.
      */
     @Override
     protected String[] getServletMappings() {
-        return new String[]{"/"}; // 스프링의 FrontController인 DispatcherServlet이 담당할 URL 매핑 패턴
+        return new String[]{"/"}; // 스프링의 프런트 컨트롤러인 DispatcherServlet이 담당할 URL 매핑 패턴
     }
 
     /**
@@ -76,10 +76,10 @@ public class WebConfig extends AbstractAnnotationConfigDispatcherServletInitiali
 
     @Override
     protected void customizeRegistration(ServletRegistration.Dynamic registration) {
-        // 📍 404 에러를 Exception으로 변환
+        // 📍 404 오류를 예외로 변환
         registration.setInitParameter("throwExceptionIfNoHandlerFound", "true");
 
-        // 📍 Multipart 파일 업로드 설정
+        // 📍 다중 파일 업로드 설정
         MultipartConfigElement multipartConfig = new MultipartConfigElement(
                 LOCATION,           // 업로드 처리 디렉토리 경로
                 MAX_FILE_SIZE,      // 업로드 가능한 파일 하나의 최대 크기

@@ -3,7 +3,7 @@ package com.jaedaero.domain.codef.account;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-/** Registration state of one securities institution persisted for a user. */
+/** 사용자에게 저장된 증권 기관 한 곳의 등록 상태입니다. */
 @ApiModel(description = "사용자별 증권사 등록 상태")
 public class SecuritiesRegistrationStatusResponse {
   @ApiModelProperty(value = "사용자 ID", example = "1")

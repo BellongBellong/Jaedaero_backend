@@ -1,6 +1,6 @@
 package com.jaedaero.domain.codef.token;
 
-/** Safe response for development token verification. The access token is never exposed. */
+/** 개발용 토큰 검증에 안전한 응답입니다. 액세스 토큰은 절대 노출하지 않습니다. */
 public class CodefTokenVerificationResponse {
 
   private final boolean issued;

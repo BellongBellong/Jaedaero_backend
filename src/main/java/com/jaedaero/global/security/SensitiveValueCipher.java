@@ -11,7 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** Encrypts Connected IDs and account numbers before they are persisted. */
+/** Connected ID와 계좌번호를 저장하기 전에 암호화합니다. */
 @Component
 public class SensitiveValueCipher {
 

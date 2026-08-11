@@ -1,7 +1,7 @@
 package com.jaedaero.domain.codef.token;
 
 /**
- * Thrown when CODEF OAuth token issuance fails. Sensitive response data is intentionally omitted.
+ * CODEF OAuth 토큰 발급에 실패했을 때 발생합니다. 민감한 응답 데이터는 의도적으로 제외합니다.
  */
 public class CodefTokenException extends RuntimeException {
 
