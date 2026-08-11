@@ -149,12 +149,23 @@ def runSqlFile(File sqlFile) {
         processBuilder.environment().put('MYSQL_PWD', db.password)
     }
     def process = processBuilder.start()
-    sqlFile.withInputStream { input ->
-        process.outputStream.withStream { output -> output << input }
+    def outputFuture = java.util.concurrent.CompletableFuture.supplyAsync {
+        process.inputStream.getText('UTF-8')
     }
+    def inputFailure = null
+    try {
+        sqlFile.withInputStream { input ->
+            process.outputStream.withStream { output -> output << input }
+        }
+    } catch (Exception exception) {
+        inputFailure = exception
+    }
+    def mysqlOutput = outputFuture.join().trim()
     def exitCode = process.waitFor()
+    if (inputFailure != null) {
+        throw new GradleException("${sqlFile.name} 입력 전달이 실패했습니다.", inputFailure)
+    }
     if (exitCode != 0) {
-        def mysqlOutput = process.inputStream.getText('UTF-8').trim()
         throw new GradleException(
                 "${sqlFile.name} 실행이 실패했습니다 (exit code ${exitCode})."
                         + (mysqlOutput ? "\nMySQL 오류:\n${mysqlOutput}" : ""))

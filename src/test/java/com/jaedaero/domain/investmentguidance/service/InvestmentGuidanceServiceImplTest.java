@@ -209,6 +209,51 @@ class InvestmentGuidanceServiceImplTest {
     assertEquals(InvestmentGuidanceErrorCode.NOT_FOUND, anotherUser.getErrorCode());
   }
 
+  @Test
+  void createsNewGuidanceWhenOnlySafeAndRiskAssetSnapshotChanges() {
+    InMemoryGuidanceMapper guidanceMapper = new InMemoryGuidanceMapper();
+    BrokeragePositionSnapshot[] position = {
+      new BrokeragePositionSnapshot(
+          1_100_000L,
+          100_000L,
+          1_000_000L,
+          500_000L,
+          500_000L,
+          0L,
+          BigDecimal.ZERO.setScale(4),
+          LocalDateTime.of(2026, 8, 4, 9, 0))
+    };
+    InvestmentGuidanceService service =
+        new InvestmentGuidanceServiceImpl(
+            guidanceMapper,
+            new StubGuidanceInputMapper(),
+            new InMemoryPlanMapper(),
+            new InMemoryApplicationMapper(),
+            (userId, plan) -> position[0],
+            new InvestmentGuidanceCalculator(),
+            new TemplateInvestmentGuidanceReasonGenerator(),
+            FIXED_CLOCK);
+
+    InvestmentGuidanceResponse first = service.create(1L);
+    position[0] =
+        new BrokeragePositionSnapshot(
+            1_100_000L,
+            200_000L,
+            900_000L,
+            500_000L,
+            500_000L,
+            0L,
+            BigDecimal.ZERO.setScale(4),
+            LocalDateTime.of(2026, 8, 4, 9, 0));
+    InvestmentGuidanceResponse second = service.create(1L);
+
+    assertEquals(1L, first.getGuidanceId());
+    assertEquals(2L, second.getGuidanceId());
+    assertEquals(2, guidanceMapper.guidances.size());
+    assertEquals(200_000L, guidanceMapper.guidances.get(1).getSafeAssetAmount());
+    assertEquals(900_000L, guidanceMapper.guidances.get(1).getRiskAssetAmount());
+  }
+
   private static class StubGuidanceInputMapper implements InvestmentGuidanceInputMapper {
 
     private final long targetAmount;

@@ -408,6 +408,8 @@ public class InvestmentGuidanceServiceImpl implements InvestmentGuidanceService 
             String.valueOf(source.getExpectedReturnRate()),
             String.valueOf(position.investmentPrincipal()),
             String.valueOf(position.accountValue()),
+            String.valueOf(position.safeAssetAmount()),
+            String.valueOf(position.riskAssetAmount()),
             String.valueOf(position.marketValue()),
             String.valueOf(position.unrealizedProfitLoss()),
             String.valueOf(position.returnRate()));
