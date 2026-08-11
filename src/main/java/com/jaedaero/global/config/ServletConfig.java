@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MultipartResolver;
@@ -30,6 +32,23 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
   }
 )
 public class ServletConfig implements WebMvcConfigurer {
+
+    /**
+     * RootConfig와 별개의 서블릿(자식) 컨텍스트라, 여기서도 직접 등록해야 이 컨텍스트의 빈(Controller 등)에서
+     * {@code @Value("${...}")}가 application.properties/application-local.properties를 읽는다.
+     * 등록하지 않으면 placeholder가 System 프로퍼티만 보고 기본값으로 폴백한다.
+     */
+    @Bean
+    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+        PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
+        configurer.setLocations(
+                new ClassPathResource("application.properties"),
+                new ClassPathResource("application-local.properties")
+        );
+        configurer.setIgnoreResourceNotFound(true);
+        configurer.setLocalOverride(true);
+        return configurer;
+    }
 
     /**
      * "/" 요청 시 /resources/index.html로 포워드 설정

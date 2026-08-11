@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper">
+
+    <sql id="dailyMarketIndicatorColumns">
+        indicator_id, report_id, indicator_type, data_as_of, source,
+        observed_value, change_value, change_rate, status, created_at
+    </sql>
+
+    <insert id="insert" parameterType="com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo"
+            useGeneratedKeys="true" keyProperty="indicatorId">
+        INSERT INTO daily_market_indicator (
+            report_id, indicator_type, data_as_of, source,
+            observed_value, change_value, change_rate, status
+        ) VALUES (
+            #{reportId}, #{indicatorType}, #{dataAsOf}, #{source},
+            #{observedValue}, #{changeValue}, #{changeRate}, #{status}
+        )
+    </insert>
+
+    <select id="findByReportId"
+            resultType="com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo">
+        SELECT <include refid="dailyMarketIndicatorColumns"/>
+        FROM daily_market_indicator
+        WHERE report_id = #{reportId}
+        ORDER BY CASE indicator_type
+            WHEN 'KOSPI' THEN 1
+            WHEN 'KOSDAQ' THEN 2
+            WHEN 'US_TREASURY_10Y' THEN 3
+            WHEN 'USD_KRW' THEN 4
+            ELSE 5
+        END
+    </select>
+</mapper>
