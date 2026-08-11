@@ -32,6 +32,11 @@ public interface StrategyApplicationMapper {
       @Param("frequency") InvestmentFrequency frequency,
       @Param("contributionAmount") long contributionAmount);
 
+  default StrategyApplicationVo findLatestByGuidanceIdAndUserId(
+      @Param("guidanceId") long guidanceId, @Param("userId") long userId) {
+    return null;
+  }
+
   List<StrategyApplicationVo> findByUserId(
       @Param("userId") long userId,
       @Param("offset") long offset,

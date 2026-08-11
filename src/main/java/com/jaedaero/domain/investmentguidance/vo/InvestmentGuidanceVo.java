@@ -32,6 +32,8 @@ public class InvestmentGuidanceVo {
   private Long marketValue;
   private Long unrealizedProfitLoss;
   private BigDecimal returnRate;
+  private Long safeAssetAmount;
+  private Long riskAssetAmount;
   private BigDecimal expectedReturnRate;
   private Integer remainingContributionCount;
   private Long safetyBufferAmount;

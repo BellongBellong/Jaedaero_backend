@@ -1,6 +1,7 @@
 package com.jaedaero.domain.investmentguidance.controller;
 
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceApplyRequest;
+import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceDetailResponse;
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceResponse;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceErrorCode;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceException;
@@ -29,6 +30,12 @@ public class InvestmentGuidanceController {
   @GetMapping("/latest")
   public ResponseEntity<InvestmentGuidanceResponse> getLatest(Authentication authentication) {
     return ResponseEntity.ok(service.getLatest(authenticatedUserId(authentication)));
+  }
+
+  @GetMapping("/{guidanceId}")
+  public ResponseEntity<InvestmentGuidanceDetailResponse> getDetail(
+      Authentication authentication, @PathVariable long guidanceId) {
+    return ResponseEntity.ok(service.getDetail(authenticatedUserId(authentication), guidanceId));
   }
 
   @PostMapping

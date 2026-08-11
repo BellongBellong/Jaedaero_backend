@@ -9,7 +9,8 @@
         guidance_id, user_id, plan_id, forecast_id, plan_updated_at, input_data_hash, service_stage, action_type,
         target_amount, current_contribution_amount, recommended_contribution_amount,
         continue_expected_asset, recommended_expected_asset, investment_principal,
-        market_value, unrealized_profit_loss, return_rate, expected_return_rate,
+        market_value, unrealized_profit_loss, return_rate, safe_asset_amount, risk_asset_amount,
+        expected_return_rate,
         remaining_contribution_count, safety_buffer_amount, reason,
         market_data_as_of, next_review_at, created_at
     </sql>
@@ -21,14 +22,16 @@
             user_id, plan_id, forecast_id, plan_updated_at, input_data_hash, service_stage, action_type,
             target_amount, current_contribution_amount, recommended_contribution_amount,
             continue_expected_asset, recommended_expected_asset, investment_principal,
-            market_value, unrealized_profit_loss, return_rate, expected_return_rate,
+            market_value, unrealized_profit_loss, return_rate, safe_asset_amount, risk_asset_amount,
+            expected_return_rate,
             remaining_contribution_count, safety_buffer_amount, reason,
             market_data_as_of, next_review_at
         ) VALUES (
             #{userId}, #{planId}, #{forecastId}, #{planUpdatedAt}, #{inputDataHash}, #{serviceStage}, #{actionType},
             #{targetAmount}, #{currentContributionAmount}, #{recommendedContributionAmount},
             #{continueExpectedAsset}, #{recommendedExpectedAsset}, #{investmentPrincipal},
-            #{marketValue}, #{unrealizedProfitLoss}, #{returnRate}, #{expectedReturnRate},
+            #{marketValue}, #{unrealizedProfitLoss}, #{returnRate}, #{safeAssetAmount}, #{riskAssetAmount},
+            #{expectedReturnRate},
             #{remainingContributionCount}, #{safetyBufferAmount}, #{reason},
             #{marketDataAsOf}, #{nextReviewAt}
         )

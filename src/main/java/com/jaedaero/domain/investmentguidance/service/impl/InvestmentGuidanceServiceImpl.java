@@ -1,6 +1,7 @@
 package com.jaedaero.domain.investmentguidance.service.impl;
 
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceApplyRequest;
+import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceDetailResponse;
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceResponse;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceErrorCode;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceException;
@@ -82,6 +83,26 @@ public class InvestmentGuidanceServiceImpl implements InvestmentGuidanceService 
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public InvestmentGuidanceDetailResponse getDetail(long userId, long guidanceId) {
+    InvestmentGuidanceVo guidance = guidanceMapper.findByIdAndUserId(guidanceId, userId);
+    if (guidance == null) {
+      throw new InvestmentGuidanceException(
+          InvestmentGuidanceErrorCode.NOT_FOUND, "조회할 적립식 투자 가이드를 찾을 수 없습니다.");
+    }
+    RecurringInvestmentPlanVo plan = planMapper.findByIdAndUserId(guidance.getPlanId(), userId);
+    if (plan == null) {
+      throw new InvestmentGuidanceException(
+          InvestmentGuidanceErrorCode.INPUT_NOT_READY, "가이드에 연결된 적립 계획을 찾을 수 없습니다.");
+    }
+    return InvestmentGuidanceDetailResponse.from(
+        guidance,
+        plan,
+        inputMapper.findCurrentRankNameByUserId(userId),
+        applicationMapper.findLatestByGuidanceIdAndUserId(guidanceId, userId));
+  }
+
+  @Override
   @Transactional
   public InvestmentGuidanceResponse create(long userId) {
     long targetAmount = requiredConfiguredTargetAmount(userId);
@@ -110,7 +131,9 @@ public class InvestmentGuidanceServiceImpl implements InvestmentGuidanceService 
     try {
       position = brokeragePositionProvider.load(userId, plan);
     } catch (RuntimeException exception) {
-      position = new BrokeragePositionSnapshot(0, 0, 0, 0, BigDecimal.ZERO.setScale(4), null);
+      position =
+          new BrokeragePositionSnapshot(
+              0, 0, 0, 0, 0, 0, BigDecimal.ZERO.setScale(4), null);
       dataIssue = "증권 데이터 조회 지연";
     }
 
@@ -177,6 +200,8 @@ public class InvestmentGuidanceServiceImpl implements InvestmentGuidanceService 
             .marketValue(position.marketValue())
             .unrealizedProfitLoss(position.unrealizedProfitLoss())
             .returnRate(position.returnRate())
+            .safeAssetAmount(position.safeAssetAmount())
+            .riskAssetAmount(position.riskAssetAmount())
             .expectedReturnRate(source.getExpectedReturnRate() == null ? BigDecimal.ZERO : source.getExpectedReturnRate())
             .remainingContributionCount(calculation.remainingContributionCount())
             .safetyBufferAmount(calculation.safetyBufferAmount())
