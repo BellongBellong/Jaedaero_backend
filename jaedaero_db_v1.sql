@@ -1,5 +1,5 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.1, 2026-08-07)
+-- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
 -- MySQL 8.0+
 -- ============================================================
 
@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS `asset_snapshot`;
 DROP TABLE IF EXISTS `transaction_history`;
 DROP TABLE IF EXISTS `soldier_saving`;
 DROP TABLE IF EXISTS `connected_account`;
+DROP TABLE IF EXISTS `codef_institution_connection`;
 DROP TABLE IF EXISTS `codef_connection`;
 DROP TABLE IF EXISTS `cashflow_forecast_month`;
 DROP TABLE IF EXISTS `cashflow_forecast`;
@@ -55,8 +56,8 @@ CREATE TABLE users (
                        social_type  ENUM('KAKAO', 'GOOGLE') NOT NULL COMMENT '소셜 로그인 유형',
                        social_id    VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
                        nickname     VARCHAR(50) NULL COMMENT '닉네임',
-                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NOT NULL DEFAULT 'ARMY' COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
-                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NOT NULL DEFAULT 'GREEN' COMMENT '프로필 배경색. 6종 중 선택',
+                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
+                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색. 6종 중 선택',
                        is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at TIMESTAMP NULL COMMENT '탈퇴 일시',
                        created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -233,27 +234,30 @@ CREATE TABLE codef_connection (
 -- 9. codef_institution_connection : 기관별 CODEF 로그인 정보
 -- ---------------------------------------------
 CREATE TABLE codef_institution_connection (
-    institution_connection_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    connection_id BIGINT NOT NULL,
-    institution_code VARCHAR(20) NOT NULL,
-    business_type ENUM('BK', 'ST') NOT NULL,
-    login_type VARCHAR(10) NOT NULL,
-    login_id_encrypted VARCHAR(1024) NULL,
-    login_password_encrypted VARCHAR(1024) NOT NULL,
-    birth_date_encrypted VARCHAR(1024) NULL,
-    status ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE',
-    last_sync_at TIMESTAMP NULL,
-    last_sync_error_message VARCHAR(500) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    institution_connection_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '기관별 연동 ID',
+    connection_id               BIGINT NOT NULL COMMENT 'CODEF 금융 연동 ID',
+    institution_code            VARCHAR(20) NOT NULL COMMENT 'CODEF organization 코드',
+    business_type               ENUM('BK', 'ST') NOT NULL COMMENT 'CODEF 업무 구분(BK 은행, ST 증권)',
+    login_type                  VARCHAR(10) NOT NULL COMMENT 'CODEF 로그인 방식(아이디/비밀번호는 1)',
+    login_id_encrypted          VARCHAR(1024) NULL COMMENT '암호화된 기관 로그인 ID',
+    login_password_encrypted    VARCHAR(1024) NOT NULL COMMENT '암호화된 기관 로그인 비밀번호',
+    birth_date_encrypted        VARCHAR(1024) NULL COMMENT '암호화된 생년월일',
+    status                      ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE' COMMENT '기관 연동 상태',
+    last_sync_at                TIMESTAMP NULL COMMENT '기관별 마지막 동기화 시각',
+    last_sync_error_message     VARCHAR(500) NULL COMMENT '기관별 최근 동기화 실패 사유',
+    created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    updated_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
     CONSTRAINT uq_codef_institution_connection
         UNIQUE (connection_id, institution_code, business_type),
     CONSTRAINT fk_codef_institution_connection_connection
         FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
             ON DELETE CASCADE,
     INDEX idx_codef_institution_connection_status (connection_id, status)
-) DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci;
+) COMMENT='CODEF 기관별 로그인 정보 및 동기화 상태. 로그인 식별자와 비밀번호는 평문 저장 금지'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
 -- 10. connected_account : CODEF 연동 계좌
@@ -1019,12 +1023,7 @@ CREATE TABLE leave_mode (
 CREATE TABLE daily_market_report (
                                      report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
                                      report_date        DATE NOT NULL COMMENT '서비스 기준일(18:00~익일 17:59 노출 구간의 기준 날짜)',
-                                     content            TEXT NOT NULL COMMENT 'OpenAI GPT(gpt-5-nano)가 생성한 오늘의 시장 경향 리포트 텍스트',
-                                     market_condition   ENUM('BULL', 'BEAR', 'NEUTRAL') NOT NULL COMMENT '오늘의 AI 판단 시장 상황',
-                                     report_status      ENUM('NORMAL', 'PARTIAL', 'STALE') NOT NULL DEFAULT 'NORMAL' COMMENT '리포트 전체 상태 — PARTIAL: 일부 지표 DELAYED/MISSING, STALE: 당일 배치 실패로 이전 리포트 노출 중',
-                                     generation_source  ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '서술 생성 출처',
-                                     model_name         VARCHAR(50) NOT NULL COMMENT '생성에 사용한 모델명(gpt-5-nano)',
-                                     prompt_version     VARCHAR(50) NOT NULL COMMENT 'Structured Outputs 프롬프트 버전',
+                                     content            TEXT NOT NULL COMMENT 'Gemini API가 생성한 오늘의 시장 경향 리포트 텍스트',
                                      valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 18:00)',
                                      valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 17:59)',
                                      created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -1032,30 +1031,6 @@ CREATE TABLE daily_market_report (
                                      CONSTRAINT uq_daily_market_report_date
                                          UNIQUE (report_date)
 ) COMMENT='오늘의 AI투자리포트 — 전체 사용자 공통 1일 1건'
-    DEFAULT CHARSET=utf8mb4
-    COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------
--- 31-B. daily_market_indicator : 오늘의 AI투자리포트 지표 원본값
--- ---------------------------------------------
-CREATE TABLE daily_market_indicator (
-                                         indicator_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '지표 ID',
-                                         report_id        BIGINT NOT NULL COMMENT '소속 리포트',
-                                         indicator_type   ENUM('KOSPI', 'KOSDAQ', 'US_TREASURY_10Y', 'USD_KRW') NOT NULL COMMENT '지표 종류',
-                                         data_as_of       TIMESTAMP NULL COMMENT '해당 지표 값의 실제 기준 시각(MISSING이면 NULL)',
-                                         source           VARCHAR(100) NOT NULL COMMENT '제공처명',
-                                         observed_value   DECIMAL(18,4) NULL COMMENT '관측값(지수·금리·환율, MISSING이면 NULL)',
-                                         change_value     DECIMAL(18,4) NULL COMMENT '전일 대비 변화량',
-                                         change_rate      DECIMAL(6,2) NULL COMMENT '전일 대비 변화율(%)',
-                                         status           ENUM('NORMAL', 'DELAYED', 'MISSING') NOT NULL COMMENT '지표 단위 수집 상태',
-                                         created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
-
-                                         CONSTRAINT uq_daily_market_indicator
-                                             UNIQUE (report_id, indicator_type),
-                                         CONSTRAINT fk_daily_market_indicator_report
-                                             FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
-                                                 ON DELETE CASCADE
-) COMMENT='오늘의 AI투자리포트 지표별 원본값 — 리포트 1건당 4행'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
