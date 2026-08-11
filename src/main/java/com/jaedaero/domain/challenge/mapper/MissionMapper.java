@@ -1,6 +1,7 @@
 package com.jaedaero.domain.challenge.mapper;
 
 import com.jaedaero.domain.challenge.common.enums.MissionType;
+import com.jaedaero.domain.challenge.vo.BadgeVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
 import java.time.LocalDate;
@@ -51,13 +52,12 @@ public interface MissionMapper {
   /** 사용자의 투자 뱃지 현황을 조회합니다. */
   InvestmentBadgeStatusVo findInvestmentBadgeStatus(@Param("userId") long userId);
 
-  /** 성향과 완료 수에 해당하는 최고 티어를 조회합니다. */
-  String findGradeByCompletionCount(
-      @Param("missionType") MissionType missionType,
-      @Param("completionCount") int completionCount);
+  /** 활성 뱃지 마스터 목록을 조회합니다. */
+  List<BadgeVo> findActiveBadges();
 
-  /** 현재 성향별 완료 수에 해당하는 뱃지 획득 이력을 동기화합니다. */
-  int syncEligibleUserBadges(@Param("userId") long userId);
+  /** 선택된 뱃지의 사용자 획득 이력을 저장합니다. */
+  int insertUserBadge(
+      @Param("userId") long userId, @Param("badgeId") long badgeId);
 
   /** 사용자의 성향별 투자 뱃지 티어를 갱신합니다. */
   int updateInvestmentBadgeGrade(

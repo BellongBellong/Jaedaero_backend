@@ -192,34 +192,27 @@
         WHERE user_id = #{userId}
     </select>
 
-    <select id="findGradeByCompletionCount" resultType="string">
-        SELECT grade
+    <select id="findActiveBadges"
+            resultType="com.jaedaero.domain.challenge.vo.BadgeVo">
+        SELECT
+            badge_id,
+            mission_type,
+            required_completion_count,
+            grade
         FROM badge
-        WHERE mission_type = #{missionType}
-          AND is_active = TRUE
-          AND required_completion_count &lt;= #{completionCount}
-        ORDER BY required_completion_count DESC
-        LIMIT 1
+        WHERE is_active = TRUE
+        ORDER BY mission_type, required_completion_count
     </select>
 
-    <insert id="syncEligibleUserBadges">
+    <insert id="insertUserBadge">
         INSERT INTO user_badge (
             user_id,
             badge_id
         )
-        SELECT
-            ib.user_id,
-            b.badge_id
-        FROM investment_badge ib
-        INNER JOIN badge b
-            ON (
-                (b.mission_type = 'SAFE'
-                    AND b.required_completion_count &lt;= ib.safe_count)
-                OR (b.mission_type = 'AGGRESSIVE'
-                    AND b.required_completion_count &lt;= ib.aggressive_count)
-            )
-        WHERE ib.user_id = #{userId}
-          AND b.is_active = TRUE
+        VALUES (
+            #{userId},
+            #{badgeId}
+        )
         ON DUPLICATE KEY UPDATE
             user_id = VALUES(user_id)
     </insert>

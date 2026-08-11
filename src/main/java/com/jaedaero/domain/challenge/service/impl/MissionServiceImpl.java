@@ -8,12 +8,14 @@ import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.MissionMapper;
 import com.jaedaero.domain.challenge.service.MissionService;
+import com.jaedaero.domain.challenge.vo.BadgeVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -106,17 +108,48 @@ public class MissionServiceImpl implements MissionService {
       missionMapper.incrementAggressiveMissionCount(userId);
     }
 
-    // 누락된 과거 뱃지를 포함해 현재 완료 수 기준의 뱃지 이력을 보정합니다.
-    missionMapper.syncEligibleUserBadges(userId);
     InvestmentBadgeStatusVo badgeStatus = missionMapper.findInvestmentBadgeStatus(userId);
-    updateGrade(userId, MissionType.SAFE, badgeStatus.getSafeCount());
-    updateGrade(userId, MissionType.AGGRESSIVE, badgeStatus.getAggressiveCount());
+    List<BadgeVo> activeBadges = missionMapper.findActiveBadges();
+    syncEligibleUserBadges(userId, badgeStatus, activeBadges);
+    updateGrade(userId, MissionType.SAFE, badgeStatus.getSafeCount(), activeBadges);
+    updateGrade(userId, MissionType.AGGRESSIVE, badgeStatus.getAggressiveCount(), activeBadges);
     return missionMapper.findInvestmentBadgeStatus(userId);
   }
 
+  /** 완료 수 기준에 해당하는 뱃지 획득 이력을 보정합니다. */
+  private void syncEligibleUserBadges(
+      long userId, InvestmentBadgeStatusVo badgeStatus, List<BadgeVo> activeBadges) {
+    activeBadges.stream()
+        .filter(badge -> isEligible(badge, badgeStatus))
+        .forEach(badge -> missionMapper.insertUserBadge(userId, badge.getBadgeId()));
+  }
+
+  /** 뱃지 성향의 완료 수가 해당 뱃지 기준 이상인지 확인합니다. */
+  private boolean isEligible(BadgeVo badge, InvestmentBadgeStatusVo badgeStatus) {
+    int completionCount;
+    if (badge.getMissionType() == MissionType.SAFE) {
+      completionCount = badgeStatus.getSafeCount();
+    } else if (badge.getMissionType() == MissionType.AGGRESSIVE) {
+      completionCount = badgeStatus.getAggressiveCount();
+    } else {
+      return false;
+    }
+    return completionCount >= badge.getRequiredCompletionCount();
+  }
+
   /** 누적 완료 수에 해당하는 성향별 최고 티어를 저장합니다. */
-  private void updateGrade(long userId, MissionType missionType, int completionCount) {
-    String grade = missionMapper.findGradeByCompletionCount(missionType, completionCount);
+  private void updateGrade(
+      long userId,
+      MissionType missionType,
+      int completionCount,
+      List<BadgeVo> activeBadges) {
+    String grade =
+        activeBadges.stream()
+            .filter(badge -> badge.getMissionType() == missionType)
+            .filter(badge -> badge.getRequiredCompletionCount() <= completionCount)
+            .max(Comparator.comparingInt(BadgeVo::getRequiredCompletionCount))
+            .map(BadgeVo::getGrade)
+            .orElse(null);
     missionMapper.updateInvestmentBadgeGrade(userId, missionType, grade);
   }
 }
