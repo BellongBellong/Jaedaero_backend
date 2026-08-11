@@ -70,6 +70,7 @@ public class MissionServiceImpl implements MissionService {
     addIfPresent(missions, missionMapper.findRecommendedMission(userId, MissionType.SAFE));
     addIfPresent(missions, missionMapper.findRecommendedMission(userId, MissionType.AGGRESSIVE));
     addIfPresent(missions, missionMapper.findOneTimeMission(userId));
+    addIfPresent(missions, missionMapper.findEventMission(userId));
     return missions;
   }
 
@@ -115,5 +116,8 @@ public class MissionServiceImpl implements MissionService {
   private void updateGrade(long userId, MissionType missionType, int completionCount) {
     String grade = missionMapper.findGradeByCompletionCount(missionType, completionCount);
     missionMapper.updateInvestmentBadgeGrade(userId, missionType, grade);
+    if (grade != null) {
+      missionMapper.insertUserBadgeByGrade(userId, missionType, grade);
+    }
   }
 }

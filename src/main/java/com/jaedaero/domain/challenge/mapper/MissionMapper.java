@@ -56,6 +56,12 @@ public interface MissionMapper {
       @Param("missionType") MissionType missionType,
       @Param("completionCount") int completionCount);
 
+  /** 달성한 성향별 티어 뱃지 획득 이력을 저장합니다. */
+  int insertUserBadgeByGrade(
+      @Param("userId") long userId,
+      @Param("missionType") MissionType missionType,
+      @Param("grade") String grade);
+
   /** 사용자의 성향별 투자 뱃지 티어를 갱신합니다. */
   int updateInvestmentBadgeGrade(
       @Param("userId") long userId,
