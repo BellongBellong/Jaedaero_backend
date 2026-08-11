@@ -68,6 +68,11 @@ class InvestmentPreferenceServiceImplTest {
     }
 
     @Override
+    public InvestmentPreference findInitialPreferenceByUserId(long userId) {
+      return preference;
+    }
+
+    @Override
     public void upsertInitialPreference(
         long userId, InvestmentPreference investmentPreference) {
       this.userId = userId;

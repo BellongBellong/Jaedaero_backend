@@ -12,11 +12,11 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 
-/** Calculates the monthly salary, saving/investment allocation, spending, and ending asset forecast. */
+/** 월별 급여, 저축·투자 배분, 지출 및 기말 자산 예측을 계산합니다. */
 @Component
 public class CashflowCalculator {
 
-  /** Initial allocation used until a synchronized soldier-savings amount is available. */
+  /** 동기화된 장병 적금 금액을 가져오기 전까지 사용할 초기 배분값입니다. */
   public static final long DEFAULT_MONTHLY_SAVING_AMOUNT = 550_000L;
   public static final long DEFAULT_MONTHLY_SPENDING_AMOUNT = 0L;
 
@@ -152,9 +152,8 @@ public class CashflowCalculator {
   }
 
   /**
-   * Estimates the day within the month that the target is reached by spreading that month's net
-   * asset increase evenly across the remaining calendar days. It is an estimate because salaries,
-   * spending, and maturity benefits are currently forecast monthly.
+   * 해당 월의 순자산 증가액을 남은 날짜에 균등하게 배분해 목표 달성일을 추정합니다. 급여·지출·만기
+   * 혜택이 현재 월 단위로 예측되므로 이 값은 추정치입니다.
    */
   private LocalDate estimatedFinancialDischargeDate(
       long assetBeforeMonth,

@@ -1,4 +1,4 @@
 package com.jaedaero.domain.codef.persistence;
 
-/** Institution and CODEF business type needed for a subsequent account refresh. */
+/** 이후 계좌 갱신에 필요한 기관과 CODEF 업무 구분입니다. */
 public record StoredInstitutionSyncTarget(String institutionCode, String businessType) {}

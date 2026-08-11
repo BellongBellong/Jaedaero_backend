@@ -20,6 +20,9 @@
         <result property="profileSource" column="profile_source"
                 javaType="com.jaedaero.domain.auth.common.enums.ProfileSource"/>
         <result property="missionCompletionCount" column="mission_completion_count"/>
+        <result property="highestBadgeType" column="highest_badge_type"
+                javaType="com.jaedaero.domain.challenge.common.enums.MissionType"/>
+        <result property="highestBadgeGrade" column="highest_badge_grade"/>
     </resultMap>
 
     <resultMap id="rankingStatisticsResultMap"
@@ -80,6 +83,24 @@
                 AND cmr.result_month = #{resultMonth}
             WHERE cm.group_id = #{groupId}
               AND member_user.is_withdrawn = FALSE
+        ),
+        highest_badges AS (
+            SELECT
+                ub.user_id,
+                b.mission_type AS highest_badge_type,
+                b.grade AS highest_badge_grade,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ub.user_id
+                    ORDER BY
+                        b.required_completion_count DESC,
+                        FIELD(b.mission_type, 'SAFE', 'AGGRESSIVE'),
+                        ub.acquired_at ASC,
+                        ub.user_badge_id ASC
+                ) AS badge_ranking_no
+            FROM user_badge ub
+            INNER JOIN badge b ON b.badge_id = ub.badge_id
+            INNER JOIN ranked_members rm ON rm.user_id = ub.user_id
+            WHERE b.is_active = TRUE
         )
     </sql>
 
@@ -104,9 +125,14 @@
             u.nickname,
             u.profile_image,
             u.profile_source,
-            rm.mission_completion_count
+            rm.mission_completion_count,
+            hb.highest_badge_type,
+            hb.highest_badge_grade
         FROM ranked_members rm
         INNER JOIN users u ON u.user_id = rm.user_id
+        LEFT JOIN highest_badges hb
+            ON hb.user_id = rm.user_id
+            AND hb.badge_ranking_no = 1
         WHERE u.is_withdrawn = FALSE
         ORDER BY rm.ranking_no
         LIMIT 3

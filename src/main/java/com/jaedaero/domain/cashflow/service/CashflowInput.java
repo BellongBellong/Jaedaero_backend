@@ -4,7 +4,7 @@ import com.jaedaero.domain.auth.common.enums.SoldierType;
 import java.time.LocalDate;
 import java.util.List;
 
-/** One calculation's immutable inputs, collected outside the calculator. */
+/** 계산기 외부에서 수집한 한 건의 불변 계산 입력값입니다. */
 public record CashflowInput(
     long baseAsset,
     long targetAmount,

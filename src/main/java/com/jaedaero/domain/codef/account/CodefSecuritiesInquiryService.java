@@ -13,8 +13,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * Queries CODEF securities assets and stock holdings without persisting sensitive portfolio
- * details.
+ * 민감한 포트폴리오 상세 정보를 저장하지 않고 CODEF 증권 자산과 주식 보유내역을 조회합니다.
  */
 @Service
 public class CodefSecuritiesInquiryService {
