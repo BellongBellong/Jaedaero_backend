@@ -10,12 +10,15 @@ import java.util.List;
 import javax.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /** 클라이언트 애플리케이션에서 사용하는 공개 계좌 연동 API입니다. */
 @Api(tags = "계좌 연동")
@@ -67,5 +70,22 @@ public class AccountConnectionController {
     return repository.findAccountsByUserId(userId).stream()
         .map(ConnectedAccountResponse::new)
         .toList();
+  }
+
+  @ApiOperation(
+      value = "연동 계좌 비활성화",
+      notes =
+          "계좌 데이터를 실제 삭제하지 않고 INACTIVE 상태로 전환합니다. 비활성 계좌는 계좌 목록과 분석 대상에서 제외되며,"
+              + " 이후 계좌 새로고침으로 다시 활성화되지 않습니다.")
+  @DeleteMapping("/{accountId}")
+  public ResponseEntity<Void> deactivateAccount(
+      @ApiParam(value = "비활성화할 계좌 ID", required = true, example = "5") @PathVariable long accountId,
+      @ApiParam(value = "사용자 ID. JWT 도입 후 인증 사용자 ID로 대체합니다.", required = true, example = "1")
+          @RequestParam
+          long userId) {
+    if (repository.deactivateAccountByIdAndUserId(accountId, userId) == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자의 활성 연동 계좌를 찾을 수 없습니다.");
+    }
+    return ResponseEntity.noContent().build();
   }
 }
