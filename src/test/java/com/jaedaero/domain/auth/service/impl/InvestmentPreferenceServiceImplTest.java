@@ -7,18 +7,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jaedaero.domain.auth.common.enums.InvestmentPreference;
 import com.jaedaero.domain.auth.dto.InvestmentPreferenceRequest;
 import com.jaedaero.domain.auth.dto.InvestmentPreferenceResponse;
+import com.jaedaero.domain.auth.event.OnboardingCompletedEvent;
 import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.InvestmentPreferenceException;
 import com.jaedaero.domain.auth.mapper.InvestmentPreferenceMapper;
 import com.jaedaero.domain.auth.service.InvestmentPreferenceService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 class InvestmentPreferenceServiceImplTest {
 
   @Test
   void storesPreferenceSeedAndTargetAmountTogether() {
     RecordingMapper mapper = new RecordingMapper();
-    InvestmentPreferenceService service = new InvestmentPreferenceServiceImpl(mapper);
+    RecordingEventPublisher eventPublisher = new RecordingEventPublisher();
+    InvestmentPreferenceService service = new InvestmentPreferenceServiceImpl(mapper, eventPublisher);
     InvestmentPreferenceRequest request = request(InvestmentPreference.BALANCED, 23_000_000L);
 
     InvestmentPreferenceResponse response =
@@ -30,12 +33,13 @@ class InvestmentPreferenceServiceImplTest {
     assertEquals(1L, mapper.userId);
     assertEquals(InvestmentPreference.BALANCED, mapper.preference);
     assertEquals(23_000_000L, mapper.targetAmount);
+    assertEquals(1L, eventPublisher.completedUserId);
   }
 
   @Test
   void rejectsZeroTargetAmountBeforeWriting() {
     RecordingMapper mapper = new RecordingMapper();
-    InvestmentPreferenceService service = new InvestmentPreferenceServiceImpl(mapper);
+    InvestmentPreferenceService service = new InvestmentPreferenceServiceImpl(mapper, event -> {});
 
     InvestmentPreferenceException exception =
         assertThrows(
@@ -83,6 +87,15 @@ class InvestmentPreferenceServiceImplTest {
     public void upsertGoalTargetAmount(long userId, long targetAmount) {
       this.userId = userId;
       this.targetAmount = targetAmount;
+    }
+  }
+
+  private static class RecordingEventPublisher implements ApplicationEventPublisher {
+    private long completedUserId;
+
+    @Override
+    public void publishEvent(Object event) {
+      completedUserId = ((OnboardingCompletedEvent) event).userId();
     }
   }
 }

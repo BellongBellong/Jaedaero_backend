@@ -2,11 +2,13 @@ package com.jaedaero.domain.auth.service.impl;
 
 import com.jaedaero.domain.auth.dto.InvestmentPreferenceRequest;
 import com.jaedaero.domain.auth.dto.InvestmentPreferenceResponse;
+import com.jaedaero.domain.auth.event.OnboardingCompletedEvent;
 import com.jaedaero.domain.auth.exception.AuthErrorCode;
 import com.jaedaero.domain.auth.exception.InvestmentPreferenceException;
 import com.jaedaero.domain.auth.mapper.InvestmentPreferenceMapper;
 import com.jaedaero.domain.auth.service.InvestmentPreferenceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceService {
 
   private final InvestmentPreferenceMapper investmentPreferenceMapper;
+  private final ApplicationEventPublisher eventPublisher;
 
   /** 사용자의 투자 성향과 목표 금액을 저장합니다. */
   @Override
@@ -28,6 +31,7 @@ public class InvestmentPreferenceServiceImpl implements InvestmentPreferenceServ
 
     investmentPreferenceMapper.upsertInitialPreference(userId, request.getInvestmentPreference());
     investmentPreferenceMapper.upsertGoalTargetAmount(userId, request.getTargetAmount());
+    eventPublisher.publishEvent(new OnboardingCompletedEvent(userId));
     return new InvestmentPreferenceResponse(
         true, request.getInvestmentPreference(), request.getTargetAmount());
   }
