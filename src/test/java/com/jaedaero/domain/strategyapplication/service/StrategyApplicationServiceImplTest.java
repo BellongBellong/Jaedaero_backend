@@ -163,6 +163,12 @@ class StrategyApplicationServiceImplTest {
 
   private static class SequencedCashflowService implements CashflowService {
 
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private final AtomicLong currentExpectedAsset;
     private final List<Long> generatedExpectedAssets;
     private int generateCount;

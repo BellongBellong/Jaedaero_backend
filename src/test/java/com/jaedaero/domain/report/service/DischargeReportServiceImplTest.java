@@ -37,6 +37,13 @@ class DischargeReportServiceImplTest {
   }
 
   private static class RecordingCashflowService implements CashflowService {
+
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private long userId;
 
     @Override public CashflowForecastResponse generate(long userId) { throw new UnsupportedOperationException(); }

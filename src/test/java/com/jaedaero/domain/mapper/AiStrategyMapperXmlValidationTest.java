@@ -15,7 +15,6 @@ class AiStrategyMapperXmlValidationTest {
   private static final List<String> MAPPER_RESOURCES =
       List.of(
           "mapper/simulation/SimulationMapper.xml",
-          "mapper/simulation/SimulationInputMapper.xml",
           "mapper/aianalysis/AiAnalysisMapper.xml",
           "mapper/aianalysis/AiAnalysisInputMapper.xml",
           "mapper/analysishistory/AnalysisHistoryMapper.xml",
@@ -42,9 +41,6 @@ class AiStrategyMapperXmlValidationTest {
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.simulation.mapper.SimulationMapper.insert"));
-    assertTrue(
-        configuration.hasStatement(
-            "com.jaedaero.domain.simulation.mapper.SimulationInputMapper.findLatestByUserId"));
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper.insertAnalysis"));
