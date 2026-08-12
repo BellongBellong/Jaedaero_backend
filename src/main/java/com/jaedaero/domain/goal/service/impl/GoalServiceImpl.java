@@ -1,5 +1,6 @@
 package com.jaedaero.domain.goal.service.impl;
 
+import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.goal.dto.GoalRequest;
 import com.jaedaero.domain.goal.dto.GoalResponse;
 import com.jaedaero.domain.goal.mapper.GoalMapper;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GoalServiceImpl implements GoalService {
   private final GoalMapper goalMapper;
+  private final CashflowService cashflowService;
 
   /** 사용자의 투자 목표 금액을 변경합니다. */
   @Override
@@ -32,6 +34,7 @@ public class GoalServiceImpl implements GoalService {
     if (goalMapper.updateTargetAmount(userId, request.getTargetAmount()) == 0) {
       throw new MyPageException(MyPageErrorCode.USER_NOT_FOUND, "목표 정보를 찾을 수 없습니다.");
     }
+    cashflowService.generate(userId);
     return new GoalResponse(request.getTargetAmount());
   }
 }
