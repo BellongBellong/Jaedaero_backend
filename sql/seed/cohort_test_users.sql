@@ -212,8 +212,12 @@ SELECT
     cm.member_id,
     cmu.total_mission_count
 FROM challenge_member cm
+INNER JOIN challenge_group cg ON cg.group_id = cm.group_id
 INNER JOIN users u ON u.user_id = cm.user_id
 INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+WHERE cg.soldier_type = 'ARMY'
+  AND cg.enlistment_year = YEAR(CURDATE())
+  AND cg.enlistment_month = MONTH(CURDATE())
 ON DUPLICATE KEY UPDATE
     total_mission_count = VALUES(total_mission_count),
     updated_at = CURRENT_TIMESTAMP;
@@ -228,8 +232,12 @@ SELECT
     DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) - 1 DAY),
     cmu.monthly_mission_count
 FROM challenge_member cm
+INNER JOIN challenge_group cg ON cg.group_id = cm.group_id
 INNER JOIN users u ON u.user_id = cm.user_id
 INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+WHERE cg.soldier_type = 'ARMY'
+  AND cg.enlistment_year = YEAR(CURDATE())
+  AND cg.enlistment_month = MONTH(CURDATE())
 ON DUPLICATE KEY UPDATE
     mission_completion_count = VALUES(mission_completion_count);
 
