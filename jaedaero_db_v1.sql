@@ -57,8 +57,8 @@ CREATE TABLE users (
                        social_type  ENUM('KAKAO', 'GOOGLE') NOT NULL COMMENT '소셜 로그인 유형',
                        social_id    VARCHAR(255) NOT NULL COMMENT '소셜 제공자 내 사용자 식별자',
                        nickname     VARCHAR(50) NULL COMMENT '닉네임',
-                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NULL COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
-                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NULL COMMENT '프로필 배경색. 6종 중 선택',
+                       profile_image  ENUM('ARMY', 'NAVY', 'AIRFORCE', 'MARINE') NOT NULL DEFAULT 'ARMY' COMMENT '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘',
+                       profile_source ENUM('GREEN', 'OLIVE', 'YELLOW', 'ORANGE', 'GRAY', 'BLACK') NOT NULL DEFAULT 'GREEN' COMMENT '프로필 배경색. 6종 중 선택',
                        is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE COMMENT '탈퇴 여부',
                        withdrawn_at TIMESTAMP NULL COMMENT '탈퇴 일시',
                        created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -397,6 +397,7 @@ CREATE TABLE challenge_member (
                                   user_id      BIGINT NOT NULL COMMENT '사용자 ID',
                                   joined_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '참여 일시',
 
+                                  INDEX idx_challenge_member_user_joined_at (user_id, joined_at DESC),
                                   CONSTRAINT uq_challenge_member_group_user UNIQUE (group_id, user_id),
                                   CONSTRAINT fk_challenge_member_group
                                       FOREIGN KEY (group_id) REFERENCES challenge_group(group_id)
@@ -1011,6 +1012,7 @@ CREATE TABLE leave_mode (
                             budget_amount   BIGINT NULL COMMENT '휴가 예산 설정값(선택 입력)',
                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
+                            INDEX idx_leave_mode_user_start_date (user_id, start_date),
                             CONSTRAINT fk_leave_mode_user
                                 FOREIGN KEY (user_id) REFERENCES users(user_id)
                                     ON DELETE CASCADE

@@ -57,69 +57,111 @@
         )
     </sql>
 
-    <select id="findDailyMissions" resultMap="missionResultMap">
-        SELECT
-        <include refid="missionColumns"/>
-        FROM mission m
-        WHERE m.is_active = TRUE
-          AND m.mission_category = 'DAILY'
-          AND m.mission_type IS NULL
-        <include refid="supportedActionTypes"/>
-        ORDER BY m.display_order, m.mission_id
-        LIMIT 2
-    </select>
+    <select id="findTodayMissions" resultMap="missionResultMap">
+        WITH mission_candidates AS (
+            SELECT
+                m.mission_id,
+                1 AS section_order,
+                0 AS subsection_order,
+                0 AS priority_order,
+                m.display_order,
+                m.mission_id AS sort_id,
+                ROW_NUMBER() OVER (
+                    ORDER BY m.display_order, m.mission_id
+                ) AS candidate_no
+            FROM mission m
+            WHERE m.is_active = TRUE
+              AND m.mission_category = 'DAILY'
+              AND m.mission_type IS NULL
+            <include refid="supportedActionTypes"/>
 
-    <select id="findRecommendedMission" resultMap="missionResultMap">
-        SELECT
-        <include refid="missionColumns"/>
-        FROM mission m
-        WHERE m.is_active = TRUE
-          AND m.mission_category = 'RECOMMENDED'
-          AND m.mission_type = #{missionType}
-        <include refid="supportedActionTypes"/>
-        ORDER BY m.display_order, m.mission_id
-        LIMIT 1
-    </select>
+            UNION ALL
 
-    <select id="findOneTimeMission" resultMap="missionResultMap">
-        SELECT
-        <include refid="missionColumns"/>
-        FROM mission m
-        WHERE m.is_active = TRUE
-          AND m.mission_category = 'ONE_TIME'
-        <include refid="supportedActionTypes"/>
-          AND NOT EXISTS (
-              SELECT 1
-              FROM user_mission_completion umc
-              WHERE umc.user_id = #{userId}
-                AND umc.mission_id = m.mission_id
-          )
-        ORDER BY m.display_order, m.mission_id
-        LIMIT 1
-    </select>
+            SELECT
+                m.mission_id,
+                2 AS section_order,
+                CASE m.mission_type
+                    WHEN 'SAFE' THEN 1
+                    WHEN 'AGGRESSIVE' THEN 2
+                END AS subsection_order,
+                0 AS priority_order,
+                m.display_order,
+                m.mission_id AS sort_id,
+                ROW_NUMBER() OVER (
+                    PARTITION BY m.mission_type
+                    ORDER BY m.display_order, m.mission_id
+                ) AS candidate_no
+            FROM mission m
+            WHERE m.is_active = TRUE
+              AND m.mission_category = 'RECOMMENDED'
+              AND m.mission_type IN ('SAFE', 'AGGRESSIVE')
+            <include refid="supportedActionTypes"/>
 
-    <select id="findEventMission" resultMap="missionResultMap">
+            UNION ALL
+
+            SELECT
+                m.mission_id,
+                3 AS section_order,
+                0 AS subsection_order,
+                0 AS priority_order,
+                m.display_order,
+                m.mission_id AS sort_id,
+                ROW_NUMBER() OVER (
+                    ORDER BY m.display_order, m.mission_id
+                ) AS candidate_no
+            FROM mission m
+            WHERE m.is_active = TRUE
+              AND m.mission_category = 'ONE_TIME'
+            <include refid="supportedActionTypes"/>
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_mission_completion umc
+                  WHERE umc.user_id = #{userId}
+                    AND umc.mission_id = m.mission_id
+              )
+
+            UNION ALL
+
+            SELECT
+                m.mission_id,
+                4 AS section_order,
+                0 AS subsection_order,
+                m.event_priority AS priority_order,
+                m.display_order,
+                m.mission_id AS sort_id,
+                ROW_NUMBER() OVER (
+                    ORDER BY m.event_priority, m.display_order, m.mission_id
+                ) AS candidate_no
+            FROM mission m
+            LEFT JOIN soldier_profile sp ON sp.user_id = #{userId}
+            WHERE m.is_active = TRUE
+              AND m.mission_category = 'EVENT'
+              AND (
+                  (m.trigger_type = 'DAYS_TO_DISCHARGE'
+                      AND DATEDIFF(sp.discharge_date, CURDATE()) = m.trigger_value)
+                  OR (m.trigger_type = 'LEAVE_SCHEDULED'
+                      AND EXISTS (
+                          SELECT 1
+                          FROM leave_mode lm
+                          WHERE lm.user_id = #{userId}
+                            AND lm.start_date = CURDATE()
+                      ))
+                  OR (m.trigger_type = 'PAYDAY'
+                      AND DAY(CURDATE()) = m.trigger_value)
+              )
+        )
         SELECT
         <include refid="missionColumns"/>
-        FROM mission m
-        LEFT JOIN soldier_profile sp ON sp.user_id = #{userId}
-        WHERE m.is_active = TRUE
-          AND m.mission_category = 'EVENT'
-          AND (
-              (m.trigger_type = 'DAYS_TO_DISCHARGE'
-                  AND DATEDIFF(sp.discharge_date, CURDATE()) = m.trigger_value)
-              OR (m.trigger_type = 'LEAVE_SCHEDULED'
-                  AND EXISTS (
-                      SELECT 1
-                      FROM leave_mode lm
-                      WHERE lm.user_id = #{userId}
-                        AND lm.start_date = CURDATE()
-                  ))
-              OR (m.trigger_type = 'PAYDAY'
-                  AND DAY(CURDATE()) = m.trigger_value)
-          )
-        ORDER BY m.event_priority, m.display_order, m.mission_id
-        LIMIT 1
+        FROM mission_candidates mc
+        INNER JOIN mission m ON m.mission_id = mc.mission_id
+        WHERE (mc.section_order = 1 AND mc.candidate_no &lt;= 2)
+           OR (mc.section_order &gt; 1 AND mc.candidate_no = 1)
+        ORDER BY
+            mc.section_order,
+            mc.subsection_order,
+            mc.priority_order,
+            mc.display_order,
+            mc.sort_id
     </select>
 
     <select id="findActiveMissionById" resultMap="missionResultMap">
@@ -135,25 +177,6 @@
         FROM mission m
         WHERE m.mission_id = #{missionId}
           AND m.is_active = TRUE
-    </select>
-
-    <select id="existsCompletionToday" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1
-            FROM user_mission_completion
-            WHERE user_id = #{userId}
-              AND mission_id = #{missionId}
-              AND completion_date = CURDATE()
-        )
-    </select>
-
-    <select id="existsAnyCompletion" resultType="boolean">
-        SELECT EXISTS (
-            SELECT 1
-            FROM user_mission_completion
-            WHERE user_id = #{userId}
-              AND mission_id = #{missionId}
-        )
     </select>
 
     <insert id="insertCompletion">
@@ -174,17 +197,29 @@
         ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
     </insert>
 
-    <update id="incrementSafeMissionCount">
-        UPDATE investment_badge
-        SET safe_count = safe_count + 1
-        WHERE user_id = #{userId}
-    </update>
+    <insert id="incrementSafeMissionCount">
+        INSERT INTO investment_badge (
+            user_id,
+            safe_count
+        ) VALUES (
+            #{userId},
+            1
+        )
+        ON DUPLICATE KEY UPDATE
+            safe_count = safe_count + 1
+    </insert>
 
-    <update id="incrementAggressiveMissionCount">
-        UPDATE investment_badge
-        SET aggressive_count = aggressive_count + 1
-        WHERE user_id = #{userId}
-    </update>
+    <insert id="incrementAggressiveMissionCount">
+        INSERT INTO investment_badge (
+            user_id,
+            aggressive_count
+        ) VALUES (
+            #{userId},
+            1
+        )
+        ON DUPLICATE KEY UPDATE
+            aggressive_count = aggressive_count + 1
+    </insert>
 
     <select id="findInvestmentBadgeStatus" resultMap="investmentBadgeStatusResultMap">
         SELECT safe_count, safe_grade, aggressive_count, aggressive_grade
@@ -192,28 +227,30 @@
         WHERE user_id = #{userId}
     </select>
 
-    <select id="findGradeByCompletionCount" resultType="string">
-        SELECT grade
+    <select id="findActiveBadges"
+            resultType="com.jaedaero.domain.challenge.vo.BadgeVo">
+        SELECT
+            badge_id,
+            mission_type,
+            required_completion_count,
+            grade
         FROM badge
-        WHERE mission_type = #{missionType}
-          AND is_active = TRUE
-          AND required_completion_count &lt;= #{completionCount}
-        ORDER BY required_completion_count DESC
-        LIMIT 1
+        WHERE is_active = TRUE
+        ORDER BY mission_type, required_completion_count
     </select>
 
-    <insert id="insertUserBadgeByGrade">
+    <insert id="insertUserBadges">
         INSERT INTO user_badge (
             user_id,
             badge_id
         )
-        SELECT
-            #{userId},
-            b.badge_id
-        FROM badge b
-        WHERE b.mission_type = #{missionType}
-          AND b.grade = #{grade}
-          AND b.is_active = TRUE
+        VALUES
+        <foreach collection="badgeIds" item="badgeId" separator=",">
+            (
+                #{userId},
+                #{badgeId}
+            )
+        </foreach>
         ON DUPLICATE KEY UPDATE
             user_id = VALUES(user_id)
     </insert>
