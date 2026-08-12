@@ -100,7 +100,7 @@ public class UserController {
   })
   public ResponseEntity<NicknameAvailabilityResponse> checkNicknameAvailability(
       @ApiIgnore Authentication authentication,
-      @RequestParam @NotBlank @Size(max = 12) @Pattern(regexp = "[가-힣a-zA-Z]{2,12}")
+      @RequestParam @NotBlank @Size(max = 12) @Pattern(regexp = "[가-힣a-zA-Z0-9]{2,12}")
           String nickname) {
     long userId = getAuthenticatedUserId(authentication);
     return ResponseEntity.ok(
