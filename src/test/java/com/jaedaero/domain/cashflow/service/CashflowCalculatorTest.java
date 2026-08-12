@@ -37,6 +37,9 @@ class CashflowCalculatorTest {
     assertEquals("상병", result.months().get(8).expectedRank());
     assertEquals("병장", result.months().get(14).expectedRank());
     assertEquals(10_200_000L, result.expectedSalary());
+    assertEquals(
+        0L,
+        result.months().stream().mapToLong(CashflowForecastMonthCalculation::expectedInvestmentAmount).sum());
   }
 
   @Test
@@ -94,8 +97,8 @@ class CashflowCalculatorTest {
             LocalDate.of(2026, 1, 1));
 
     assertEquals(500_000L, result.months().get(0).expectedSavingAmount());
-    assertEquals(2_845_000L, result.expectedSavingAmount());
-    assertEquals(1_095_000L, result.expectedAsset());
+    assertEquals(5_045_000L, result.expectedSavingAmount());
+    assertEquals(3_295_000L, result.expectedAsset());
   }
 
   @Test

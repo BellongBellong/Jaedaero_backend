@@ -75,9 +75,7 @@ public class CashflowCalculator {
       long monthlyInvestment =
           hasAppliedStrategy
               ? input.appliedStrategy().monthlyInvestmentAmount()
-              : Math.min(
-                  Math.max(0L, pay.monthlySalary() - spending - monthlySaving),
-                  Math.max(0L, requiredSaving - monthlySaving));
+              : 0L;
       long maturityBonus =
           savings.stream()
               .filter(saving -> month.equals(saving.maturityMonth()))
@@ -200,7 +198,9 @@ public class CashflowCalculator {
     long futurePrincipal = Math.multiplyExact(input.monthlyAmount(), depositMonths);
     long principal = Math.addExact(input.currentBalance(), futurePrincipal);
     long interest = estimatedInterest(input, depositMonths);
-    long governmentSupport = input.governmentSupportExpected();
+    // 장병내일준비적금은 만기 해지 시 납입 원금의 100%를 매칭지원금으로 지급한다.
+    // 현재 잔액은 이미 납입한 원금으로, 미래 납입액까지 합산해 지원금을 계산한다.
+    long governmentSupport = principal;
     return new SavingMaturity(
         input, maturityMonth, principal + interest + governmentSupport, interest + governmentSupport);
   }
