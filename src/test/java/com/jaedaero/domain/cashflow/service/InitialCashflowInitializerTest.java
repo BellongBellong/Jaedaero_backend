@@ -44,6 +44,13 @@ class InitialCashflowInitializerTest {
   }
 
   private static class RecordingCashflowService implements CashflowService {
+
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private final boolean missing;
     private int generateCount;
     private boolean failGeneration;

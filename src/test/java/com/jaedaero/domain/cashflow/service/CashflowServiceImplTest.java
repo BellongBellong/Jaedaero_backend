@@ -58,6 +58,17 @@ class CashflowServiceImplTest {
     assertEquals(2, latest.getMonths().size());
   }
 
+  @Test
+  void calculationInputUsesTheSameCanonicalInputAsForecastGeneration() {
+    CashflowService service = service(new InMemoryCashflowMapper());
+
+    var input = service.getCalculationInput(1L);
+
+    assertEquals(30_000_000L, input.getTargetAmount());
+    assertEquals(SoldierType.ARMY, input.getSoldierType());
+    assertEquals(LocalDate.of(2027, 6, 1), input.getDischargeDate());
+  }
+
   private CashflowService service(InMemoryCashflowMapper mapper) {
     CashflowInputProvider inputProvider =
         userId ->

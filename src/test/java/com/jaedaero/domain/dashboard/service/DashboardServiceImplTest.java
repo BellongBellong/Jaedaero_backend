@@ -96,6 +96,13 @@ class DashboardServiceImplTest {
   }
 
   private static class RecordingCashflowService implements CashflowService {
+
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private final CashflowForecastResponse generated;
     private int generateCount;
 
