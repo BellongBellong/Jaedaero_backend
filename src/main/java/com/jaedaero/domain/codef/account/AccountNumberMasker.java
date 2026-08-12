@@ -8,7 +8,7 @@ public final class AccountNumberMasker {
   public static String mask(String value) {
     if (value == null || value.isBlank()) return null;
     String normalized = value.replaceAll("[^0-9A-Za-z]", "");
-    if (value.contains("*") && normalized.length() <= 4) {
+    if (value.contains("*")) {
       return "****-**-****" + normalized.substring(Math.max(0, normalized.length() - 2));
     }
     if (normalized.length() <= 8) return "****-**-****";
