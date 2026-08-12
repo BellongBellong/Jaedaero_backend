@@ -41,7 +41,6 @@ public class DashboardServiceImpl implements DashboardService {
   }
 
   @Override
-  @Transactional
   public DashboardResponse get(long userId) {
     CashflowForecastResponse cashflow = latestOrGenerate(userId);
     return DashboardResponse.from(

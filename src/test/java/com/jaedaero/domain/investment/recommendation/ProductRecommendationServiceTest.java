@@ -13,6 +13,7 @@ import com.jaedaero.domain.investment.etf.EtfMarketOverviewResponse;
 import com.jaedaero.domain.investment.etf.EtfMarketOverviewService;
 import com.jaedaero.domain.recurringinvestment.mapper.RecurringInvestmentPlanMapper;
 import com.jaedaero.domain.recurringinvestment.vo.RecurringInvestmentPlanVo;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -93,6 +94,34 @@ class ProductRecommendationServiceTest {
         service.getEtfRecommendations(1L, LocalDate.of(2025, 1, 1)).personalizedRecommendations().get(0);
 
     assertEquals(-15, recommendation.scoreBreakdown().adjustmentScore());
+  }
+
+  @Test
+  void usesAnalysisContextBudgetInsteadOfCurrentPlanBudget() {
+    ProductRecommendationService service =
+        new ProductRecommendationService(
+            overviewService("20260807"),
+            new EtfRiskClassifier(),
+            preferenceMapper(InvestmentPreference.AGGRESSIVE),
+            planMapper(plan("999999")),
+            userId -> LocalDate.of(2027, 1, 1));
+
+    ProductRecommendationResponse response =
+        service.getEtfRecommendations(
+            1L,
+            LocalDate.of(2026, 8, 7),
+            new ProductRecommendationContext(
+                11L,
+                7L,
+                30_000L,
+                new BigDecimal("6.50"),
+                LocalDate.of(2026, 12, 1)));
+
+    assertEquals(30_000L, response.monthlyInvestmentBudget());
+    assertEquals(11L, response.analysisId());
+    assertEquals(7L, response.simulationId());
+    assertEquals(new BigDecimal("6.50"), response.expectedReturnRate());
+    assertEquals(30_000L, response.personalizedRecommendations().get(0).recommendedMonthlyAmount());
   }
 
   private static EtfMarketOverviewService overviewService(String marketDate) {

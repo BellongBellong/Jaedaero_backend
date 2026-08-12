@@ -71,6 +71,30 @@
         WHERE user_id = #{userId}
     </select>
 
+    <update id="disconnectCodefConnection" parameterType="long">
+        UPDATE codef_connection
+        SET status = 'DISCONNECTED',
+            last_sync_error_message = NULL
+        WHERE user_id = #{userId}
+        AND status = 'ACTIVE'
+    </update>
+
+    <update id="disconnectCodefInstitutionConnections" parameterType="long">
+        UPDATE codef_institution_connection cic
+        JOIN codef_connection cc ON cc.connection_id = cic.connection_id
+        SET cic.status = 'DISCONNECTED'
+        WHERE cc.user_id = #{userId}
+        AND cic.status = 'ACTIVE'
+    </update>
+
+    <update id="disconnectConnectedAccounts" parameterType="long">
+        UPDATE connected_account ca
+        JOIN codef_connection cc ON cc.connection_id = ca.connection_id
+        SET ca.status = 'DISCONNECTED'
+        WHERE cc.user_id = #{userId}
+        AND ca.status = 'ACTIVE'
+    </update>
+
     <update id="withdraw" parameterType="long">
         UPDATE users SET is_withdrawn = TRUE, withdrawn_at = CURRENT_TIMESTAMP
         WHERE user_id = #{userId} AND is_withdrawn = FALSE
