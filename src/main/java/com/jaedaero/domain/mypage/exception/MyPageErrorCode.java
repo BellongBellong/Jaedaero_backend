@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum MyPageErrorCode implements ErrorCode {
   AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED"),
+  CODEF_CONNECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "CODEF_CONNECTION_NOT_FOUND"),
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND");
 
   private final HttpStatus status;
