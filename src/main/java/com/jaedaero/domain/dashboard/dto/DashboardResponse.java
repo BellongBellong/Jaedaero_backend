@@ -82,7 +82,7 @@ public class DashboardResponse {
     long thisMonthSpending = currentMonth == null ? 0L : currentMonth.getExpectedSpendingAmount();
     Long monthlyInvestmentGoal = monthlyInvestmentGoal(latestApplication);
     Long monthlySpendingGoal =
-        latestApplication == null ? null : latestApplication.getAppliedMonthlySpendingAmount();
+        latestApplication == null ? 0L : latestApplication.getAppliedMonthlySpendingAmount();
     return DashboardResponse.builder()
         .financialDischargeDate(financialDischargeDate)
         .actualDischargeDate(actualDischargeDate)
@@ -106,7 +106,7 @@ public class DashboardResponse {
   }
 
   private static Long monthlyInvestmentGoal(StrategyApplicationVo application) {
-    return application == null ? null : application.getAppliedMonthlyInvestmentAmount();
+    return application == null ? 0L : application.getAppliedMonthlyInvestmentAmount();
   }
 
   private static BigDecimal achievementRate(long actualAmount, Long goalAmount) {

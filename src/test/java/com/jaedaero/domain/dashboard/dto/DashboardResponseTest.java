@@ -57,15 +57,15 @@ class DashboardResponseTest {
   }
 
   @Test
-  void returnsNullGoalFieldsWhenNoStrategyHasBeenApplied() {
+  void usesZeroGoalsWhenNoStrategyHasBeenApplied() {
     CashflowForecastResponse cashflow =
         CashflowForecastResponse.builder().months(List.of()).build();
 
     DashboardResponse response =
         DashboardResponse.from(cashflow, LocalDate.of(2027, 9, 1), null, LocalDate.of(2026, 8, 4));
 
-    assertEquals(null, response.getMonthlyInvestmentGoal());
-    assertEquals(null, response.getMonthlySpendingGoal());
+    assertEquals(0L, response.getMonthlyInvestmentGoal());
+    assertEquals(0L, response.getMonthlySpendingGoal());
     assertEquals(null, response.getInvestmentGoalAchievementRate());
     assertEquals(null, response.getSpendingGoalAchievementRate());
     assertEquals(null, response.getGoalSource());
