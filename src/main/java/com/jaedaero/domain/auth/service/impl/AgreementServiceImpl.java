@@ -31,14 +31,12 @@ public class AgreementServiceImpl implements AgreementService {
     insertAgreement(userId, AgreementType.PERSONAL_INFORMATION_COLLECTION, true);
     insertAgreement(userId, AgreementType.FINANCIAL_INFORMATION_INQUIRY, true);
     insertAgreement(userId, AgreementType.AI_SERVICE_USE, true);
-    insertAgreement(userId, AgreementType.MARKETING_INFORMATION_RECEIPT, request.getMarketingInformationReceiptAgreed());
 
     return new UserAgreementResponse(
         true,
         true,
         true,
-        true,
-        request.getMarketingInformationReceiptAgreed());
+        true);
   }
 
   /** 필수 약관 동의 여부를 검증합니다. */

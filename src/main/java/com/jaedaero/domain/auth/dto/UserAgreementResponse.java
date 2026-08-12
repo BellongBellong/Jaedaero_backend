@@ -11,5 +11,4 @@ public class UserAgreementResponse {
   private final boolean personalInformationCollectionAgreed;
   private final boolean financialInformationInquiryAgreed;
   private final boolean aiServiceUseAgreed;
-  private final boolean marketingInformationReceiptAgreed;
 }
