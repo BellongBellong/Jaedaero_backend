@@ -20,19 +20,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductRecommendationController {
 
   private final ProductRecommendationService productRecommendationService;
+  private final ProductRecommendationContextResolver contextResolver;
 
-  public ProductRecommendationController(ProductRecommendationService productRecommendationService) {
+  public ProductRecommendationController(
+      ProductRecommendationService productRecommendationService,
+      ProductRecommendationContextResolver contextResolver) {
     this.productRecommendationService = productRecommendationService;
+    this.contextResolver = contextResolver;
   }
 
   @GetMapping("/recommendations")
   @ApiOperation(
       value = "ETF 위험등급별 상품 분류 조회",
-      notes = "KRX ETF 시세를 LOW·MEDIUM·HIGH·VERY_HIGH로 분류합니다. 맞춤 추천은 자산배분 적합도(40), 위험등급(25), 거래대금(15), NAV 괴리율(10), 시가총액(10)을 합산합니다. VERY_HIGH(레버리지·인버스·파생형)는 초기 리밸런싱 추천에서 제외됩니다.",
+      notes = "analysisId 또는 simulationId를 지정하면 해당 사용자 소유의 분석 맥락에서 월 투자금·목표 기대수익률·재정적 전역일을 반영합니다. 둘은 동시에 지정할 수 없습니다. VERY_HIGH(레버리지·인버스·파생형)는 추천에서 제외됩니다.",
       response = ProductRecommendationResponse.class)
   @ApiResponses({
     @ApiResponse(code = 200, message = "조회 성공", response = ProductRecommendationResponse.class),
     @ApiResponse(code = 400, message = "기준일 형식 또는 값이 올바르지 않음"),
+    @ApiResponse(code = 409, message = "분석/시뮬레이션 추천 조건이 준비되지 않음"),
     @ApiResponse(code = 404, message = "기준일 ETF 데이터를 찾을 수 없음"),
     @ApiResponse(code = 502, message = "KRX API 요청 또는 응답 처리 실패"),
     @ApiResponse(code = 503, message = "KRX 인증키 미설정 또는 KRX 요청 중단")
@@ -41,12 +46,20 @@ public class ProductRecommendationController {
       Authentication authentication,
       @ApiParam(value = "기준일(yyyyMMdd). 생략하면 오늘", example = "20260806")
           @RequestParam(required = false)
-          String asOfDate) {
+          String asOfDate,
+      @ApiParam(value = "추천 맥락으로 사용할 AI 분석 ID", example = "1")
+          @RequestParam(required = false)
+          Long analysisId,
+      @ApiParam(value = "추천 맥락으로 사용할 What-if 시뮬레이션 ID", example = "1")
+          @RequestParam(required = false)
+          Long simulationId) {
     LocalDate date = asOfDate == null || asOfDate.isBlank() ? LocalDate.now() : parseDate(asOfDate);
     if (date.isAfter(LocalDate.now())) {
       throw new IllegalArgumentException("기준일은 오늘보다 늦을 수 없습니다.");
     }
-    return productRecommendationService.getEtfRecommendations(authenticatedUserId(authentication), date);
+    long userId = authenticatedUserId(authentication);
+    ProductRecommendationContext context = contextResolver.resolve(userId, analysisId, simulationId);
+    return productRecommendationService.getEtfRecommendations(userId, date, context);
   }
 
   private long authenticatedUserId(Authentication authentication) {
