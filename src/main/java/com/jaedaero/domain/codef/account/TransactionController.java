@@ -1,6 +1,7 @@
 package com.jaedaero.domain.codef.account;
 
 import com.jaedaero.domain.codef.persistence.CodefPersistenceRepository;
+import com.jaedaero.domain.codef.persistence.StoredConnectedAccount;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 import javax.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,9 +31,18 @@ import springfox.documentation.annotations.ApiIgnore;
 public class TransactionController {
 
   private final CodefPersistenceRepository repository;
+  private final CodefTransactionSyncService transactionSyncService;
 
-  public TransactionController(CodefPersistenceRepository repository) {
+  @Autowired
+  public TransactionController(
+      CodefPersistenceRepository repository, CodefTransactionSyncService transactionSyncService) {
     this.repository = repository;
+    this.transactionSyncService = transactionSyncService;
+  }
+
+  /** Test-only convenience constructor. Production requests always use the sync-enabled constructor. */
+  public TransactionController(CodefPersistenceRepository repository) {
+    this(repository, null);
   }
 
   @GetMapping
@@ -66,11 +77,37 @@ public class TransactionController {
     if (resolvedStartDate.isAfter(resolvedEndDate)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate는 endDate보다 늦을 수 없습니다.");
     }
+    synchronizeMissingPeriods(userId, accountId, resolvedStartDate, resolvedEndDate);
     return repository
         .findTransactionsByUser(userId, accountId, resolvedStartDate, resolvedEndDate, category)
         .stream()
         .map(TransactionResponse::new)
         .collect(Collectors.toList());
+  }
+
+  private void synchronizeMissingPeriods(
+      long userId, Long accountId, LocalDate startDate, LocalDate endDate) {
+    if (transactionSyncService == null) {
+      return;
+    }
+    List<StoredConnectedAccount> accounts =
+        accountId == null
+            ? repository.findAccountsByUserId(userId)
+            : repository.findAccountByIdAndUserId(accountId, userId).stream().toList();
+    for (StoredConnectedAccount account : accounts) {
+      if (!"DEMAND_DEPOSIT".equals(account.accountType())
+          || repository.isTransactionPeriodCovered(
+              account.accountId(), "DEMAND_DEPOSIT", startDate, endDate)) {
+        continue;
+      }
+      transactionSyncService.sync(
+          userId,
+          account.accountId(),
+          startDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+          endDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+      repository.recordTransactionSyncPeriod(
+          account.accountId(), "DEMAND_DEPOSIT", startDate, endDate);
+    }
   }
 
   @PutMapping("/{transactionId}/category")
