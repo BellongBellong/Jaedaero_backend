@@ -718,6 +718,8 @@ CREATE TABLE investment_guidance (
     market_value                    BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가금액',
     unrealized_profit_loss          BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가손익',
     return_rate                     DECIMAL(9,4) NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 수익률(%)',
+    safe_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 예수금(안전자산)',
+    risk_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 전체 보유종목 평가액(위험자산)',
     expected_return_rate            DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '결정론 계산에 사용한 연 예상수익률(%)',
     remaining_contribution_count    INT NOT NULL DEFAULT 0 COMMENT '전역일까지 남은 적립 회차 수',
     safety_buffer_amount            BIGINT NOT NULL DEFAULT 0 COMMENT 'SAFE_FOCUS 판정용 안전 여유금',

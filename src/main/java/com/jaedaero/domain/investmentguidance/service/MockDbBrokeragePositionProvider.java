@@ -34,6 +34,8 @@ public class MockDbBrokeragePositionProvider implements BrokeragePositionProvide
     // 평가금액을 투자원금으로 간주해 평가손익과 수익률을 0으로 고정한다.
     return new BrokeragePositionSnapshot(
         accountValue,
+        cashBalance,
+        marketValue,
         marketValue,
         marketValue,
         0L,

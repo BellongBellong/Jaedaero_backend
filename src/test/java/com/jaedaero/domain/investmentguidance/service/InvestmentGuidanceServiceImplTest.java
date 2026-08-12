@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceApplyRequest;
+import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceDetailResponse;
 import com.jaedaero.domain.investmentguidance.dto.InvestmentGuidanceResponse;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceErrorCode;
 import com.jaedaero.domain.investmentguidance.exception.InvestmentGuidanceException;
@@ -52,6 +53,8 @@ class InvestmentGuidanceServiceImplTest {
             (userId, plan) ->
                 new BrokeragePositionSnapshot(
                     1_100_000L,
+                    100_000L,
+                    1_000_000L,
                     1_000_000L,
                     1_100_000L,
                     100_000L,
@@ -114,6 +117,8 @@ class InvestmentGuidanceServiceImplTest {
             (userId, plan) ->
                 new BrokeragePositionSnapshot(
                     1_100_000L,
+                    100_000L,
+                    1_000_000L,
                     1_000_000L,
                     1_100_000L,
                     100_000L,
@@ -129,6 +134,124 @@ class InvestmentGuidanceServiceImplTest {
     InvestmentGuidanceException exception =
         assertThrows(InvestmentGuidanceException.class, () -> service.getLatest(1L));
     assertEquals(InvestmentGuidanceErrorCode.NOT_FOUND, exception.getErrorCode());
+  }
+
+  @Test
+  void returnsDetailWithAssetSnapshotAndAppliedState() {
+    InMemoryGuidanceMapper guidanceMapper = new InMemoryGuidanceMapper();
+    InMemoryPlanMapper planMapper = new InMemoryPlanMapper();
+    InMemoryApplicationMapper applicationMapper = new InMemoryApplicationMapper();
+    InvestmentGuidanceService service =
+        new InvestmentGuidanceServiceImpl(
+            guidanceMapper,
+            new StubGuidanceInputMapper(),
+            planMapper,
+            applicationMapper,
+            (userId, plan) ->
+                new BrokeragePositionSnapshot(
+                    1_100_000L,
+                    100_000L,
+                    1_000_000L,
+                    900_000L,
+                    1_000_000L,
+                    100_000L,
+                    new BigDecimal("11.1111"),
+                    LocalDateTime.of(2026, 8, 4, 9, 0)),
+            new InvestmentGuidanceCalculator(),
+            new TemplateInvestmentGuidanceReasonGenerator(),
+            FIXED_CLOCK);
+
+    InvestmentGuidanceResponse guidance = service.create(1L);
+    InvestmentGuidanceDetailResponse before = service.getDetail(1L, guidance.getGuidanceId());
+    service.apply(
+        1L,
+        guidance.getGuidanceId(),
+        new InvestmentGuidanceApplyRequest(InvestmentGuidanceAction.SAFE_FOCUS, 0L));
+    InvestmentGuidanceDetailResponse after = service.getDetail(1L, guidance.getGuidanceId());
+
+    assertEquals(100_000L, before.getAssetStatus().safeAssetAmount());
+    assertEquals(1_000_000L, before.getAssetStatus().riskAssetAmount());
+    assertEquals(InvestmentGuidanceAction.SAFE_FOCUS, before.getRecommendation().actionType());
+    assertEquals("TEMPLATE", before.getReasonGenerationPolicy());
+    assertEquals(false, before.getApplicationStatus().applied());
+    assertEquals(true, after.getApplicationStatus().applied());
+    assertEquals(InvestmentGuidanceAction.SAFE_FOCUS, after.getApplicationStatus().appliedAction());
+  }
+
+  @Test
+  void returnsReviewDetailAndBlocksMissingOrAnotherUsersGuidance() {
+    InMemoryGuidanceMapper guidanceMapper = new InMemoryGuidanceMapper();
+    InvestmentGuidanceService service =
+        new InvestmentGuidanceServiceImpl(
+            guidanceMapper,
+            new StubGuidanceInputMapper(),
+            new InMemoryPlanMapper(),
+            new InMemoryApplicationMapper(),
+            (userId, plan) -> {
+              throw new IllegalStateException("증권 데이터 없음");
+            },
+            new InvestmentGuidanceCalculator(),
+            new TemplateInvestmentGuidanceReasonGenerator(),
+            FIXED_CLOCK);
+
+    InvestmentGuidanceResponse review = service.create(1L);
+    assertEquals(
+        InvestmentGuidanceAction.REVIEW,
+        service.getDetail(1L, review.getGuidanceId()).getRecommendation().actionType());
+
+    InvestmentGuidanceException missing =
+        assertThrows(InvestmentGuidanceException.class, () -> service.getDetail(1L, 999L));
+    InvestmentGuidanceException anotherUser =
+        assertThrows(
+            InvestmentGuidanceException.class,
+            () -> service.getDetail(2L, review.getGuidanceId()));
+    assertEquals(InvestmentGuidanceErrorCode.NOT_FOUND, missing.getErrorCode());
+    assertEquals(InvestmentGuidanceErrorCode.NOT_FOUND, anotherUser.getErrorCode());
+  }
+
+  @Test
+  void createsNewGuidanceWhenOnlySafeAndRiskAssetSnapshotChanges() {
+    InMemoryGuidanceMapper guidanceMapper = new InMemoryGuidanceMapper();
+    BrokeragePositionSnapshot[] position = {
+      new BrokeragePositionSnapshot(
+          1_100_000L,
+          100_000L,
+          1_000_000L,
+          500_000L,
+          500_000L,
+          0L,
+          BigDecimal.ZERO.setScale(4),
+          LocalDateTime.of(2026, 8, 4, 9, 0))
+    };
+    InvestmentGuidanceService service =
+        new InvestmentGuidanceServiceImpl(
+            guidanceMapper,
+            new StubGuidanceInputMapper(),
+            new InMemoryPlanMapper(),
+            new InMemoryApplicationMapper(),
+            (userId, plan) -> position[0],
+            new InvestmentGuidanceCalculator(),
+            new TemplateInvestmentGuidanceReasonGenerator(),
+            FIXED_CLOCK);
+
+    InvestmentGuidanceResponse first = service.create(1L);
+    position[0] =
+        new BrokeragePositionSnapshot(
+            1_100_000L,
+            200_000L,
+            900_000L,
+            500_000L,
+            500_000L,
+            0L,
+            BigDecimal.ZERO.setScale(4),
+            LocalDateTime.of(2026, 8, 4, 9, 0));
+    InvestmentGuidanceResponse second = service.create(1L);
+
+    assertEquals(1L, first.getGuidanceId());
+    assertEquals(2L, second.getGuidanceId());
+    assertEquals(2, guidanceMapper.guidances.size());
+    assertEquals(200_000L, guidanceMapper.guidances.get(1).getSafeAssetAmount());
+    assertEquals(900_000L, guidanceMapper.guidances.get(1).getRiskAssetAmount());
   }
 
   private static class StubGuidanceInputMapper implements InvestmentGuidanceInputMapper {
@@ -160,6 +283,11 @@ class InvestmentGuidanceServiceImplTest {
           .dischargeDate(LocalDate.of(2027, 8, 4))
           .expectedReturnRate(new BigDecimal("5.00"))
           .build();
+    }
+
+    @Override
+    public String findCurrentRankNameByUserId(long userId) {
+      return "병장";
     }
   }
 
@@ -309,6 +437,14 @@ class InvestmentGuidanceServiceImplTest {
                       && item.getAppliedInvestmentFrequency() == frequency
                       && Objects.equals(item.getAppliedRecurringContributionAmount(), contributionAmount))
           .findFirst()
+          .orElse(null);
+    }
+
+    @Override
+    public StrategyApplicationVo findLatestByGuidanceIdAndUserId(long guidanceId, long userId) {
+      return applications.stream()
+          .filter(item -> item.getUserId() == userId && Objects.equals(item.getGuidanceId(), guidanceId))
+          .max(Comparator.comparing(StrategyApplicationVo::getApplicationId))
           .orElse(null);
     }
 

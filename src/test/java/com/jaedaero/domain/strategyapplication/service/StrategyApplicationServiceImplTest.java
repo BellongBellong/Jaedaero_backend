@@ -268,6 +268,17 @@ class StrategyApplicationServiceImplTest {
     }
 
     @Override
+    public StrategyApplicationVo findLatestByGuidanceIdAndUserId(long guidanceId, long userId) {
+      return applications.stream()
+          .filter(
+              application ->
+                  application.getUserId() == userId
+                      && java.util.Objects.equals(application.getGuidanceId(), guidanceId))
+          .max(Comparator.comparing(StrategyApplicationVo::getApplicationId))
+          .orElse(null);
+    }
+
+    @Override
     public List<StrategyApplicationVo> findByUserId(
         long userId, long offset, int limit) {
       return applications.stream()
