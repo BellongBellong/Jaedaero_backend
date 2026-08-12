@@ -57,7 +57,7 @@ class DashboardResponseTest {
   }
 
   @Test
-  void usesZeroGoalsWhenNoStrategyHasBeenApplied() {
+  void returnsZeroGoalsWhenNoStrategyHasBeenApplied() {
     CashflowForecastResponse cashflow =
         CashflowForecastResponse.builder().months(List.of()).build();
 
