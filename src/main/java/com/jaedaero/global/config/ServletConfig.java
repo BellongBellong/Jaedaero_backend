@@ -1,11 +1,16 @@
 package com.jaedaero.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MultipartResolver;
@@ -33,6 +38,9 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 )
 public class ServletConfig implements WebMvcConfigurer {
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * RootConfig와 별개의 서블릿(자식) 컨텍스트라, 여기서도 직접 등록해야 이 컨텍스트의 빈(Controller 등)에서
      * {@code @Value("${...}")}가 application.properties/application-local.properties를 읽는다.
@@ -48,6 +56,15 @@ public class ServletConfig implements WebMvcConfigurer {
         configurer.setIgnoreResourceNotFound(true);
         configurer.setLocalOverride(true);
         return configurer;
+    }
+
+    /** RootConfig의 Java Time 설정을 MVC JSON 응답에도 적용합니다. */
+    @Override
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.stream()
+                .filter(MappingJackson2HttpMessageConverter.class::isInstance)
+                .map(MappingJackson2HttpMessageConverter.class::cast)
+                .forEach(converter -> converter.setObjectMapper(objectMapper));
     }
 
     /**
