@@ -12,27 +12,11 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface MissionMapper {
 
-  /** 오늘 노출할 공통 데일리 미션을 조회합니다. */
-  List<MissionVo> findDailyMissions(@Param("userId") long userId);
-
-  /** 오늘 노출할 성향별 추천 미션을 조회합니다. */
-  MissionVo findRecommendedMission(
-      @Param("userId") long userId, @Param("missionType") MissionType missionType);
-
-  /** 아직 완료하지 않은 한 번 미션을 조회합니다. */
-  MissionVo findOneTimeMission(@Param("userId") long userId);
-
-  /** 오늘 조건을 충족한 이벤트 미션을 조회합니다. */
-  MissionVo findEventMission(@Param("userId") long userId);
+  /** 오늘 노출되는 미션을 한 번의 조회로 가져옵니다. */
+  List<MissionVo> findTodayMissions(@Param("userId") long userId);
 
   /** 활성 상태의 미션을 식별자로 조회합니다. */
   MissionVo findActiveMissionById(@Param("missionId") long missionId);
-
-  /** 사용자의 당일 미션 완료 여부를 조회합니다. */
-  boolean existsCompletionToday(@Param("userId") long userId, @Param("missionId") long missionId);
-
-  /** 사용자의 미션 완료 이력 존재 여부를 조회합니다. */
-  boolean existsAnyCompletion(@Param("userId") long userId, @Param("missionId") long missionId);
 
   /** 사용자의 미션 완료 이력을 저장합니다. */
   int insertCompletion(
@@ -55,9 +39,9 @@ public interface MissionMapper {
   /** 활성 뱃지 마스터 목록을 조회합니다. */
   List<BadgeVo> findActiveBadges();
 
-  /** 선택된 뱃지의 사용자 획득 이력을 저장합니다. */
-  int insertUserBadge(
-      @Param("userId") long userId, @Param("badgeId") long badgeId);
+  /** 선택된 뱃지의 획득 이력을 한 번에 저장합니다. */
+  int insertUserBadges(
+      @Param("userId") long userId, @Param("badgeIds") List<Long> badgeIds);
 
   /** 사용자의 성향별 투자 뱃지 티어를 갱신합니다. */
   int updateInvestmentBadgeGrade(

@@ -397,6 +397,7 @@ CREATE TABLE challenge_member (
                                   user_id      BIGINT NOT NULL COMMENT '사용자 ID',
                                   joined_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '참여 일시',
 
+                                  INDEX idx_challenge_member_user_joined_at (user_id, joined_at DESC),
                                   CONSTRAINT uq_challenge_member_group_user UNIQUE (group_id, user_id),
                                   CONSTRAINT fk_challenge_member_group
                                       FOREIGN KEY (group_id) REFERENCES challenge_group(group_id)
@@ -1011,6 +1012,7 @@ CREATE TABLE leave_mode (
                             budget_amount   BIGINT NULL COMMENT '휴가 예산 설정값(선택 입력)',
                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
+                            INDEX idx_leave_mode_user_start_date (user_id, start_date),
                             CONSTRAINT fk_leave_mode_user
                                 FOREIGN KEY (user_id) REFERENCES users(user_id)
                                     ON DELETE CASCADE

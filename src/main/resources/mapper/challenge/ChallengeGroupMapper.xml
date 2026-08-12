@@ -52,10 +52,16 @@
                 </choose>
             FROM challenge_member cm
             INNER JOIN users member_user ON member_user.user_id = cm.user_id
-            LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
-            LEFT JOIN challenge_monthly_result cmr
-                ON cmr.member_id = cm.member_id
-                AND cmr.result_month = #{resultMonth}
+            <choose>
+                <when test="rankingPeriod.name() == 'MONTHLY'">
+                    LEFT JOIN challenge_monthly_result cmr
+                        ON cmr.member_id = cm.member_id
+                        AND cmr.result_month = #{resultMonth}
+                </when>
+                <otherwise>
+                    LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
+                </otherwise>
+            </choose>
             WHERE cm.group_id = #{groupId}
               AND member_user.is_withdrawn = FALSE
         ),
@@ -67,11 +73,6 @@
                     mission_completion_count DESC,
                     member_id ASC
                 ) AS ranking_no,
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    mission_completion_count ASC,
-                    member_id ASC
-                ) AS ascending_row_no,
                 COUNT(*) OVER () AS member_count
             FROM member_scores
         )
@@ -154,7 +155,7 @@
                 ROUND(
                     AVG(
                         CASE
-                            WHEN ascending_row_no &lt;= CEILING(member_count * 0.25)
+                            WHEN ranking_no &gt; member_count - CEILING(member_count * 0.25)
                             THEN mission_completion_count
                         END
                     )
