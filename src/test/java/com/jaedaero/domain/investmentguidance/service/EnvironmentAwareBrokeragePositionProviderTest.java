@@ -38,7 +38,14 @@ class EnvironmentAwareBrokeragePositionProviderTest {
 
   private BrokeragePositionSnapshot snapshot(long accountValue) {
     return new BrokeragePositionSnapshot(
-        accountValue, accountValue, accountValue, 0L, BigDecimal.ZERO.setScale(4), null);
+        accountValue,
+        0L,
+        accountValue,
+        accountValue,
+        accountValue,
+        0L,
+        BigDecimal.ZERO.setScale(4),
+        null);
   }
 
   private RecurringInvestmentPlanVo plan() {

@@ -11,4 +11,6 @@ public interface InvestmentGuidanceInputMapper {
 
   InvestmentGuidanceInputSourceVo findLatestByUserId(
       @Param("userId") long userId, @Param("brokerageAccountId") long brokerageAccountId);
+
+  String findCurrentRankNameByUserId(@Param("userId") long userId);
 }

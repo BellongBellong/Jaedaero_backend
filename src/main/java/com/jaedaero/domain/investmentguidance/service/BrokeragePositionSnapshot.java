@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 public record BrokeragePositionSnapshot(
     long accountValue,
+    long safeAssetAmount,
+    long riskAssetAmount,
     long investmentPrincipal,
     long marketValue,
     long unrealizedProfitLoss,

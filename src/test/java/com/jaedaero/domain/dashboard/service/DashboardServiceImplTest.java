@@ -85,6 +85,11 @@ class DashboardServiceImplTest {
     }
 
     @Override
+    public StrategyApplicationVo findLatestByGuidanceIdAndUserId(long guidanceId, long userId) {
+      return null;
+    }
+
+    @Override
     public List<StrategyApplicationVo> findByUserId(long userId, long offset, int limit) {
       throw new UnsupportedOperationException();
     }

@@ -70,6 +70,17 @@
         LIMIT 1
     </select>
 
+    <select id="findLatestByGuidanceIdAndUserId"
+            resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
+        SELECT <include refid="strategyApplicationColumns"/>
+        FROM strategy_application
+        WHERE guidance_id = #{guidanceId}
+          AND user_id = #{userId}
+          AND source_type = 'INVESTMENT_GUIDANCE'
+        ORDER BY applied_at DESC, application_id DESC
+        LIMIT 1
+    </select>
+
     <select id="findLatestByUserId"
             resultType="com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo">
         SELECT <include refid="strategyApplicationColumns"/>

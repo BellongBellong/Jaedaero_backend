@@ -121,38 +121,32 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO challenge_member_summary (
     member_id,
-    total_mission_count,
-    overall_ranking_no
+    total_mission_count
 )
 SELECT
     cm.member_id,
-    cmu.total_mission_count,
-    NULL
+    cmu.total_mission_count
 FROM challenge_member cm
 INNER JOIN users u ON u.user_id = cm.user_id
 INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
 ON DUPLICATE KEY UPDATE
     total_mission_count = VALUES(total_mission_count),
-    overall_ranking_no = NULL,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO challenge_monthly_result (
     member_id,
     result_month,
-    mission_completion_count,
-    ranking_no
+    mission_completion_count
 )
 SELECT
     cm.member_id,
     DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) - 1 DAY),
-    cmu.monthly_mission_count,
-    NULL
+    cmu.monthly_mission_count
 FROM challenge_member cm
 INNER JOIN users u ON u.user_id = cm.user_id
 INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
 ON DUPLICATE KEY UPDATE
-    mission_completion_count = VALUES(mission_completion_count),
-    ranking_no = NULL;
+    mission_completion_count = VALUES(mission_completion_count);
 
 INSERT INTO investment_badge (
     user_id,
