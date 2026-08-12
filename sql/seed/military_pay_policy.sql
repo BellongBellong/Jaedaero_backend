@@ -1,5 +1,5 @@
 -- 캐시플로우용 병 봉급 정책 초기 데이터
--- 실행: mysql -u <DB_USER> -p jaedaero < sql/seed/military_pay_policy.sql
+-- 실행: mysql -u <DB_USER> -p jaedaero_db < sql/seed/military_pay_policy.sql
 --
 -- 현재 프로젝트의 2026 목업 기준값을 모든 군종에 공통 적용한다.
 -- 연도별 실제 봉급이 확정되면 effective_year와 effective_from을 새로 추가한다.

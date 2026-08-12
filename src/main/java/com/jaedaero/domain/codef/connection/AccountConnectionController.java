@@ -75,7 +75,7 @@ public class AccountConnectionController {
   @ApiOperation(
       value = "연동 계좌 비활성화",
       notes =
-          "계좌 데이터를 실제 삭제하지 않고 INACTIVE 상태로 전환합니다. 비활성 계좌는 계좌 목록과 분석 대상에서 제외되며,"
+          "계좌 데이터를 실제 삭제하지 않고 DISCONNECTED 상태로 전환합니다. 비활성 계좌는 계좌 목록과 분석 대상에서 제외되며,"
               + " 이후 계좌 새로고침으로 다시 활성화되지 않습니다.")
   @DeleteMapping("/{accountId}")
   public ResponseEntity<Void> deactivateAccount(

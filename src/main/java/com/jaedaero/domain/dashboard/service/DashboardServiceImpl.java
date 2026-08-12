@@ -6,6 +6,7 @@ import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
+import com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper;
 import com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ public class DashboardServiceImpl implements DashboardService {
 
   private final CashflowService cashflowService;
   private final DashboardMapper dashboardMapper;
+  private final DashboardSpendingMapper dashboardSpendingMapper;
   private final StrategyApplicationMapper strategyApplicationMapper;
   private final Clock clock;
 
@@ -25,18 +27,26 @@ public class DashboardServiceImpl implements DashboardService {
   public DashboardServiceImpl(
       CashflowService cashflowService,
       DashboardMapper dashboardMapper,
-      StrategyApplicationMapper strategyApplicationMapper) {
-    this(cashflowService, dashboardMapper, strategyApplicationMapper, Clock.systemDefaultZone());
+      StrategyApplicationMapper strategyApplicationMapper,
+      DashboardSpendingMapper dashboardSpendingMapper) {
+    this(
+        cashflowService,
+        dashboardMapper,
+        strategyApplicationMapper,
+        dashboardSpendingMapper,
+        Clock.systemDefaultZone());
   }
 
   public DashboardServiceImpl(
       CashflowService cashflowService,
       DashboardMapper dashboardMapper,
       StrategyApplicationMapper strategyApplicationMapper,
+      DashboardSpendingMapper dashboardSpendingMapper,
       Clock clock) {
     this.cashflowService = cashflowService;
     this.dashboardMapper = dashboardMapper;
     this.strategyApplicationMapper = strategyApplicationMapper;
+    this.dashboardSpendingMapper = dashboardSpendingMapper;
     this.clock = clock;
   }
 
@@ -47,7 +57,8 @@ public class DashboardServiceImpl implements DashboardService {
         cashflow,
         dashboardMapper.findActualDischargeDateByUserId(userId),
         strategyApplicationMapper.findLatestByUserId(userId),
-        LocalDate.now(clock));
+        LocalDate.now(clock),
+        dashboardSpendingMapper.sumThisMonthSpendingByUserId(userId));
   }
 
   private CashflowForecastResponse latestOrGenerate(long userId) {

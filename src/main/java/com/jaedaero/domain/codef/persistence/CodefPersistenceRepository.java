@@ -264,7 +264,7 @@ public class CodefPersistenceRepository {
   public int deactivateAccountByIdAndUserId(long accountId, long userId) {
     return jdbcTemplate.update(
         "UPDATE connected_account ca JOIN codef_connection cc ON cc.connection_id ="
-            + " ca.connection_id SET ca.status = 'INACTIVE' WHERE ca.account_id = ?"
+            + " ca.connection_id SET ca.status = 'DISCONNECTED' WHERE ca.account_id = ?"
             + " AND cc.user_id = ? AND ca.status = 'ACTIVE'",
         accountId,
         userId);
