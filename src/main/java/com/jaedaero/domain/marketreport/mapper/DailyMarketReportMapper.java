@@ -30,6 +30,11 @@ public interface DailyMarketReportMapper {
   /** 날짜 행을 잠근 상태로 읽어 로컬 재시험 claim의 동시성을 제어한다. */
   DailyMarketReportVo findByReportDateForUpdate(@Param("reportDate") LocalDate reportDate);
 
+  DailyMarketReportVo findByReportDate(@Param("reportDate") LocalDate reportDate);
+
   /** 성공 Gemini 리포트가 아닌 행을 생성 진행 상태로 원자적으로 표시한다. */
   int markGenerationInProgress(@Param("reportId") long reportId);
+
+  int updateReportStatus(
+      @Param("reportId") long reportId, @Param("reportStatus") String reportStatus);
 }

@@ -71,6 +71,13 @@
         FOR UPDATE
     </select>
 
+    <select id="findByReportDate" resultType="com.jaedaero.domain.marketreport.vo.DailyMarketReportVo">
+        SELECT <include refid="dailyMarketReportColumns"/>
+        FROM daily_market_report
+        WHERE report_date = #{reportDate}
+        LIMIT 1
+    </select>
+
     <update id="markGenerationInProgress">
         UPDATE daily_market_report
         SET title = '오늘의 AI 시장 리포트',
@@ -83,5 +90,11 @@
         WHERE report_id = #{reportId}
           AND COALESCE(generation_source, 'FALLBACK') &lt;&gt; 'GEMINI'
           AND COALESCE(prompt_version, '') &lt;&gt; 'in-progress'
+    </update>
+
+    <update id="updateReportStatus">
+        UPDATE daily_market_report
+        SET report_status = #{reportStatus}
+        WHERE report_id = #{reportId}
     </update>
 </mapper>
