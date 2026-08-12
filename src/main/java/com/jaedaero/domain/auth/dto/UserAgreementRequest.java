@@ -15,6 +15,4 @@ public class UserAgreementRequest {
   @NotNull private Boolean financialInformationInquiryAgreed;
 
   @NotNull private Boolean aiServiceUseAgreed;
-
-  @NotNull private Boolean marketingInformationReceiptAgreed;
 }
