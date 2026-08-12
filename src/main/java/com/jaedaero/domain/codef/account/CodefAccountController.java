@@ -161,7 +161,8 @@ public class CodefAccountController {
 
   @ApiOperation(
       value = "적금 거래내역 조회",
-      notes = "기본 최근 3개월을 저장하며, 요청 기간이 DB 동기화 범위를 벗어난 경우에만 CODEF를 다시 호출합니다.")
+      notes =
+          "기본 최근 3개월을 저장하며, 요청 기간이 DB 동기화 범위를 벗어난 경우에만 CODEF를 다시 호출합니다. 미래 종료일은 오늘로 보정합니다.")
   @GetMapping("/savings/{accountId}/transactions")
   public List<TransactionResponse> getSavingsTransactions(
       @ApiParam(value = "적금 계좌 ID", required = true, example = "10")
