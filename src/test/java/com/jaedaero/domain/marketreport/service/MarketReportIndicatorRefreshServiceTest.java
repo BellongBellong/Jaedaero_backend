@@ -50,6 +50,21 @@ class MarketReportIndicatorRefreshServiceTest {
     assertEquals(MarketReportErrorCode.INDICATOR_REFRESH_NOT_AVAILABLE, exception.getErrorCode());
   }
 
+  @Test
+  void refreshesPreviousDayReportWhileItIsStillInItsActiveWindow() {
+    Clock morningClock =
+        Clock.fixed(Instant.parse("2026-08-13T01:00:00Z"), ZoneId.of("Asia/Seoul"));
+    RecordingPersistence persistence = new RecordingPersistence();
+    DailyMarketReportVo previousDay = report(MarketReportStatus.PARTIAL);
+    MarketReportIndicatorRefreshService service =
+        new MarketReportIndicatorRefreshService(
+            new StubReportMapper(previousDay), ignored -> normalIndicators(), persistence, morningClock);
+
+    service.refreshToday();
+
+    assertEquals(LocalDate.of(2026, 8, 12), persistence.reportDate);
+  }
+
   private MarketReportIndicatorRefreshService service(
       DailyMarketReportVo report, RecordingPersistence persistence) {
     MarketIndicatorProvider provider = ignored -> normalIndicators();
@@ -110,7 +125,7 @@ class MarketReportIndicatorRefreshServiceTest {
     }
 
     @Override public int upsert(DailyMarketReportVo ignored) { throw new UnsupportedOperationException(); }
-    @Override public DailyMarketReportVo findActiveAt(LocalDateTime now) { throw new UnsupportedOperationException(); }
+    @Override public DailyMarketReportVo findActiveAt(LocalDateTime now) { return report; }
     @Override public DailyMarketReportVo findLatest() { throw new UnsupportedOperationException(); }
     @Override public int countByReportDate(LocalDate reportDate) { throw new UnsupportedOperationException(); }
     @Override public int claimReportDate(LocalDate reportDate, LocalDateTime validFrom, LocalDateTime validUntil) { throw new UnsupportedOperationException(); }
