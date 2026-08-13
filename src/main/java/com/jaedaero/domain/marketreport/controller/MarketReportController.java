@@ -57,7 +57,7 @@ public class MarketReportController {
   }
 
   @PostMapping("/today/indicators/refresh")
-  @ApiOperation(value = "[운영 관리자] 오늘의 시장 지표 재수집", notes = "PARTIAL 상태의 당일 리포트에서만 지표 4종을 재수집합니다. Gemini 본문과 출처는 재생성하지 않습니다.")
+  @ApiOperation(value = "[운영 관리자] 현재 시장 지표 재수집", notes = "PARTIAL 상태의 현재 노출 리포트에서만 지표 4종을 재수집합니다. Gemini 본문과 출처는 재생성하지 않습니다.")
   @ApiImplicitParam(
       name = "X-Market-Report-Admin-Token",
       value = "Railway MARKET_REPORT_ADMIN_REFRESH_TOKEN과 일치하는 운영 재수집 토큰",

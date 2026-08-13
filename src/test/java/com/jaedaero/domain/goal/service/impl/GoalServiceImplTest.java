@@ -68,6 +68,12 @@ class GoalServiceImplTest {
     private long generatedUserId;
 
     @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public CashflowForecastResponse generate(long userId) {
       generatedUserId = userId;
       return null;
