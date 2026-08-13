@@ -46,11 +46,8 @@
 
     <sql id="supportedActionTypes">
         AND m.action_type IN (
-            'VIEW_FINANCE_REPORT',
-            'VIEW_AI_REPORT',
+            'VIEW_MARKET_REPORT',
             'VIEW_TRANSACTION_HISTORY',
-            'VIEW_SPENDING_ANALYSIS',
-            'VIEW_ASSET_STATUS',
             'VIEW_DEPOSIT_PRODUCT',
             'VIEW_REBALANCING',
             'RUN_WHAT_IF_SIMULATION'

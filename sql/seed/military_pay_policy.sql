@@ -4,6 +4,8 @@
 -- 현재 프로젝트의 2026 목업 기준값을 모든 군종에 공통 적용한다.
 -- 연도별 실제 봉급이 확정되면 effective_year와 effective_from을 새로 추가한다.
 
+SET NAMES utf8mb4;
+
 START TRANSACTION;
 
 INSERT IGNORE INTO military_pay_policy (
