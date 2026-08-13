@@ -377,7 +377,7 @@ public class CodefPersistenceRepository {
             new StoredTransaction(
                 rs.getLong("transaction_id"),
                 accountId,
-                rs.getTimestamp("transaction_datetime").toLocalDateTime(),
+                rs.getObject("transaction_datetime", java.time.LocalDateTime.class),
                 rs.getLong("amount"),
                 rs.getObject("balance_after", Long.class),
                 rs.getString("transaction_type"),
@@ -419,7 +419,7 @@ public class CodefPersistenceRepository {
             new StoredTransaction(
                 rs.getLong("transaction_id"),
                 rs.getLong("account_id"),
-                rs.getTimestamp("transaction_datetime").toLocalDateTime(),
+                rs.getObject("transaction_datetime", java.time.LocalDateTime.class),
                 rs.getLong("amount"),
                 rs.getObject("balance_after", Long.class),
                 rs.getString("transaction_type"),
