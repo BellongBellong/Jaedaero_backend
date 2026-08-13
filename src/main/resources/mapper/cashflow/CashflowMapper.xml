@@ -73,11 +73,17 @@
     <insert id="insertForecast" parameterType="com.jaedaero.domain.cashflow.vo.CashflowForecastVo"
             useGeneratedKeys="true" keyProperty="forecastId">
         INSERT INTO cashflow_forecast (
-            user_id, base_asset, expected_salary, expected_saving_amount, expected_asset,
-            monthly_spending_limit, achievement_rate, financial_discharge_date, policy_version
+            user_id, base_asset, expected_salary, expected_spending, expected_saving_amount,
+            expected_investment_amount, expected_asset, soldier_saving_interest,
+            government_matching_support, expected_investment_return, projected_benefit_amount,
+            potential_expected_asset, calculation_policy_version, monthly_spending_limit,
+            achievement_rate, financial_discharge_date, policy_version
         ) VALUES (
-            #{userId}, #{baseAsset}, #{expectedSalary}, #{expectedSavingAmount}, #{expectedAsset},
-            #{monthlySpendingLimit}, #{achievementRate}, #{financialDischargeDate}, #{policyVersion}
+            #{userId}, #{baseAsset}, #{expectedSalary}, #{expectedSpending}, #{expectedSavingAmount},
+            #{expectedInvestmentAmount}, #{expectedAsset}, #{soldierSavingInterest},
+            #{governmentMatchingSupport}, #{expectedInvestmentReturn}, #{projectedBenefitAmount},
+            #{potentialExpectedAsset}, #{calculationPolicyVersion}, #{monthlySpendingLimit},
+            #{achievementRate}, #{financialDischargeDate}, #{policyVersion}
         )
     </insert>
 
@@ -94,8 +100,12 @@
     </insert>
 
     <select id="findLatestForecastByUserId" resultType="com.jaedaero.domain.cashflow.vo.CashflowForecastVo">
-        SELECT forecast_id, user_id, base_asset, expected_salary, expected_saving_amount, expected_asset,
-               monthly_spending_limit, achievement_rate, financial_discharge_date, policy_version, generated_at
+        SELECT forecast_id, user_id, base_asset, expected_salary, expected_spending,
+               expected_saving_amount, expected_investment_amount, expected_asset,
+               soldier_saving_interest, government_matching_support, expected_investment_return,
+               projected_benefit_amount, potential_expected_asset, calculation_policy_version,
+               monthly_spending_limit, achievement_rate, financial_discharge_date,
+               policy_version, generated_at
         FROM cashflow_forecast
         WHERE user_id = #{userId}
         ORDER BY generated_at DESC, forecast_id DESC

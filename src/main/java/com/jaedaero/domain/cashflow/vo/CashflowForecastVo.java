@@ -19,8 +19,16 @@ public class CashflowForecastVo {
   private Long userId;
   private Long baseAsset;
   private Long expectedSalary;
+  private Long expectedSpending;
   private Long expectedSavingAmount;
+  private Long expectedInvestmentAmount;
   private Long expectedAsset;
+  private Long soldierSavingInterest;
+  private Long governmentMatchingSupport;
+  private Long expectedInvestmentReturn;
+  private Long projectedBenefitAmount;
+  private Long potentialExpectedAsset;
+  private String calculationPolicyVersion;
   private Long monthlySpendingLimit;
   private BigDecimal achievementRate;
   private LocalDate financialDischargeDate;
