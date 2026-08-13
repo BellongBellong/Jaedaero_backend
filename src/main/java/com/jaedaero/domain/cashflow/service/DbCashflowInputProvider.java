@@ -27,6 +27,7 @@ public class DbCashflowInputProvider implements CashflowInputProvider {
     }
     try {
       return new CashflowInput(
+          userId,
           defaultIfNull(source.getBaseAsset()),
           source.getTargetAmount(),
           defaultIfNull(source.getMonthlySpendingAverage()),
@@ -38,7 +39,7 @@ public class DbCashflowInputProvider implements CashflowInputProvider {
                   saving ->
                       new SoldierSavingInput(
                           defaultIfNull(saving.getCurrentBalance()),
-                          saving.getMonthlyAmount(),
+                          defaultIfNull(saving.getMonthlyAmount()),
                           saving.getInterestRate(),
                           defaultIfNull(saving.getGovernmentSupportExpected()),
                           saving.getStartDate(),

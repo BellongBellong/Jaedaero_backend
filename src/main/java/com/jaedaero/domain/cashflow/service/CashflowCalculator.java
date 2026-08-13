@@ -20,18 +20,28 @@ public class CashflowCalculator {
 
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
   private final ConservativeMonthlyCashflowEngine cashflowEngine;
+  private final AggregateInvestmentPrincipalProvider investmentPrincipalProvider;
+  private final InvestmentPrincipalBackfill investmentPrincipalBackfill;
 
   @Autowired
   public CashflowCalculator(
       DefaultMilitaryPayPolicy militaryPayPolicy,
-      ConservativeMonthlyCashflowEngine cashflowEngine) {
+      ConservativeMonthlyCashflowEngine cashflowEngine,
+      AggregateInvestmentPrincipalProvider investmentPrincipalProvider,
+      InvestmentPrincipalBackfill investmentPrincipalBackfill) {
     this.militaryPayPolicy = militaryPayPolicy;
     this.cashflowEngine = cashflowEngine;
+    this.investmentPrincipalProvider = investmentPrincipalProvider;
+    this.investmentPrincipalBackfill = investmentPrincipalBackfill;
   }
 
   /** 단위 테스트와 독립 계산 호출의 하위 호환용 생성자입니다. */
   public CashflowCalculator(DefaultMilitaryPayPolicy militaryPayPolicy) {
-    this(militaryPayPolicy, new ConservativeMonthlyCashflowEngine());
+    this(
+        militaryPayPolicy,
+        new ConservativeMonthlyCashflowEngine(),
+        userId -> java.util.Optional.empty(),
+        new InvestmentPrincipalBackfill(militaryPayPolicy));
   }
 
   public CashflowForecastCalculation calculate(CashflowInput input, LocalDate calculationDate) {
@@ -48,7 +58,8 @@ public class CashflowCalculator {
           0L,
           0L,
           0L,
-          input.baseAsset(),
+          0L,
+          0L,
           ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,
           0L,
           achievementRate(input.baseAsset(), input.targetAmount()),
@@ -69,6 +80,29 @@ public class CashflowCalculator {
     List<LocalDate> savingContributionDates = new ArrayList<>();
     int totalMonths = (int) ChronoUnit.MONTHS.between(startMonth, dischargeMonth) + 1;
     boolean hasAppliedStrategy = input.appliedStrategy() != null;
+    if (hasAppliedStrategy
+        && (input.appliedStrategy().expectedReturnRate() == null
+            || input.appliedStrategy().expectedReturnRate().signum() < 0)) {
+      throw new CashflowException(
+          CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 금액이 유효하지 않습니다.");
+    }
+
+    BigDecimal spendingRatio = BigDecimal.ZERO;
+    BigDecimal investmentRatio = BigDecimal.ZERO;
+    if (hasAppliedStrategy) {
+      long firstMonthSalary =
+          militaryPayPolicy
+              .resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), startMonth)
+              .monthlySalary();
+      if (firstMonthSalary > 0L) {
+        spendingRatio =
+            BigDecimal.valueOf(input.appliedStrategy().monthlySpendingAmount())
+                .divide(BigDecimal.valueOf(firstMonthSalary), 10, java.math.RoundingMode.HALF_UP);
+        investmentRatio =
+            BigDecimal.valueOf(input.appliedStrategy().monthlyInvestmentAmount())
+                .divide(BigDecimal.valueOf(firstMonthSalary), 10, java.math.RoundingMode.HALF_UP);
+      }
+    }
 
     for (int index = 0; index < totalMonths; index++) {
       YearMonth month = startMonth.plusMonths(index);
@@ -76,12 +110,9 @@ public class CashflowCalculator {
       DefaultMilitaryPayPolicy.MilitaryPay pay =
           militaryPayPolicy.resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), month);
       long requiredSaving = requiredSaving(input.targetAmount(), asset, remainingMonths);
-      if (hasAppliedStrategy) {
-        validateAppliedStrategy(input.appliedStrategy(), pay.monthlySalary());
-      }
       long spending =
           hasAppliedStrategy
-              ? input.appliedStrategy().monthlySpendingAmount()
+              ? scale(spendingRatio, pay.monthlySalary())
               : Math.max(0L, input.monthlySpendingAverage());
       long monthlySaving =
           hasAppliedStrategy
@@ -90,12 +121,15 @@ public class CashflowCalculator {
       long spendingLimit = Math.max(0L, pay.monthlySalary() - requiredSaving);
       long monthlyInvestment =
           hasAppliedStrategy
-              ? input.appliedStrategy().monthlyInvestmentAmount()
+              ? scale(investmentRatio, pay.monthlySalary())
               : Math.max(
                   0L,
                   Math.min(
                       pay.monthlySalary() - spending - monthlySaving,
                       requiredSaving - monthlySaving));
+      if (hasAppliedStrategy) {
+        validateAppliedStrategy(spending, monthlySaving, monthlyInvestment, pay.monthlySalary());
+      }
 
       long assetBeforeMonth = asset;
       ConservativeMonthlyCashflowEngine.MonthProjection projection =
@@ -132,6 +166,17 @@ public class CashflowCalculator {
 
     BigDecimal investmentAnnualReturnRate =
         hasAppliedStrategy ? input.appliedStrategy().expectedReturnRate() : BigDecimal.ZERO;
+    BigDecimal finalInvestmentRatio = investmentRatio;
+    long existingInvestmentPrincipal =
+        investmentPrincipalProvider
+            .resolveLinkedPrincipal(input.userId())
+            .orElseGet(
+                () ->
+                    investmentPrincipalBackfill.estimate(
+                        input.soldierType(),
+                        input.enlistmentDate(),
+                        calculationDate,
+                        finalInvestmentRatio));
     ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
         cashflowEngine.calculateProjectedBenefit(
             input.soldierSavings(),
@@ -139,25 +184,29 @@ public class CashflowCalculator {
             savingContributions,
             savingContributionDates,
             input.dischargeDate(),
-            0L,
+            existingInvestmentPrincipal,
             investmentContributions,
             investmentAnnualReturnRate);
-    long potentialExpectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
+    long expectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
+    if (financialDischargeDate == null && expectedAsset >= input.targetAmount()) {
+      financialDischargeDate = input.dischargeDate();
+    }
 
     return new CashflowForecastCalculation(
         expectedSalary,
         expectedSpending,
         expectedSavingAmount,
         expectedInvestmentAmount,
-        asset,
+        expectedAsset,
+        benefit.soldierSavingPrincipal(),
         benefit.soldierSavingInterest(),
         benefit.governmentMatchingSupport(),
+        benefit.investmentPrincipal(),
         benefit.expectedInvestmentReturn(),
         benefit.projectedBenefitAmount(),
-        potentialExpectedAsset,
         ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,
         firstMonthSpendingLimit,
-        achievementRate(asset, input.targetAmount()),
+        achievementRate(expectedAsset, input.targetAmount()),
         financialDischargeDate,
         List.copyOf(months));
   }
@@ -167,23 +216,26 @@ public class CashflowCalculator {
     return (remainingAmount + remainingMonths - 1) / remainingMonths;
   }
 
+  private long scale(BigDecimal ratio, long referenceSalary) {
+    return ratio
+        .multiply(BigDecimal.valueOf(referenceSalary))
+        .setScale(0, java.math.RoundingMode.HALF_UP)
+        .longValueExact();
+  }
+
   private void validateAppliedStrategy(
-      AppliedCashflowStrategy strategy, long referenceMonthlyIncome) {
-    if (strategy.monthlySpendingAmount() < 0
-        || strategy.monthlySavingAmount() < 0
-        || strategy.monthlySavingAmount() > DEFAULT_MONTHLY_SAVING_AMOUNT
-        || strategy.monthlyInvestmentAmount() < 0
-        || strategy.expectedReturnRate() == null
-        || strategy.expectedReturnRate().signum() < 0) {
+      long spending, long saving, long investment, long referenceMonthlyIncome) {
+    if (spending < 0
+        || saving < 0
+        || saving > DEFAULT_MONTHLY_SAVING_AMOUNT
+        || investment < 0) {
       throw new CashflowException(
           CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 금액이 유효하지 않습니다.");
     }
     try {
       long allocated =
           Math.addExact(
-              Math.addExact(
-                  strategy.monthlySpendingAmount(), strategy.monthlySavingAmount()),
-              strategy.monthlyInvestmentAmount());
+              Math.addExact(spending, saving), investment);
       if (allocated > referenceMonthlyIncome) {
         throw new CashflowException(
             CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 합계가 해당 월 군 월급을 초과합니다.");

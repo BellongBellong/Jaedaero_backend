@@ -3,6 +3,7 @@ package com.jaedaero.domain.cashflow.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
@@ -77,7 +78,7 @@ class CashflowCalculatorTest {
   }
 
   @Test
-  void excludesUnrealizedSavingBenefitsFromConservativeExpectedAsset() {
+  void includesProjectedSavingBenefitsInUnifiedExpectedAsset() {
     CashflowForecastCalculation result =
         calculator.calculate(
             new CashflowInput(
@@ -99,7 +100,8 @@ class CashflowCalculatorTest {
 
     assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(750_000L, result.expectedSavingAmount());
-    assertEquals(750_000L, result.expectedAsset());
+    assertEquals(2_502_500L, result.expectedAsset());
+    assertEquals(1_750_000L, result.soldierSavingPrincipal());
   }
 
   @Test
@@ -202,13 +204,44 @@ class CashflowCalculatorTest {
 
     assertEquals(0L, result.monthlySpendingLimit());
     assertEquals(200_000L, result.expectedSavingAmount());
-    assertEquals(300_000L, result.expectedAsset());
+    assertEquals(500_625L, result.expectedAsset());
     assertEquals(50_000L, result.months().get(0).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(50_000L, result.months().get(0).expectedInvestmentAmount());
     assertEquals(50_000L, result.months().get(1).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(1).expectedSavingAmount());
     assertEquals(50_000L, result.months().get(1).expectedInvestmentAmount());
+  }
+
+  @Test
+  void appliedStrategySpendingAndInvestmentScaleWithSalaryButSavingStaysFixed() {
+    AppliedCashflowStrategy strategy =
+        new AppliedCashflowStrategy(
+            9L, 50_000L, 100_000L, 50_000L, BigDecimal.ZERO);
+    CashflowInput input =
+        new CashflowInput(
+            1L,
+            0L,
+            50_000_000L,
+            0L,
+            SoldierType.ARMY,
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2027, 6, 30),
+            List.of(),
+            strategy);
+
+    CashflowForecastCalculation result =
+        calculator.calculate(input, LocalDate.of(2026, 1, 1));
+    CashflowForecastMonthCalculation first = result.months().get(0);
+    CashflowForecastMonthCalculation last = result.months().get(result.months().size() - 1);
+
+    assertEquals(50_000L, first.expectedSpendingAmount());
+    assertEquals(50_000L, first.expectedInvestmentAmount());
+    assertEquals(100_000L, first.expectedSavingAmount());
+    assertEquals(237_500L, last.expectedSpendingAmount());
+    assertEquals(237_500L, last.expectedInvestmentAmount());
+    assertEquals(100_000L, last.expectedSavingAmount());
+    assertTrue(last.expectedSalary() > first.expectedSalary());
   }
 
   @Test

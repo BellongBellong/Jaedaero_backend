@@ -23,11 +23,12 @@ public class CashflowForecastVo {
   private Long expectedSavingAmount;
   private Long expectedInvestmentAmount;
   private Long expectedAsset;
+  private Long soldierSavingPrincipal;
   private Long soldierSavingInterest;
   private Long governmentMatchingSupport;
+  private Long investmentPrincipal;
   private Long expectedInvestmentReturn;
   private Long projectedBenefitAmount;
-  private Long potentialExpectedAsset;
   private String calculationPolicyVersion;
   private Long monthlySpendingLimit;
   private BigDecimal achievementRate;

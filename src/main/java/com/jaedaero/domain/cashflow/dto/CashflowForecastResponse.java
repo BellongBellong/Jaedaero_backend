@@ -17,12 +17,12 @@ public class CashflowForecastResponse {
   private final Long expectedSavingAmount;
   private final Long expectedInvestmentAmount;
   private final Long expectedAsset;
+  private final Long soldierSavingPrincipal;
   private final Long soldierSavingInterest;
   private final Long governmentMatchingSupport;
+  private final Long investmentPrincipal;
   private final Long expectedInvestmentReturn;
   private final Long projectedBenefitAmount;
-  private final Boolean returnsIncludedInExpectedAsset;
-  private final Long potentialExpectedAsset;
   private final String calculationPolicyVersion;
   private final Long monthlySpendingLimit;
   private final BigDecimal achievementRate;
@@ -39,12 +39,12 @@ public class CashflowForecastResponse {
         .expectedSavingAmount(forecast.getExpectedSavingAmount())
         .expectedInvestmentAmount(forecast.getExpectedInvestmentAmount())
         .expectedAsset(forecast.getExpectedAsset())
+        .soldierSavingPrincipal(forecast.getSoldierSavingPrincipal())
         .soldierSavingInterest(forecast.getSoldierSavingInterest())
         .governmentMatchingSupport(forecast.getGovernmentMatchingSupport())
+        .investmentPrincipal(forecast.getInvestmentPrincipal())
         .expectedInvestmentReturn(forecast.getExpectedInvestmentReturn())
         .projectedBenefitAmount(forecast.getProjectedBenefitAmount())
-        .returnsIncludedInExpectedAsset(false)
-        .potentialExpectedAsset(forecast.getPotentialExpectedAsset())
         .calculationPolicyVersion(forecast.getCalculationPolicyVersion())
         .monthlySpendingLimit(forecast.getMonthlySpendingLimit())
         .achievementRate(forecast.getAchievementRate())
