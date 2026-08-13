@@ -44,7 +44,7 @@ public class SimulationExpectedEffectResponse {
         .governmentMatchingSupport(simulation.getGovernmentMatchingSupport())
         .expectedInvestmentReturn(simulation.getExpectedInvestmentReturn())
         .projectedBenefitAmount(projectedBenefit)
-        .returnsIncludedInExpectedAsset(true)
+        .returnsIncludedInExpectedAsset(false)
         .conservativeExpectedAsset(simulation.getExpectedAsset())
         .potentialExpectedAsset(simulation.getPotentialExpectedAsset())
         .calculationPolicyVersion(simulation.getCalculationPolicyVersion())
