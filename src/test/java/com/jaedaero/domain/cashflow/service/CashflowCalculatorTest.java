@@ -93,6 +93,7 @@ class CashflowCalculatorTest {
                         500_000L,
                         BigDecimal.valueOf(12),
                         300_000L,
+                        LocalDate.of(2026, 1, 1),
                         LocalDate.of(2026, 3, 31)))),
             LocalDate.of(2026, 1, 1));
 
@@ -228,6 +229,7 @@ class CashflowCalculatorTest {
                     500_000L,
                     BigDecimal.valueOf(12),
                     0L,
+                    LocalDate.of(2026, 1, 1),
                     LocalDate.of(2026, 3, 31))),
             strategy);
 

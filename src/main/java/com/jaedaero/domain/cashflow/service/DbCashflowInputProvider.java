@@ -41,6 +41,7 @@ public class DbCashflowInputProvider implements CashflowInputProvider {
                           saving.getMonthlyAmount(),
                           saving.getInterestRate(),
                           defaultIfNull(saving.getGovernmentSupportExpected()),
+                          saving.getStartDate(),
                           saving.getEndDate()))
               .toList(),
           appliedStrategy(source));
