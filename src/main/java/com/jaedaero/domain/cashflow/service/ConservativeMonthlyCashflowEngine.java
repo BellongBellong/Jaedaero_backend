@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component;
 /**
  * 대시보드 캐시플로우와 What-if가 공유하는 보수적 순자산 계산 규칙입니다.
  *
- * <p>저축·투자 원금은 급여 안에서의 배분이므로 순자산에 다시 더하지 않습니다. 아직 확정되지 않은
- * 이자·매칭지원금·투자수익도 보수적 자산과 목표 달성일에서 제외합니다.
+ * <p>저축·투자 원금은 급여 안에서의 배분이므로 순자산에 다시 더하지 않습니다. 이 엔진은 순수 월별
+ * 현금흐름과 군적금 이자·매칭지원금·투자 예상수익을 분리 계산하고, 계산기가 두 값을 단일 전역 예상
+ * 자산으로 합칩니다.
  */
 @Component
 public class ConservativeMonthlyCashflowEngine {
