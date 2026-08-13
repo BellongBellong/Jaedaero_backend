@@ -58,18 +58,35 @@ class MarketReportIndicatorRefreshServiceTest {
     DailyMarketReportVo previousDay = report(MarketReportStatus.PARTIAL);
     MarketReportIndicatorRefreshService service =
         new MarketReportIndicatorRefreshService(
-            new StubReportMapper(previousDay), ignored -> normalIndicators(), persistence, morningClock);
+            new StubReportMapper(previousDay, previousDay),
+            ignored -> normalIndicators(),
+            persistence,
+            morningClock);
 
     service.refreshToday();
 
     assertEquals(LocalDate.of(2026, 8, 12), persistence.reportDate);
   }
 
+  @Test
+  void refreshesLatestPartialReportWhenNoReportIsInTheActiveWindow() {
+    RecordingPersistence persistence = new RecordingPersistence();
+    DailyMarketReportVo latest = report(MarketReportStatus.PARTIAL);
+    MarketReportIndicatorRefreshService service =
+        new MarketReportIndicatorRefreshService(
+            new StubReportMapper(null, latest), ignored -> normalIndicators(), persistence, CLOCK);
+
+    service.refreshToday();
+
+    assertEquals(LocalDate.of(2026, 8, 12), persistence.reportDate);
+    assertEquals(MarketReportStatus.NORMAL, persistence.reportStatus);
+  }
+
   private MarketReportIndicatorRefreshService service(
       DailyMarketReportVo report, RecordingPersistence persistence) {
     MarketIndicatorProvider provider = ignored -> normalIndicators();
     return new MarketReportIndicatorRefreshService(
-        new StubReportMapper(report), provider, persistence, CLOCK);
+            new StubReportMapper(report, report), provider, persistence, CLOCK);
   }
 
   private List<MarketIndicatorResult> normalIndicators() {
@@ -120,13 +137,16 @@ class MarketReportIndicatorRefreshServiceTest {
   private static class StubReportMapper implements DailyMarketReportMapper {
     private final DailyMarketReportVo report;
 
-    StubReportMapper(DailyMarketReportVo report) {
+    private final DailyMarketReportVo latest;
+
+    StubReportMapper(DailyMarketReportVo report, DailyMarketReportVo latest) {
       this.report = report;
+      this.latest = latest;
     }
 
     @Override public int upsert(DailyMarketReportVo ignored) { throw new UnsupportedOperationException(); }
     @Override public DailyMarketReportVo findActiveAt(LocalDateTime now) { return report; }
-    @Override public DailyMarketReportVo findLatest() { throw new UnsupportedOperationException(); }
+    @Override public DailyMarketReportVo findLatest() { return latest; }
     @Override public int countByReportDate(LocalDate reportDate) { throw new UnsupportedOperationException(); }
     @Override public int claimReportDate(LocalDate reportDate, LocalDateTime validFrom, LocalDateTime validUntil) { throw new UnsupportedOperationException(); }
     @Override public DailyMarketReportVo findByReportDateForUpdate(LocalDate reportDate) { throw new UnsupportedOperationException(); }
