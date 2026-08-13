@@ -54,7 +54,7 @@ public class TransactionController {
       example = "1")
   @ApiOperation(
       value = "거래내역 조회",
-      notes = "동기화된 거래내역을 조회합니다. accountId, 기간, 카테고리는 선택 필터이며 CODEF를 다시 호출하지 않습니다.")
+      notes = "동기화된 거래내역을 조회합니다. 누락된 기간은 CODEF에서 자동 동기화하며, 미래 종료일은 오늘로 보정합니다.")
   public List<TransactionResponse> getTransactions(
       @ApiIgnore Authentication authentication,
       @ApiParam(value = "연결 계좌 ID. 생략하면 사용자의 모든 연동 계좌를 조회합니다.", example = "10")
@@ -72,7 +72,8 @@ public class TransactionController {
           @RequestParam(required = false)
           String category) {
     long userId = authenticatedUserId(authentication);
-    LocalDate resolvedEndDate = endDate == null ? LocalDate.now() : endDate;
+    LocalDate today = LocalDate.now();
+    LocalDate resolvedEndDate = endDate == null ? today : endDate.isAfter(today) ? today : endDate;
     LocalDate resolvedStartDate = startDate == null ? resolvedEndDate.minusMonths(3) : startDate;
     if (resolvedStartDate.isAfter(resolvedEndDate)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate는 endDate보다 늦을 수 없습니다.");

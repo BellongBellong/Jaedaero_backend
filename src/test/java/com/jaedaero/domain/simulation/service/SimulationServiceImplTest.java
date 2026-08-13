@@ -59,20 +59,20 @@ class SimulationServiceImplTest {
     SimulationDefaultsResponse defaults = service.getDefaults(1L);
     assertEquals(20_000_000L, defaults.getTargetAmount());
     assertEquals(900_000L, defaults.getReferenceMonthlyIncome());
-    assertEquals(350_000L, defaults.getMonthlySpendingAmount());
+    assertEquals(0L, defaults.getMonthlySpendingAmount());
     assertEquals(550_000L, defaults.getMonthlySavingAmount());
     assertEquals(0L, defaults.getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("5.00"), defaults.getExpectedReturnRate());
-    assertEquals(new BigDecimal("38.89"), defaults.getSpendingRate());
+    assertEquals(new BigDecimal("0.00"), defaults.getSpendingRate());
     assertEquals(new BigDecimal("61.11"), defaults.getSavingRate());
-    assertEquals(0L, defaults.getUnallocatedAmount());
+    assertEquals(350_000L, defaults.getUnallocatedAmount());
 
     SimulationResponse preview = service.run(1L, request(false));
 
     assertFalse(preview.getIsSaved());
     assertNull(preview.getSimulationId());
     assertEquals(0, mapper.countByUserId(1L));
-    assertEquals(19_900_000L, preview.getExpectedAsset());
+    assertEquals(24_600_475L, preview.getExpectedAsset());
     assertEquals(20_000_000L, preview.getTargetAmount());
     assertEquals(150_000L, preview.getMonthlyInvestmentAmount());
     assertEquals(900_000L, preview.getReferenceMonthlyIncome());
@@ -92,8 +92,8 @@ class SimulationServiceImplTest {
     assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
     assertEquals(66_825L, preview.getExpectedEffect().getExpectedInvestmentReturn());
     assertEquals(4_700_475L, preview.getExpectedEffect().getProjectedBenefitAmount());
-    assertFalse(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
-    assertEquals(19_900_000L, preview.getExpectedEffect().getConservativeExpectedAsset());
+    assertTrue(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
+    assertEquals(24_600_475L, preview.getExpectedEffect().getConservativeExpectedAsset());
     assertEquals(24_600_475L, preview.getExpectedEffect().getPotentialExpectedAsset());
     assertEquals(
         SimulationCalculator.CALCULATION_POLICY_VERSION,
@@ -186,7 +186,7 @@ class SimulationServiceImplTest {
     SimulationResponse high = service.run(1L, highSaving);
     SimulationResponse low = service.run(1L, lowSaving);
 
-    assertEquals(high.getExpectedAsset(), low.getExpectedAsset());
+    assertTrue(high.getExpectedAsset() > low.getExpectedAsset());
     assertTrue(
         high.getExpectedEffect().getSoldierSavingInterest()
             > low.getExpectedEffect().getSoldierSavingInterest());

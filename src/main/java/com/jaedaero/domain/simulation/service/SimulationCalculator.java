@@ -102,10 +102,10 @@ public class SimulationCalculator {
         Math.addExact(
             Math.addExact(soldierSavingInterest, governmentMatchingSupport),
             expectedInvestmentReturn);
-    long potentialExpectedAsset = Math.addExact(asset, projectedBenefit);
+    long expectedAsset = Math.addExact(asset, projectedBenefit);
 
     return new SimulationCalculationResult(
-        asset,
+        expectedAsset,
         financialDischargeDate,
         totalMonths,
         input.baseAsset(),
@@ -117,7 +117,7 @@ public class SimulationCalculator {
         investmentPrincipal,
         expectedInvestmentReturn,
         unallocatedPrincipal,
-        potentialExpectedAsset,
+        expectedAsset,
         CALCULATION_POLICY_VERSION);
   }
 

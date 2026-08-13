@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper">
+
+    <select id="sumThisMonthSpendingByUserId" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(th.amount), 0)
+        FROM transaction_history th
+        INNER JOIN connected_account ca ON ca.account_id = th.account_id
+        INNER JOIN codef_connection cc ON cc.connection_id = ca.connection_id
+        WHERE cc.user_id = #{userId}
+          AND ca.status = 'ACTIVE'
+          AND th.transaction_type = 'WITHDRAW'
+          AND (th.category IS NULL OR th.category != 'ASSET')
+          AND th.transaction_datetime >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND th.transaction_datetime &lt; DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+    </select>
+</mapper>

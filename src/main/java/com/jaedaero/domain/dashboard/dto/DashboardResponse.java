@@ -42,7 +42,7 @@ public class DashboardResponse {
   @ApiModelProperty(value = "이번 달 예상 투자액", example = "420000")
   private final Long thisMonthInvestment;
 
-  @ApiModelProperty(value = "이번 달 예상 소비액", example = "154000")
+  @ApiModelProperty(value = "이번 달 실제 소비액(동기화된 출금 거래 합계)", example = "154000")
   private final Long thisMonthSpending;
 
   @ApiModelProperty(value = "적용한 What-if 기준 월 투자 목표액", example = "500000")
@@ -67,7 +67,8 @@ public class DashboardResponse {
       CashflowForecastResponse cashflow,
       LocalDate actualDischargeDate,
       StrategyApplicationVo latestApplication,
-      LocalDate today) {
+      LocalDate today,
+      Long actualThisMonthSpending) {
     CashflowForecastMonthResponse currentMonth =
         cashflow.getMonths().stream()
             .filter(month -> YearMonth.from(month.getForecastMonth()).equals(YearMonth.from(today)))
@@ -79,7 +80,7 @@ public class DashboardResponse {
         currentMonth == null || currentMonth.getExpectedInvestmentAmount() == null
             ? 0L
             : currentMonth.getExpectedInvestmentAmount();
-    long thisMonthSpending = currentMonth == null ? 0L : currentMonth.getExpectedSpendingAmount();
+    long thisMonthSpending = actualThisMonthSpending == null ? 0L : actualThisMonthSpending;
     Long monthlyInvestmentGoal = monthlyInvestmentGoal(latestApplication);
     Long monthlySpendingGoal =
         latestApplication == null ? 0L : latestApplication.getAppliedMonthlySpendingAmount();

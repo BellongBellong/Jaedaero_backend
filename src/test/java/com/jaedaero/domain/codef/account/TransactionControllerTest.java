@@ -50,6 +50,17 @@ class TransactionControllerTest {
   }
 
   @Test
+  void clampsAFutureEndDateToTodayBeforeSynchronizingOrQuerying() {
+    CapturingRepository repository = new CapturingRepository();
+    TransactionController controller = new TransactionController(repository);
+    LocalDate today = LocalDate.now();
+
+    controller.getTransactions(authentication(1), null, today.minusDays(3), today.plusDays(10), null);
+
+    assertEquals(today, repository.endDate);
+  }
+
+  @Test
   void rejectsAReversedPeriod() {
     TransactionController controller = new TransactionController(new CapturingRepository());
 
