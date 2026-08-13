@@ -6,6 +6,7 @@
 
 -- Railway MySQL을 포함해 실행 세션의 한글 인코딩을 명시합니다.
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+09:00';
 START TRANSACTION;
 
 DROP TEMPORARY TABLE IF EXISTS challenge_mock_user;
@@ -110,18 +111,25 @@ INSERT INTO users (
 SELECT
     'KAKAO',
     cmu.social_id,
-    cmu.nickname,
+    NULL,
     'ARMY',
     cmu.profile_source,
     FALSE,
     NULL
 FROM challenge_mock_user cmu
 ON DUPLICATE KEY UPDATE
-    nickname = VALUES(nickname),
     profile_image = VALUES(profile_image),
     profile_source = VALUES(profile_source),
     is_withdrawn = FALSE,
     withdrawn_at = NULL;
+
+-- 소셜 식별자로 사용자를 확정한 뒤 닉네임을 설정해 다른 사용자를 중복 키 대상으로 삼지 않습니다.
+-- 같은 닉네임을 실제 사용자가 쓰고 있으면 UPDATE가 실패하고 전체 트랜잭션이 롤백됩니다.
+UPDATE users u
+INNER JOIN challenge_mock_user cmu
+    ON cmu.social_id = u.social_id
+   AND u.social_type = 'KAKAO'
+SET u.nickname = cmu.nickname;
 
 INSERT INTO soldier_profile (
     user_id,
@@ -158,11 +166,11 @@ INSERT INTO goal (
 SELECT
     u.user_id,
     CASE MOD(CAST(SUBSTRING_INDEX(cmu.social_id, '-', -1) AS UNSIGNED), 5)
-        WHEN 0 THEN 30000000
-        WHEN 1 THEN 10000000
-        WHEN 2 THEN 15000000
-        WHEN 3 THEN 20000000
-        ELSE 25000000
+        WHEN 0 THEN 35000000
+        WHEN 1 THEN 15000000
+        WHEN 2 THEN 20000000
+        WHEN 3 THEN 25000000
+        ELSE 30000000
     END,
     DATE_ADD(
         CURDATE(),
@@ -203,6 +211,31 @@ WHERE cg.soldier_type = 'ARMY'
   AND cg.enlistment_month = MONTH(CURDATE())
 ON DUPLICATE KEY UPDATE
     joined_at = CURRENT_TIMESTAMP;
+
+-- 목 사용자가 이전 실행 월의 그룹에 남아 있으면 테스트 그룹에서만 제거합니다.
+DELETE cm
+FROM challenge_member cm
+INNER JOIN users u
+    ON u.user_id = cm.user_id
+   AND u.social_type = 'KAKAO'
+INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+INNER JOIN challenge_group cg ON cg.group_id = cm.group_id
+WHERE cg.soldier_type <> 'ARMY'
+   OR cg.enlistment_year <> YEAR(CURDATE())
+   OR cg.enlistment_month <> MONTH(CURDATE());
+
+-- 현재 동기 그룹의 목 사용자 목표 평균을 2,500만 원으로 맞춥니다.
+UPDATE goal g
+INNER JOIN challenge_member cm ON cm.user_id = g.user_id
+INNER JOIN challenge_group cg ON cg.group_id = cm.group_id
+INNER JOIN users u
+    ON u.user_id = g.user_id
+   AND u.social_type = 'KAKAO'
+INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+SET g.target_amount = 25000000
+WHERE cg.soldier_type = 'ARMY'
+  AND cg.enlistment_year = YEAR(CURDATE())
+  AND cg.enlistment_month = MONTH(CURDATE());
 
 INSERT INTO challenge_member_summary (
     member_id,
@@ -321,7 +354,9 @@ SELECT
         ELSE NULL
     END
 FROM users u
-INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+INNER JOIN challenge_mock_user cmu
+    ON cmu.social_id = u.social_id
+   AND u.social_type = 'KAKAO'
 ON DUPLICATE KEY UPDATE
     initial_preference = VALUES(initial_preference),
     badge_tier = VALUES(badge_tier),
@@ -342,7 +377,9 @@ SELECT
     DATE_SUB(CURRENT_TIMESTAMP, INTERVAL MOD(ib.safe_count + ib.aggressive_count, 30) DAY)
 FROM investment_badge ib
 INNER JOIN users u ON u.user_id = ib.user_id
-INNER JOIN challenge_mock_user cmu ON cmu.social_id = u.social_id
+INNER JOIN challenge_mock_user cmu
+    ON cmu.social_id = u.social_id
+   AND u.social_type = 'KAKAO'
 INNER JOIN badge b ON (
     (b.mission_type = 'SAFE' AND b.required_completion_count <= ib.safe_count)
     OR (b.mission_type = 'AGGRESSIVE' AND b.required_completion_count <= ib.aggressive_count)

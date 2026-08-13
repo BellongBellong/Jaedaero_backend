@@ -3,6 +3,7 @@ package com.jaedaero.domain.goal.service.impl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
 import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.goal.dto.GoalRequest;
@@ -68,9 +69,8 @@ class GoalServiceImplTest {
     private long generatedUserId;
 
     @Override
-    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
-        long userId) {
-      throw new UnsupportedOperationException();
+    public CashflowCalculationInputResponse getCalculationInput(long userId) {
+      return null;
     }
 
     @Override
