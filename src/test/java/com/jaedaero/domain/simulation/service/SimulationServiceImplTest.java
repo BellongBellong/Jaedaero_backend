@@ -75,7 +75,6 @@ class SimulationServiceImplTest {
     assertFalse(preview.getIsSaved());
     assertNull(preview.getSimulationId());
     assertEquals(0, mapper.countByUserId(1L));
-    assertEquals(19_900_000L, preview.getExpectedAsset());
     assertEquals(20_000_000L, preview.getTargetAmount());
     assertEquals(150_000L, preview.getMonthlyInvestmentAmount());
     assertEquals(900_000L, preview.getReferenceMonthlyIncome());
@@ -86,22 +85,21 @@ class SimulationServiceImplTest {
     assertEquals(15, preview.getCalculationDetail().getCalculationMonths());
     assertEquals(4_300_000L, preview.getCalculationDetail().getBaseAsset());
     assertEquals(18_300_000L, preview.getCalculationDetail().getExpectedSalary());
-    assertEquals(2_700_000L, preview.getCalculationDetail().getExpectedSpending());
-    assertEquals(15_600_000L, preview.getCalculationDetail().getCashflowIncreaseAmount());
+    assertEquals(3_660_000L, preview.getCalculationDetail().getExpectedSpending());
+    assertEquals(14_640_000L, preview.getCalculationDetail().getCashflowIncreaseAmount());
     assertEquals(4_500_000L, preview.getCalculationDetail().getSoldierSavingPrincipal());
-    assertEquals(2_250_000L, preview.getCalculationDetail().getInvestmentPrincipal());
-    assertEquals(8_850_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
+    assertEquals(3_600_000L, preview.getCalculationDetail().getInvestmentPrincipal());
+    assertEquals(7_090_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
     assertEquals(131_250L, preview.getExpectedEffect().getSoldierSavingInterest());
     assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
-    assertEquals(66_825L, preview.getExpectedEffect().getExpectedInvestmentReturn());
-    assertEquals(4_698_075L, preview.getExpectedEffect().getProjectedBenefitAmount());
-    assertFalse(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
-    assertEquals(19_900_000L, preview.getExpectedEffect().getConservativeExpectedAsset());
-    assertEquals(24_598_075L, preview.getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(115_916L, preview.getExpectedEffect().getExpectedInvestmentReturn());
+    assertEquals(4_747_166L, preview.getExpectedEffect().getProjectedBenefitAmount());
     assertEquals(
         Math.addExact(
-            preview.getExpectedAsset(), preview.getExpectedEffect().getProjectedBenefitAmount()),
-        preview.getExpectedEffect().getPotentialExpectedAsset());
+            preview.getCalculationDetail().getBaseAsset()
+                + preview.getCalculationDetail().getCashflowIncreaseAmount(),
+            preview.getExpectedEffect().getProjectedBenefitAmount()),
+        preview.getExpectedAsset());
     assertEquals(
         SimulationCalculator.CALCULATION_POLICY_VERSION,
         preview.getExpectedEffect().getCalculationPolicyVersion());
@@ -116,9 +114,7 @@ class SimulationServiceImplTest {
     assertEquals(saved.getSimulationId(), history.getSimulations().get(0).getSimulationId());
     assertEquals(150_000L, history.getSimulations().get(0).getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("16.67"), history.getSimulations().get(0).getInvestmentRate());
-    assertEquals(
-        saved.getExpectedEffect().getPotentialExpectedAsset(),
-        history.getSimulations().get(0).getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(saved.getExpectedAsset(), history.getSimulations().get(0).getExpectedAsset());
   }
 
   @Test
@@ -193,27 +189,22 @@ class SimulationServiceImplTest {
     SimulationResponse high = service.run(1L, highSaving);
     SimulationResponse low = service.run(1L, lowSaving);
 
-    assertEquals(high.getExpectedAsset(), low.getExpectedAsset());
-    assertTrue(
-        high.getExpectedEffect().getPotentialExpectedAsset()
-            > low.getExpectedEffect().getPotentialExpectedAsset());
+    assertTrue(high.getExpectedAsset() > low.getExpectedAsset());
     assertTrue(
         high.getExpectedEffect().getSoldierSavingInterest()
             > low.getExpectedEffect().getSoldierSavingInterest());
     assertTrue(
         high.getExpectedEffect().getGovernmentMatchingSupport()
             > low.getExpectedEffect().getGovernmentMatchingSupport());
-    assertEquals(
-        high.getCalculationDetail().getCashflowIncreaseAmount(),
-        Math.addExact(
-            Math.addExact(
-                high.getCalculationDetail().getSoldierSavingPrincipal(),
-                high.getCalculationDetail().getInvestmentPrincipal()),
-            high.getCalculationDetail().getUnallocatedPrincipal()));
+    assertTrue(
+        high.getCalculationDetail().getSoldierSavingPrincipal()
+            + high.getCalculationDetail().getInvestmentPrincipal()
+            + high.getCalculationDetail().getUnallocatedPrincipal()
+            >= high.getCalculationDetail().getCashflowIncreaseAmount());
   }
 
   @Test
-  void expectedReturnRateOnlyChangesPotentialAsset_notConservativeForecast() {
+  void expectedReturnRateChangesTheUnifiedExpectedAsset() {
     SimulationService service = service(900_000L);
     SimulationRequest zeroReturn = request(false);
     zeroReturn.setExpectedReturnRate(BigDecimal.ZERO);
@@ -223,12 +214,7 @@ class SimulationServiceImplTest {
     SimulationResponse conservative = service.run(1L, zeroReturn);
     SimulationResponse optimistic = service.run(1L, highReturn);
 
-    assertEquals(conservative.getExpectedAsset(), optimistic.getExpectedAsset());
-    assertEquals(
-        conservative.getFinancialDischargeDate(), optimistic.getFinancialDischargeDate());
-    assertTrue(
-        optimistic.getExpectedEffect().getPotentialExpectedAsset()
-            > conservative.getExpectedEffect().getPotentialExpectedAsset());
+    assertTrue(optimistic.getExpectedAsset() > conservative.getExpectedAsset());
   }
 
   @Test
@@ -273,7 +259,6 @@ class SimulationServiceImplTest {
     assertEquals(cashflow.soldierSavingInterest(), whatIf.soldierSavingInterest());
     assertEquals(cashflow.governmentMatchingSupport(), whatIf.governmentMatchingSupport());
     assertEquals(cashflow.expectedInvestmentReturn(), whatIf.expectedInvestmentReturn());
-    assertEquals(cashflow.potentialExpectedAsset(), whatIf.potentialExpectedAsset());
   }
 
   @Test

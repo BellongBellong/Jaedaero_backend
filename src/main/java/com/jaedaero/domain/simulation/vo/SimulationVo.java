@@ -36,7 +36,6 @@ public class SimulationVo {
   private Long investmentPrincipal;
   private Long expectedInvestmentReturn;
   private Long unallocatedPrincipal;
-  private Long potentialExpectedAsset;
   private String calculationPolicyVersion;
   private Boolean isSaved;
   private LocalDateTime createdAt;

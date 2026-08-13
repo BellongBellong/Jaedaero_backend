@@ -126,7 +126,6 @@ public class SimulationServiceImpl implements SimulationService {
             .investmentPrincipal(result.investmentPrincipal())
             .expectedInvestmentReturn(result.expectedInvestmentReturn())
             .unallocatedPrincipal(result.unallocatedPrincipal())
-            .potentialExpectedAsset(result.potentialExpectedAsset())
             .calculationPolicyVersion(result.calculationPolicyVersion())
             .isSaved(isSaved)
             .build();

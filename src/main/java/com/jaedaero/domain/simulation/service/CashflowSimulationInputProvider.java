@@ -24,12 +24,14 @@ public class CashflowSimulationInputProvider implements SimulationInputProvider 
     try {
       CashflowCalculationInputResponse source = cashflowService.getCalculationInput(userId);
       return new SimulationInput(
+          source.getUserId(),
           source.getBaseAsset(),
           source.getTargetAmount(),
           source.getMonthlySpendingAverage(),
           source.getSoldierType(),
           source.getEnlistmentDate(),
           source.getDischargeDate(),
+          source.getSoldierSavings(),
           source.getAppliedStrategy());
     } catch (CashflowException exception) {
       throw new SimulationException(

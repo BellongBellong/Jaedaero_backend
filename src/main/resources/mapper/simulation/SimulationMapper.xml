@@ -11,8 +11,7 @@
         financial_discharge_date, calculation_months, base_asset, expected_salary, expected_spending,
         soldier_saving_principal, soldier_saving_interest, government_matching_support,
         investment_principal, expected_investment_return, unallocated_principal,
-        potential_expected_asset, calculation_policy_version,
-        is_saved, created_at, updated_at
+        calculation_policy_version, is_saved, created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.jaedaero.domain.simulation.vo.SimulationVo"
@@ -23,14 +22,14 @@
             financial_discharge_date, calculation_months, base_asset, expected_salary, expected_spending,
             soldier_saving_principal, soldier_saving_interest, government_matching_support,
             investment_principal, expected_investment_return, unallocated_principal,
-            potential_expected_asset, calculation_policy_version, is_saved
+            calculation_policy_version, is_saved
         ) VALUES (
             #{userId}, #{scenarioName}, #{targetAmount}, #{monthlySavingAmount}, #{monthlyInvestmentAmount},
             #{expectedReturnRate}, #{monthlySpendingAmount}, #{expectedAsset},
             #{financialDischargeDate}, #{calculationMonths}, #{baseAsset}, #{expectedSalary}, #{expectedSpending},
             #{soldierSavingPrincipal}, #{soldierSavingInterest}, #{governmentMatchingSupport},
             #{investmentPrincipal}, #{expectedInvestmentReturn}, #{unallocatedPrincipal},
-            #{potentialExpectedAsset}, #{calculationPolicyVersion}, #{isSaved}
+            #{calculationPolicyVersion}, #{isSaved}
         )
     </insert>
 

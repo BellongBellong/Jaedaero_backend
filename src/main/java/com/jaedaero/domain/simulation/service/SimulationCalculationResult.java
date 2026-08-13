@@ -15,5 +15,4 @@ public record SimulationCalculationResult(
     long investmentPrincipal,
     long expectedInvestmentReturn,
     long unallocatedPrincipal,
-    long potentialExpectedAsset,
     String calculationPolicyVersion) {}
