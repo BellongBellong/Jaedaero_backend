@@ -1,6 +1,7 @@
 package com.jaedaero.domain.marketreport.service;
 
 import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
+import com.jaedaero.domain.marketreport.dto.MarketReportStatus;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketReportSourceMapper;
@@ -8,6 +9,7 @@ import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportSourceVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
 import java.util.List;
+import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +49,24 @@ public class MarketReportPersistenceService {
     for (int index = 0; index < sources.size(); index++) {
       sourceMapper.insert(toSourceVo(reportId, index + 1, sources.get(index)));
     }
+  }
+
+  /** 기존 본문·출처는 유지하고, 해당 날짜의 지표 스냅샷과 전체 상태만 갱신합니다. */
+  @Transactional
+  public void refreshIndicators(
+      LocalDate reportDate,
+      List<MarketIndicatorResult> indicators,
+      MarketReportStatus reportStatus) {
+    DailyMarketReportVo report = reportMapper.findByReportDateForUpdate(reportDate);
+    if (report == null || report.getReportId() == null) {
+      throw new IllegalStateException("오늘자 시장 리포트를 찾을 수 없습니다.");
+    }
+    long reportId = report.getReportId();
+    indicatorMapper.deleteByReportId(reportId);
+    for (MarketIndicatorResult result : indicators) {
+      indicatorMapper.insert(toIndicatorVo(reportId, result));
+    }
+    reportMapper.updateReportStatus(reportId, reportStatus.name());
   }
 
   private DailyMarketIndicatorVo toIndicatorVo(long reportId, MarketIndicatorResult result) {

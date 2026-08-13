@@ -8,6 +8,7 @@ import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.service.CashflowService;
 import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
+import com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper;
 import com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceAction;
 import com.jaedaero.domain.recurringinvestment.vo.InvestmentFrequency;
 import com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper;
@@ -33,12 +34,14 @@ class DashboardServiceImplTest {
             .build();
     RecordingCashflowService cashflowService = new RecordingCashflowService(generated);
     DashboardMapper dashboardMapper = userId -> LocalDate.of(2027, 6, 20);
+    DashboardSpendingMapper dashboardSpendingMapper = userId -> 0L;
     StrategyApplicationMapper strategyApplicationMapper = new EmptyStrategyApplicationMapper();
     DashboardServiceImpl service =
         new DashboardServiceImpl(
             cashflowService,
             dashboardMapper,
             strategyApplicationMapper,
+            dashboardSpendingMapper,
             Clock.fixed(Instant.parse("2026-08-04T00:00:00Z"), ZoneId.of("Asia/Seoul")));
 
     DashboardResponse response = service.get(1L);
@@ -96,6 +99,13 @@ class DashboardServiceImplTest {
   }
 
   private static class RecordingCashflowService implements CashflowService {
+
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private final CashflowForecastResponse generated;
     private int generateCount;
 

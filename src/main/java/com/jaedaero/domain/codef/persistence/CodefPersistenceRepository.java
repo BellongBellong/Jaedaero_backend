@@ -183,7 +183,7 @@ public class CodefPersistenceRepository {
             + " VALUES(account_type), product_name = VALUES(product_name), current_balance ="
             + " VALUES(current_balance), available_balance = VALUES(available_balance),"
             + " account_opened_date = VALUES(account_opened_date), maturity_date ="
-            + " VALUES(maturity_date), last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'",
+            + " VALUES(maturity_date), last_synced_at = CURRENT_TIMESTAMP",
         connectionId,
         institutionCode,
         businessType,
@@ -258,6 +258,16 @@ public class CodefPersistenceRepository {
             accountId,
             userId);
     return rows.stream().findFirst();
+  }
+
+  /** 실제 데이터를 삭제하지 않고 사용자의 계좌를 조회 대상에서 제외합니다. */
+  public int deactivateAccountByIdAndUserId(long accountId, long userId) {
+    return jdbcTemplate.update(
+        "UPDATE connected_account ca JOIN codef_connection cc ON cc.connection_id ="
+            + " ca.connection_id SET ca.status = 'DISCONNECTED' WHERE ca.account_id = ?"
+            + " AND cc.user_id = ? AND ca.status = 'ACTIVE'",
+        accountId,
+        userId);
   }
 
   /** 멱등 계좌 upsert 후 로컬에 준비된 계좌를 찾습니다. */

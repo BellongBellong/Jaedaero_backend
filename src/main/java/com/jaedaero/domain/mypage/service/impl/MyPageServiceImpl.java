@@ -80,6 +80,17 @@ public class MyPageServiceImpl implements MyPageService {
   /** 사용자를 탈퇴 처리하고 인증 토큰을 삭제합니다. */
   @Override
   @Transactional
+  public void unlinkCodef(long userId) {
+    if (myPageMapper.disconnectCodefConnection(userId) == 0) {
+      throw new MyPageException(
+          MyPageErrorCode.CODEF_CONNECTION_NOT_FOUND, "활성 금융기관 연동 정보를 찾을 수 없습니다.");
+    }
+    myPageMapper.disconnectCodefInstitutionConnections(userId);
+    myPageMapper.disconnectConnectedAccounts(userId);
+  }
+
+  @Override
+  @Transactional
   public void withdraw(long userId) {
     if (myPageMapper.withdraw(userId) == 0) {
       throw new MyPageException(MyPageErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다.");

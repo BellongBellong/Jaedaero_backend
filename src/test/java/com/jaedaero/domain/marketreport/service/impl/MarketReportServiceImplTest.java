@@ -60,6 +60,15 @@ class MarketReportServiceImplTest {
   }
 
   @Test
+  void getTodayIndicatorsReturnsOnlyIndicatorContract() {
+    var response = service(report(1L, "정상 시장 리포트"), null).getTodayIndicators();
+
+    assertEquals(1L, response.getReportId());
+    assertEquals(MarketReportStatus.NORMAL, response.getReportStatus());
+    assertEquals(4, response.getIndicators().size());
+  }
+
+  @Test
   void getTodayMarksLatestReportStaleWhenNoActiveReportExists() {
     var response = service(null, report(2L, "어제 시장 리포트")).getToday();
 
@@ -135,7 +144,17 @@ class MarketReportServiceImplTest {
     }
 
     @Override
+    public DailyMarketReportVo findByReportDate(java.time.LocalDate reportDate) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public int markGenerationInProgress(long reportId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int updateReportStatus(long reportId, String reportStatus) {
       throw new UnsupportedOperationException();
     }
   }

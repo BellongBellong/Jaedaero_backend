@@ -25,6 +25,15 @@ public interface MyPageMapper {
   /** 사용자의 투자 성향과 미션 기반 뱃지 현황을 조회합니다. */
   InvestmentBadgeStatusVo findInvestmentBadgeStatus(@Param("userId") long userId);
 
+  /** 활성 금융기관 연동을 해지 상태로 변경합니다. */
+  int disconnectCodefConnection(@Param("userId") long userId);
+
+  /** 금융기관 인증 연결을 해지 상태로 변경합니다. */
+  void disconnectCodefInstitutionConnections(@Param("userId") long userId);
+
+  /** 연결 계좌를 해지 상태로 변경합니다. */
+  void disconnectConnectedAccounts(@Param("userId") long userId);
+
   /** 사용자 계정을 소프트 삭제합니다. */
   int withdraw(@Param("userId") long userId);
 }

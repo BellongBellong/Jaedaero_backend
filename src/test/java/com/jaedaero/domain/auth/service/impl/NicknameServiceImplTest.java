@@ -77,7 +77,7 @@ class NicknameServiceImplTest {
     NicknameException tooLongException =
         assertThrows(NicknameException.class, () -> service.updateNickname(1L, "a".repeat(13)));
     NicknameException invalidCharacterException =
-        assertThrows(NicknameException.class, () -> service.updateNickname(1L, "jaedaero1"));
+        assertThrows(NicknameException.class, () -> service.updateNickname(1L, "jaedaero!"));
 
     assertEquals(AuthErrorCode.INVALID_NICKNAME, blankException.getErrorCode());
     assertEquals(AuthErrorCode.INVALID_NICKNAME, tooLongException.getErrorCode());

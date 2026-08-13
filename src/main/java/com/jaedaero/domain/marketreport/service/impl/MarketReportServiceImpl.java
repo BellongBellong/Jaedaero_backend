@@ -6,6 +6,7 @@ import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
 import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
 import com.jaedaero.domain.marketreport.dto.MarketReportStatus;
 import com.jaedaero.domain.marketreport.dto.TodayMarketReportResponse;
+import com.jaedaero.domain.marketreport.dto.TodayMarketIndicatorsResponse;
 import com.jaedaero.domain.marketreport.exception.MarketReportErrorCode;
 import com.jaedaero.domain.marketreport.exception.MarketReportException;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
@@ -46,18 +47,8 @@ public class MarketReportServiceImpl implements MarketReportService {
   @Override
   @Transactional(readOnly = true)
   public TodayMarketReportResponse getToday() {
-    LocalDateTime now = LocalDateTime.now(clock);
-    DailyMarketReportVo report = reportMapper.findActiveAt(now);
-    boolean stale = false;
-    if (report == null) {
-      report = reportMapper.findLatest();
-      if (report == null) {
-        throw new MarketReportException(
-            MarketReportErrorCode.NOT_FOUND,
-            "오늘의 시장 리포트가 아직 생성되지 않았습니다.");
-      }
-      stale = true;
-    }
+    ReportView reportView = loadReportView();
+    DailyMarketReportVo report = reportView.report();
 
     List<DailyMarketIndicatorVo> indicatorRows =
         indicatorMapper.findByReportId(report.getReportId());
@@ -66,12 +57,7 @@ public class MarketReportServiceImpl implements MarketReportService {
     return TodayMarketReportResponse.builder()
         .reportId(report.getReportId())
         .reportDate(report.getReportDate())
-        .reportStatus(
-            stale
-                ? MarketReportStatus.STALE
-                : report.getReportStatus() == null
-                    ? MarketReportStatus.PARTIAL
-                    : report.getReportStatus())
+        .reportStatus(reportView.status())
         .title(report.getTitle())
         .summary(report.getSummary())
         .content(report.getContent())
@@ -84,6 +70,36 @@ public class MarketReportServiceImpl implements MarketReportService {
         .validUntil(report.getValidUntil())
         .build();
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public TodayMarketIndicatorsResponse getTodayIndicators() {
+    ReportView reportView = loadReportView();
+    DailyMarketReportVo report = reportView.report();
+    return TodayMarketIndicatorsResponse.builder()
+        .reportId(report.getReportId())
+        .reportDate(report.getReportDate())
+        .reportStatus(reportView.status())
+        .indicators(toIndicatorItems(indicatorMapper.findByReportId(report.getReportId())))
+        .build();
+  }
+
+  private ReportView loadReportView() {
+    DailyMarketReportVo report = reportMapper.findActiveAt(LocalDateTime.now(clock));
+    if (report != null) {
+      return new ReportView(
+          report,
+          report.getReportStatus() == null ? MarketReportStatus.PARTIAL : report.getReportStatus());
+    }
+    report = reportMapper.findLatest();
+    if (report == null) {
+      throw new MarketReportException(
+          MarketReportErrorCode.NOT_FOUND, "오늘의 시장 리포트가 아직 생성되지 않았습니다.");
+    }
+    return new ReportView(report, MarketReportStatus.STALE);
+  }
+
+  private record ReportView(DailyMarketReportVo report, MarketReportStatus status) {}
 
   private List<MarketIndicatorItem> toIndicatorItems(List<DailyMarketIndicatorVo> rows) {
     Map<MarketIndicatorType, DailyMarketIndicatorVo> rowsByType =

@@ -43,6 +43,11 @@ public class ProductRecommendationService {
   }
 
   public ProductRecommendationResponse getEtfRecommendations(long userId, LocalDate asOfDate) {
+    return getEtfRecommendations(userId, asOfDate, null);
+  }
+
+  public ProductRecommendationResponse getEtfRecommendations(
+      long userId, LocalDate asOfDate, ProductRecommendationContext context) {
     EtfMarketOverviewResponse overview = marketOverviewService.getOverview(asOfDate);
     Map<RiskLevel, List<EtfProductRecommendation>> itemsByRiskLevel =
         overview.items().stream()
@@ -55,14 +60,23 @@ public class ProductRecommendationService {
             .toList();
     InvestmentPreference preference = investmentPreferenceMapper.findInitialPreferenceByUserId(userId);
     RecurringInvestmentPlanVo plan = recurringInvestmentPlanMapper.findByUserId(userId);
+    Long monthlyInvestmentBudget =
+        context == null
+            ? plan == null ? null : plan.getMaximumMonthlyAmount()
+            : Long.valueOf(context.monthlyInvestmentBudget());
+    LocalDate dischargeDate =
+        context == null
+            ? dashboardMapper.findActualDischargeDateByUserId(userId)
+            : context.financialDischargeDate();
     List<PersonalizedEtfRecommendation> personalized =
-        preference == null || plan == null
+        preference == null || plan == null || monthlyInvestmentBudget == null
             ? List.of()
             : personalized(
                 overview.items(),
                 preference,
                 plan,
-                dashboardMapper.findActualDischargeDateByUserId(userId),
+                monthlyInvestmentBudget,
+                dischargeDate,
                 overviewDate(overview, asOfDate));
     return new ProductRecommendationResponse(
         overview.requestedAsOfDate(),
@@ -70,14 +84,19 @@ public class ProductRecommendationService {
         "ETF명과 기초지수명의 자산군·구조 키워드로 분류한 내부 리밸런싱 규칙입니다. 맞춤 순위는 자산군 적합도(40점), 위험등급(25점), 거래대금(15점), NAV 괴리율(10점), 시가총액(10점)을 합산하며 운용사 공식 위험등급이 아닙니다.",
         groups,
         preference,
-        plan == null ? null : plan.getMaximumMonthlyAmount(),
-        personalized);
+        monthlyInvestmentBudget,
+        personalized,
+        context == null ? null : context.analysisId(),
+        context == null ? null : context.simulationId(),
+        context == null ? null : context.expectedReturnRate(),
+        context == null ? null : context.financialDischargeDate());
   }
 
   private List<PersonalizedEtfRecommendation> personalized(
       List<EtfMarketOverviewItem> items,
       InvestmentPreference preference,
       RecurringInvestmentPlanVo plan,
+      long monthlyInvestmentBudget,
       LocalDate dischargeDate,
       LocalDate dataReferenceDate) {
     RecommendationScoreReference reference = RecommendationScoreReference.from(items, riskClassifier);
@@ -93,7 +112,7 @@ public class ProductRecommendationService {
         .map(
             item ->
                 personalized(
-                    item.etf(), preference, plan, heldIndex, dischargeDate, dataReferenceDate, reference))
+                    item.etf(), preference, plan, monthlyInvestmentBudget, heldIndex, dischargeDate, dataReferenceDate, reference))
         .filter(java.util.Objects::nonNull)
         .sorted(Comparator.comparingInt(PersonalizedEtfRecommendation::suitabilityScore).reversed())
         .limit(5)
@@ -104,6 +123,7 @@ public class ProductRecommendationService {
       com.jaedaero.domain.investment.etf.EtfDailyTradingInfo etf,
       InvestmentPreference preference,
       RecurringInvestmentPlanVo plan,
+      long monthlyInvestmentBudget,
       String heldIndex,
       LocalDate dischargeDate,
       LocalDate dataReferenceDate,
@@ -126,7 +146,7 @@ public class ProductRecommendationService {
       adjustmentScore -= 40;
       warnings.add("현재 적립 계획과 동일한 ETF입니다. 분산투자 관점에서 우선순위를 낮췄습니다.");
     }
-    long budget = plan.getMaximumMonthlyAmount();
+    long budget = monthlyInvestmentBudget;
     long price = amount(etf.tddClsprc());
     if (price > budget) {
       adjustmentScore -= 30;

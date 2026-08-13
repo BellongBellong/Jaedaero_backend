@@ -50,7 +50,7 @@ public class NicknameServiceImpl implements NicknameService {
     }
 
     String normalizedNickname = nickname.trim();
-    if (!normalizedNickname.matches("[가-힣a-zA-Z]{2,12}")) {
+    if (!normalizedNickname.matches("[가-힣a-zA-Z0-9]{2,12}")) {
       throw new NicknameException(
           AuthErrorCode.INVALID_NICKNAME, "닉네임은 한글 또는 영문 1자 이상 12자 이하여야 합니다.");
     }
