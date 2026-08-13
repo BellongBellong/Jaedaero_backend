@@ -38,10 +38,10 @@ class CashflowServiceImplTest {
     assertEquals(8_000_000L, generated.getExpectedSavingAmount());
     assertEquals(2_200_000L, generated.getExpectedInvestmentAmount());
     assertEquals(10_200_000L, generated.getExpectedAsset());
-    assertEquals(244_776L, generated.getSoldierSavingInterest());
+    assertEquals(240_000L, generated.getSoldierSavingInterest());
     assertEquals(8_000_000L, generated.getGovernmentMatchingSupport());
     assertEquals(0L, generated.getExpectedInvestmentReturn());
-    assertEquals(18_444_776L, generated.getPotentialExpectedAsset());
+    assertEquals(18_440_000L, generated.getPotentialExpectedAsset());
     assertEquals(false, generated.getReturnsIncludedInExpectedAsset());
     assertEquals(
         ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,

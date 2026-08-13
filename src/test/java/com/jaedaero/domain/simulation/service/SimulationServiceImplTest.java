@@ -91,13 +91,13 @@ class SimulationServiceImplTest {
     assertEquals(4_500_000L, preview.getCalculationDetail().getSoldierSavingPrincipal());
     assertEquals(2_250_000L, preview.getCalculationDetail().getInvestmentPrincipal());
     assertEquals(8_850_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
-    assertEquals(133_650L, preview.getExpectedEffect().getSoldierSavingInterest());
+    assertEquals(131_250L, preview.getExpectedEffect().getSoldierSavingInterest());
     assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
     assertEquals(66_825L, preview.getExpectedEffect().getExpectedInvestmentReturn());
-    assertEquals(4_700_475L, preview.getExpectedEffect().getProjectedBenefitAmount());
+    assertEquals(4_698_075L, preview.getExpectedEffect().getProjectedBenefitAmount());
     assertFalse(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
     assertEquals(19_900_000L, preview.getExpectedEffect().getConservativeExpectedAsset());
-    assertEquals(24_600_475L, preview.getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(24_598_075L, preview.getExpectedEffect().getPotentialExpectedAsset());
     assertEquals(
         Math.addExact(
             preview.getExpectedAsset(), preview.getExpectedEffect().getProjectedBenefitAmount()),

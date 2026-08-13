@@ -98,9 +98,20 @@ public class SimulationCalculator {
         Collections.nCopies(totalMonths, request.getMonthlySavingAmount());
     List<Long> investmentContributions =
         Collections.nCopies(totalMonths, request.getMonthlyInvestmentAmount());
+    List<LocalDate> savingContributionDates =
+        java.util.stream.IntStream.range(0, totalMonths)
+            .mapToObj(index -> startMonth.plusMonths(index).atDay(1))
+            .toList();
     ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
         cashflowEngine.calculateProjectedBenefit(
-            savingContributions, investmentContributions, request.getExpectedReturnRate());
+            List.of(),
+            calculationDate,
+            savingContributions,
+            savingContributionDates,
+            input.dischargeDate(),
+            0L,
+            investmentContributions,
+            request.getExpectedReturnRate());
     long potentialExpectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
 
     return new SimulationCalculationResult(

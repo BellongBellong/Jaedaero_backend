@@ -66,6 +66,7 @@ public class CashflowCalculator {
     List<CashflowForecastMonthCalculation> months = new ArrayList<>();
     List<Long> savingContributions = new ArrayList<>();
     List<Long> investmentContributions = new ArrayList<>();
+    List<LocalDate> savingContributionDates = new ArrayList<>();
     int totalMonths = (int) ChronoUnit.MONTHS.between(startMonth, dischargeMonth) + 1;
     boolean hasAppliedStrategy = input.appliedStrategy() != null;
 
@@ -113,6 +114,7 @@ public class CashflowCalculator {
       expectedInvestmentAmount += monthlyInvestment;
       savingContributions.add(monthlySaving);
       investmentContributions.add(monthlyInvestment);
+      savingContributionDates.add(month.atDay(1));
       if (index == 0) firstMonthSpendingLimit = spendingLimit;
       if (financialDischargeDate == null && projection.targetReachedDate() != null) {
         financialDischargeDate = projection.targetReachedDate();
@@ -132,7 +134,14 @@ public class CashflowCalculator {
         hasAppliedStrategy ? input.appliedStrategy().expectedReturnRate() : BigDecimal.ZERO;
     ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
         cashflowEngine.calculateProjectedBenefit(
-            savingContributions, investmentContributions, investmentAnnualReturnRate);
+            input.soldierSavings(),
+            calculationDate,
+            savingContributions,
+            savingContributionDates,
+            input.dischargeDate(),
+            0L,
+            investmentContributions,
+            investmentAnnualReturnRate);
     long potentialExpectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
 
     return new CashflowForecastCalculation(

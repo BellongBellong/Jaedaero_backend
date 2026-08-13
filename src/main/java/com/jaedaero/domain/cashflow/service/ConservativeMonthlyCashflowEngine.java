@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,7 +22,7 @@ public class ConservativeMonthlyCashflowEngine {
   public static final BigDecimal SOLDIER_SAVING_ANNUAL_INTEREST_RATE =
       new BigDecimal("5.00");
   public static final BigDecimal GOVERNMENT_MATCHING_RATE = new BigDecimal("100.00");
-  public static final String CALCULATION_POLICY_VERSION = "CONSERVATIVE_CASHFLOW_V2_20260813";
+  public static final String CALCULATION_POLICY_VERSION = "CONSERVATIVE_CASHFLOW_V3_20260813";
   private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
   private static final BigDecimal PERCENT = BigDecimal.valueOf(100);
   private static final MathContext RETURN_MATH_CONTEXT =
@@ -48,19 +49,55 @@ public class ConservativeMonthlyCashflowEngine {
   }
 
   public ProjectedBenefit calculateProjectedBenefit(
+      List<SoldierSavingInput> existingSoldierSavings,
+      LocalDate calculationDate,
       List<Long> monthlySavingContributions,
+      List<LocalDate> monthlySavingContributionDates,
+      LocalDate dischargeDate,
+      long existingInvestmentPrincipal,
       List<Long> monthlyInvestmentContributions,
       BigDecimal investmentAnnualReturnRate) {
-    long savingPrincipal = sum(monthlySavingContributions);
-    long savingInterest =
-        compoundReturn(monthlySavingContributions, SOLDIER_SAVING_ANNUAL_INTEREST_RATE);
+    LocalDate savingMaturityDate = resolveSavingMaturityDate(existingSoldierSavings, dischargeDate);
+
+    long existingSavingBalance = 0L;
+    long existingSavingInterest = 0L;
+    for (SoldierSavingInput saving : existingSoldierSavings) {
+      existingSavingBalance = Math.addExact(existingSavingBalance, saving.currentBalance());
+      long elapsedMonths =
+          Math.max(0L, ChronoUnit.MONTHS.between(saving.startDate(), calculationDate));
+      existingSavingInterest =
+          Math.addExact(
+              existingSavingInterest,
+              simpleInterest(
+                  saving.currentBalance(), SOLDIER_SAVING_ANNUAL_INTEREST_RATE, elapsedMonths));
+    }
+
+    long futureSavingInterest = 0L;
+    for (int index = 0; index < monthlySavingContributions.size(); index++) {
+      long amount = monthlySavingContributions.get(index);
+      long remainingMonths =
+          Math.max(
+              0L,
+              ChronoUnit.MONTHS.between(
+                  monthlySavingContributionDates.get(index), savingMaturityDate));
+      futureSavingInterest =
+          Math.addExact(
+              futureSavingInterest,
+              simpleInterest(amount, SOLDIER_SAVING_ANNUAL_INTEREST_RATE, remainingMonths));
+    }
+
+    long savingPrincipal = Math.addExact(existingSavingBalance, sum(monthlySavingContributions));
+    long savingInterest = Math.addExact(existingSavingInterest, futureSavingInterest);
     long governmentMatchingSupport = rateAmount(savingPrincipal, GOVERNMENT_MATCHING_RATE);
-    long investmentPrincipal = sum(monthlyInvestmentContributions);
+
+    long investmentPrincipal =
+        Math.addExact(existingInvestmentPrincipal, sum(monthlyInvestmentContributions));
     long investmentReturn =
-        compoundReturn(monthlyInvestmentContributions, investmentAnnualReturnRate);
+        compoundReturn(
+            existingInvestmentPrincipal, monthlyInvestmentContributions, investmentAnnualReturnRate);
+
     long projectedBenefitAmount =
-        Math.addExact(
-            Math.addExact(savingInterest, governmentMatchingSupport), investmentReturn);
+        Math.addExact(Math.addExact(savingInterest, governmentMatchingSupport), investmentReturn);
     return new ProjectedBenefit(
         savingPrincipal,
         savingInterest,
@@ -68,6 +105,26 @@ public class ConservativeMonthlyCashflowEngine {
         investmentPrincipal,
         investmentReturn,
         projectedBenefitAmount);
+  }
+
+  private LocalDate resolveSavingMaturityDate(
+      List<SoldierSavingInput> existingSoldierSavings, LocalDate dischargeDate) {
+    return existingSoldierSavings.stream()
+        .map(SoldierSavingInput::maturityDate)
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(dischargeDate);
+  }
+
+  private long simpleInterest(long principal, BigDecimal annualRatePercent, long months) {
+    if (principal == 0L || months <= 0L) {
+      return 0L;
+    }
+    return BigDecimal.valueOf(principal)
+        .multiply(annualRatePercent)
+        .multiply(BigDecimal.valueOf(months))
+        .divide(PERCENT.multiply(MONTHS_PER_YEAR), 0, RoundingMode.HALF_UP)
+        .longValueExact();
   }
 
   private long sum(List<Long> contributions) {
@@ -78,23 +135,26 @@ public class ConservativeMonthlyCashflowEngine {
     return total;
   }
 
-  private long compoundReturn(List<Long> contributions, BigDecimal annualRatePercent) {
-    if (annualRatePercent == null || annualRatePercent.signum() == 0 || contributions.size() <= 1) {
+  private long compoundReturn(
+      long existingPrincipal, List<Long> contributions, BigDecimal annualRatePercent) {
+    if (annualRatePercent == null || annualRatePercent.signum() == 0) {
       return 0L;
     }
     BigDecimal monthlyRate =
         annualRatePercent
             .divide(PERCENT, RETURN_MATH_CONTEXT)
             .divide(MONTHS_PER_YEAR, RETURN_MATH_CONTEXT);
-    BigDecimal balance = BigDecimal.ZERO;
     BigDecimal growthFactor = BigDecimal.ONE.add(monthlyRate);
+    BigDecimal balance = BigDecimal.valueOf(existingPrincipal);
     for (Long contribution : contributions) {
       balance =
           balance
               .multiply(growthFactor, RETURN_MATH_CONTEXT)
               .add(BigDecimal.valueOf(contribution == null ? 0L : contribution));
     }
-    return balance.subtract(BigDecimal.valueOf(sum(contributions)))
+    long totalPrincipal = Math.addExact(existingPrincipal, sum(contributions));
+    return balance
+        .subtract(BigDecimal.valueOf(totalPrincipal))
         .setScale(0, RoundingMode.HALF_UP)
         .longValueExact();
   }
