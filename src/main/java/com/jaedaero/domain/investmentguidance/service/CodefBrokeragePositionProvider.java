@@ -35,10 +35,10 @@ public class CodefBrokeragePositionProvider implements BrokeragePositionProvider
     long principal = selected.stream().mapToLong(SecuritiesHoldingResponse::purchaseAmount).sum();
     long marketValue = selected.stream().mapToLong(SecuritiesHoldingResponse::valuationAmount).sum();
     long profitLoss = selected.stream().mapToLong(SecuritiesHoldingResponse::valuationProfit).sum();
+    long riskAssetAmount =
+        assets.holdings().stream().mapToLong(SecuritiesHoldingResponse::valuationAmount).sum();
     long accountValue =
-        Math.addExact(
-            assets.depositAmount(),
-            assets.holdings().stream().mapToLong(SecuritiesHoldingResponse::valuationAmount).sum());
+        Math.addExact(assets.depositAmount(), riskAssetAmount);
     BigDecimal returnRate =
         principal == 0
             ? BigDecimal.ZERO.setScale(4)
@@ -46,7 +46,14 @@ public class CodefBrokeragePositionProvider implements BrokeragePositionProvider
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(principal), 4, RoundingMode.HALF_UP);
     return new BrokeragePositionSnapshot(
-        accountValue, principal, marketValue, profitLoss, returnRate, LocalDateTime.now(clock));
+        accountValue,
+        assets.depositAmount(),
+        riskAssetAmount,
+        principal,
+        marketValue,
+        profitLoss,
+        returnRate,
+        LocalDateTime.now(clock));
   }
 
   private boolean matches(

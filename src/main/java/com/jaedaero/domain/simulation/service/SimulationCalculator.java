@@ -10,7 +10,7 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import org.springframework.stereotype.Component;
 
-/** 위키의 What-if 월별 누적 산식을 구현한다. */
+/** 위키의 가정 시뮬레이션 월별 누적 산식을 구현합니다. */
 @Component
 public class SimulationCalculator {
 
@@ -59,7 +59,7 @@ public class SimulationCalculator {
           militaryPayPolicy.resolve(input.soldierType(), enlistmentMonth, month).monthlySalary();
       long assetBeforeMonth = asset;
 
-      // What-if의 저축액과 투자액은 순자산 내부 배분이다. MVP 예상자산은
+      // 가정 시뮬레이션의 저축액과 투자액은 순자산 내부 배분입니다. MVP 예상자산은
       // 캐시플로우 계약과 동일하게 급여 - 소비만 순증가로 반영한다.
       asset = Math.addExact(asset, Math.subtractExact(salary, request.getMonthlySpendingAmount()));
       expectedSalary = Math.addExact(expectedSalary, salary);
@@ -102,10 +102,10 @@ public class SimulationCalculator {
         Math.addExact(
             Math.addExact(soldierSavingInterest, governmentMatchingSupport),
             expectedInvestmentReturn);
-    long potentialExpectedAsset = Math.addExact(asset, projectedBenefit);
+    long expectedAsset = Math.addExact(asset, projectedBenefit);
 
     return new SimulationCalculationResult(
-        asset,
+        expectedAsset,
         financialDischargeDate,
         totalMonths,
         input.baseAsset(),
@@ -117,7 +117,7 @@ public class SimulationCalculator {
         investmentPrincipal,
         expectedInvestmentReturn,
         unallocatedPrincipal,
-        potentialExpectedAsset,
+        expectedAsset,
         CALCULATION_POLICY_VERSION);
   }
 

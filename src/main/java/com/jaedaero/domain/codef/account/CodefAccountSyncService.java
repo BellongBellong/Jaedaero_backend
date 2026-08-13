@@ -16,7 +16,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Synchronizes CODEF account-list data into the local database. */
+/** CODEF 계좌 목록 데이터를 로컬 데이터베이스에 동기화합니다. */
 @Service
 public class CodefAccountSyncService {
   private static final String ACCOUNT_LIST_PATH = "/v1/kr/bank/p/account/account-list";
@@ -134,7 +134,6 @@ public class CodefAccountSyncService {
       }
       String productName =
           firstText(account, "resAccountName", "resAccountProductName", "resAccountTypeName");
-      String masked = firstText(account, "resAccountDisplay", "resAccountNoDisplay");
       String institutionName =
           firstText(account, "resAccountBankName", "resCompanyName", "resOrganizationName");
       repository.upsertAccount(
@@ -144,7 +143,7 @@ public class CodefAccountSyncService {
           institutionName.isBlank() ? organizationCode : institutionName,
           cipher.encrypt(accountNumber),
           hasher.hash(accountNumber),
-          masked.isBlank() ? mask(accountNumber) : masked,
+          AccountNumberMasker.mask(accountNumber),
           "SECURITIES",
           productName.isBlank() ? "증권 계좌" : productName,
           number(
@@ -175,7 +174,6 @@ public class CodefAccountSyncService {
       String accountNumber = account.path("resAccount").asText();
       if (accountNumber.isBlank()) continue;
       String productName = account.path("resAccountName").asText();
-      String masked = textOrDefault(account, "resAccountDisplay", mask(accountNumber));
       String institutionName = textOrDefault(account, "resAccountBankName", organizationCode);
       String accountType = resolveAccountType(account, fallbackType);
       repository.upsertAccount(
@@ -185,7 +183,7 @@ public class CodefAccountSyncService {
           institutionName,
           cipher.encrypt(accountNumber),
           hasher.hash(accountNumber),
-          masked,
+          AccountNumberMasker.mask(accountNumber),
           accountType,
           productName,
           number(account.path("resAccountBalance")),
@@ -257,8 +255,4 @@ public class CodefAccountSyncService {
     return value.isBlank() ? fallback : value;
   }
 
-  private String mask(String accountNumber) {
-    if (accountNumber.length() <= 4) return "****";
-    return "***-***-" + accountNumber.substring(accountNumber.length() - 4);
-  }
 }

@@ -68,6 +68,18 @@ public class UserController {
         myPageService.getInvestmentBadges(getAuthenticatedUserId(authentication)));
   }
 
+  @ApiOperation(value = "금융기관 연동 해지", notes = "현재 사용자의 CODEF 금융기관과 연결 계좌를 해지 상태로 변경합니다.")
+  @ApiResponses({
+    @ApiResponse(code = 204, message = "연동 해지 성공"),
+    @ApiResponse(code = 401, message = "인증 필요"),
+    @ApiResponse(code = 404, message = "활성 금융기관 연동 정보를 찾을 수 없음")
+  })
+  @DeleteMapping("/codef/unlink")
+  public ResponseEntity<Void> unlinkCodef(@ApiIgnore Authentication authentication) {
+    myPageService.unlinkCodef(getAuthenticatedUserId(authentication));
+    return ResponseEntity.noContent().build();
+  }
+
   @DeleteMapping("/me")
   @ApiOperation(value = "회원 탈퇴")
   @ApiResponses({
@@ -88,7 +100,7 @@ public class UserController {
   })
   public ResponseEntity<NicknameAvailabilityResponse> checkNicknameAvailability(
       @ApiIgnore Authentication authentication,
-      @RequestParam @NotBlank @Size(max = 12) @Pattern(regexp = "[가-힣a-zA-Z]{2,12}")
+      @RequestParam @NotBlank @Size(max = 12) @Pattern(regexp = "[가-힣a-zA-Z0-9]{2,12}")
           String nickname) {
     long userId = getAuthenticatedUserId(authentication);
     return ResponseEntity.ok(

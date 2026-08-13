@@ -62,9 +62,7 @@ public class SimulationServiceImpl implements SimulationService {
           Math.min(
               SimulationAllocationPolicy.MAX_MONTHLY_SAVING_AMOUNT, referenceMonthlyIncome);
       monthlyInvestmentAmount = 0L;
-      long availableForSpending = Math.max(0L, referenceMonthlyIncome - monthlySavingAmount);
-      monthlySpendingAmount =
-          Math.min(Math.max(0L, input.monthlySpendingAverage()), availableForSpending);
+      monthlySpendingAmount = 0L;
       expectedReturnRate = SimulationAllocationPolicy.DEFAULT_EXPECTED_RETURN_RATE;
     } else {
       monthlySpendingAmount = input.appliedStrategy().monthlySpendingAmount();

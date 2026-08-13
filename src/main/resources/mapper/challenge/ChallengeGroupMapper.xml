@@ -20,6 +20,9 @@
         <result property="profileSource" column="profile_source"
                 javaType="com.jaedaero.domain.auth.common.enums.ProfileSource"/>
         <result property="missionCompletionCount" column="mission_completion_count"/>
+        <result property="highestBadgeType" column="highest_badge_type"
+                javaType="com.jaedaero.domain.challenge.common.enums.MissionType"/>
+        <result property="highestBadgeGrade" column="highest_badge_grade"/>
     </resultMap>
 
     <resultMap id="rankingStatisticsResultMap"
@@ -33,53 +36,68 @@
     </resultMap>
 
     <sql id="rankedMembersCte">
-        WITH ranked_members AS (
+        WITH member_scores AS (
             SELECT
                 cm.member_id,
                 cm.user_id,
                 <choose>
                     <when test="rankingPeriod.name() == 'MONTHLY'">
                         COALESCE(cmr.mission_completion_count, 0) AS mission_completion_count,
-                        cmr.created_at AS updated_at,
+                        cmr.created_at AS updated_at
                     </when>
                     <otherwise>
                         COALESCE(cms.total_mission_count, 0) AS mission_completion_count,
-                        cms.updated_at,
+                        cms.updated_at AS updated_at
                     </otherwise>
                 </choose>
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    DESC, cm.member_id ASC
-                ) AS ranking_no,
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    ASC, cm.member_id ASC
-                ) AS ascending_row_no,
-                ROW_NUMBER() OVER (
-                    ORDER BY
-                    <choose>
-                        <when test="rankingPeriod.name() == 'MONTHLY'">COALESCE(cmr.mission_completion_count, 0)</when>
-                        <otherwise>COALESCE(cms.total_mission_count, 0)</otherwise>
-                    </choose>
-                    DESC, cm.member_id ASC
-                ) AS descending_row_no,
-                COUNT(*) OVER () AS member_count
             FROM challenge_member cm
             INNER JOIN users member_user ON member_user.user_id = cm.user_id
-            LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
-            LEFT JOIN challenge_monthly_result cmr
-                ON cmr.member_id = cm.member_id
-                AND cmr.result_month = #{resultMonth}
+            <choose>
+                <when test="rankingPeriod.name() == 'MONTHLY'">
+                    LEFT JOIN challenge_monthly_result cmr
+                        ON cmr.member_id = cm.member_id
+                        AND cmr.result_month = #{resultMonth}
+                </when>
+                <otherwise>
+                    LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
+                </otherwise>
+            </choose>
             WHERE cm.group_id = #{groupId}
               AND member_user.is_withdrawn = FALSE
+        ),
+        ranked_members AS (
+            SELECT
+                member_scores.*,
+                ROW_NUMBER() OVER (
+                    ORDER BY
+                    mission_completion_count DESC,
+                    member_id ASC
+                ) AS ranking_no,
+                COUNT(*) OVER () AS member_count
+            FROM member_scores
+        )
+    </sql>
+
+    <sql id="highestBadgesCte">
+        , highest_badges AS (
+            SELECT
+                ub.user_id,
+                b.mission_type AS highest_badge_type,
+                b.grade AS highest_badge_grade,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ub.user_id
+                    ORDER BY
+                        b.required_completion_count DESC,
+                        FIELD(b.mission_type, 'SAFE', 'AGGRESSIVE'),
+                        ub.acquired_at ASC,
+                        ub.user_badge_id ASC
+                ) AS badge_ranking_no
+            FROM user_badge ub
+            INNER JOIN badge b ON b.badge_id = ub.badge_id
+            INNER JOIN ranked_members rm
+                ON rm.user_id = ub.user_id
+               AND rm.ranking_no &lt;= 3
+            WHERE b.is_active = TRUE
         )
     </sql>
 
@@ -98,15 +116,21 @@
 
     <select id="findTopRankersByGroupId" resultMap="rankingMemberResultMap">
         <include refid="rankedMembersCte"/>
+        <include refid="highestBadgesCte"/>
         SELECT
             rm.ranking_no,
             rm.member_count,
             u.nickname,
             u.profile_image,
             u.profile_source,
-            rm.mission_completion_count
+            rm.mission_completion_count,
+            hb.highest_badge_type,
+            hb.highest_badge_grade
         FROM ranked_members rm
         INNER JOIN users u ON u.user_id = rm.user_id
+        LEFT JOIN highest_badges hb
+            ON hb.user_id = rm.user_id
+            AND hb.badge_ranking_no = 1
         WHERE u.is_withdrawn = FALSE
         ORDER BY rm.ranking_no
         LIMIT 3
@@ -131,7 +155,7 @@
                 ROUND(
                     AVG(
                         CASE
-                            WHEN ascending_row_no &lt;= CEILING(member_count * 0.25)
+                            WHEN ranking_no &gt; member_count - CEILING(member_count * 0.25)
                             THEN mission_completion_count
                         END
                     )
@@ -139,7 +163,7 @@
             ) AS bottom_quarter_average_mission_completion_count,
             MAX(
                 CASE
-                    WHEN descending_row_no = CEILING(member_count * 0.10)
+                    WHEN ranking_no = CEILING(member_count * 0.10)
                     THEN mission_completion_count
                 END
             ) AS top_ten_percent_threshold,

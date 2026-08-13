@@ -10,6 +10,8 @@ public interface InvestmentPreferenceMapper {
   /** 활성 사용자 존재 여부를 조회합니다. */
   int countActiveUserByUserId(@Param("userId") long userId);
 
+  InvestmentPreference findInitialPreferenceByUserId(@Param("userId") long userId);
+
   /** 사용자의 초기 투자 성향을 등록하거나 갱신합니다. */
   void upsertInitialPreference(
       @Param("userId") long userId,

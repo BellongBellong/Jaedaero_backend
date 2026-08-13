@@ -1,10 +1,10 @@
-# Copy this file to application-local.properties and fill in local values.
+# 이 파일을 application-local.properties로 복사한 뒤 로컬 값을 입력하세요.
 db.driver=com.mysql.cj.jdbc.Driver
 db.url=jdbc:mysql://localhost:3306/jaedaero?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 db.username=your_username
 db.password=your_password
 
-# Social login credentials are read from Jaedaero_backend/.env.
+# 소셜 로그인 자격 증명은 Jaedaero_backend/.env에서 읽습니다.
 google.client-id=${GOOGLE_CLIENT_ID}
 google.client-secret=${GOOGLE_CLIENT_SECRET}
 kakao.client-id=${KAKAO_CLIENT_ID}
@@ -14,11 +14,17 @@ codef.client-secret=${CODEF_CLIENT_SECRET}
 codef.public-key=${CODEF_PUBLIC_KEY}
 codef.api.base-url=https://development.codef.io
 codef.debug.account-create-enabled=true
+# 로컬 CODEF 요청 전에는 POST /api/v1/auth/login으로 사용자를 생성하고,
+# 응답의 userId를 CODEF 요청에 사용하세요. X-User-Id 헤더만으로는 users 행이 생성되지 않습니다.
 
-# OpenAI Chat Completions 호환 프록시. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
+# OpenAI Chat Completions 호환 프록시입니다. llm.api-key는 Authorization: Bearer 헤더로만 전송됩니다.
 llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.cloudtype.app/v1/chat/completions
-# Models are assigned by server task policy; clients do not select them.
+# 모델은 서버 작업 정책이 지정하며 클라이언트는 선택하지 않습니다.
 llm.api-key=your_llm_api_key
+
+# Gemini Developer API generateContent. 실제 키는 커밋하지 않는다.
+gemini.api-key=your_gemini_api_key
+gemini.generate-content-url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent
 
 # Generate once with: openssl rand -base64 32
 # Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
@@ -26,5 +32,17 @@ app.crypto.master-key-base64=your_32_byte_aes256_key_base64
 
 # JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
 codef.demo.user-id=1
-# KRX Open API 인증키
+# KRX Open API 인증키 — ETF 기능에서만 사용
 krx.api.auth-key=YOUR_KRX_AUTH_KEY
+# 금융위원회_지수시세정보 공공데이터포털 서비스키 — KOSPI/KOSDAQ 시장 리포트
+# 공공데이터포털에서 제공한 일반 인증키(Decoding) 또는 URL 인코딩 인증키를 설정한다.
+market-index.api.service-key=YOUR_DATA_GO_KR_SERVICE_KEY
+# 로컬에서도 실제 provider를 호출한다. 키가 없거나 유효하지 않으면 해당 지표는 MISSING으로 저장된다.
+# 한국수출입은행 Open API 인증키
+eximbank.api.key=YOUR_EXIMBANK_API_KEY
+# FRED API 인증키
+fred.api.key=YOUR_FRED_API_KEY
+# 운영 배포에서 PARTIAL 시장 리포트의 지표만 재수집할 때 사용하는 별도 토큰
+market-report.admin-refresh-token=YOUR_MARKET_REPORT_ADMIN_REFRESH_TOKEN
+# Finnhub Market News API 인증키
+finnhub.api.key=YOUR_FINNHUB_API_KEY

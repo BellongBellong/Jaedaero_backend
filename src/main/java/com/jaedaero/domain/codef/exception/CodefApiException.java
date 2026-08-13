@@ -1,6 +1,6 @@
 package com.jaedaero.domain.codef.exception;
 
-/** Exception for a failed CODEF resource API call. */
+/** CODEF 리소스 API 호출 실패 예외입니다. */
 public class CodefApiException extends RuntimeException {
 
   private final int statusCode;

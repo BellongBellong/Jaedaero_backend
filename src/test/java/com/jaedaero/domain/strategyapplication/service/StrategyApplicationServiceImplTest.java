@@ -163,6 +163,12 @@ class StrategyApplicationServiceImplTest {
 
   private static class SequencedCashflowService implements CashflowService {
 
+    @Override
+    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
+        long userId) {
+      throw new UnsupportedOperationException();
+    }
+
     private final AtomicLong currentExpectedAsset;
     private final List<Long> generatedExpectedAssets;
     private int generateCount;
@@ -264,6 +270,17 @@ class StrategyApplicationServiceImplTest {
                       && java.util.Objects.equals(
                           application.getAppliedRecurringContributionAmount(), contributionAmount))
           .findFirst()
+          .orElse(null);
+    }
+
+    @Override
+    public StrategyApplicationVo findLatestByGuidanceIdAndUserId(long guidanceId, long userId) {
+      return applications.stream()
+          .filter(
+              application ->
+                  application.getUserId() == userId
+                      && java.util.Objects.equals(application.getGuidanceId(), guidanceId))
+          .max(Comparator.comparing(StrategyApplicationVo::getApplicationId))
           .orElse(null);
     }
 

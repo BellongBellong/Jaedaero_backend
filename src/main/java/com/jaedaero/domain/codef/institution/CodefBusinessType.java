@@ -1,6 +1,6 @@
 package com.jaedaero.domain.codef.institution;
 
-/** CODEF account-registration business categories supported by this application. */
+/** 이 애플리케이션이 지원하는 CODEF 계좌 등록 업무 구분입니다. */
 public enum CodefBusinessType {
   BANK("BK"),
   SECURITIES("ST");

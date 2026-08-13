@@ -2,6 +2,7 @@ package com.jaedaero.domain.cashflow.service.impl;
 
 import com.jaedaero.domain.cashflow.dto.CashflowForecastMonthResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
+import com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse;
 import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.mapper.CashflowMapper;
@@ -48,6 +49,12 @@ public class CashflowServiceImpl implements CashflowService {
     this.cashflowInputProvider = cashflowInputProvider;
     this.cashflowCalculator = cashflowCalculator;
     this.clock = clock;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public CashflowCalculationInputResponse getCalculationInput(long userId) {
+    return CashflowCalculationInputResponse.from(cashflowInputProvider.load(userId));
   }
 
   @Override

@@ -45,4 +45,11 @@
             LIMIT 1
         )
     </select>
+
+    <select id="findCurrentRankNameByUserId" resultType="string">
+        SELECT rank_name
+        FROM soldier_profile
+        WHERE user_id = #{userId}
+        LIMIT 1
+    </select>
 </mapper>

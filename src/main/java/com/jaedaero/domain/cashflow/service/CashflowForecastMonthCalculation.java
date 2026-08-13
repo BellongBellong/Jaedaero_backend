@@ -2,7 +2,7 @@ package com.jaedaero.domain.cashflow.service;
 
 import java.time.LocalDate;
 
-/** A single monthly row before it is persisted. */
+/** 저장되기 전 월별 계산 결과 한 건입니다. */
 public record CashflowForecastMonthCalculation(
     LocalDate forecastMonth,
     String expectedRank,

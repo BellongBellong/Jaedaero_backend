@@ -2,8 +2,8 @@ module.exports = {
     extends: ['@commitlint/config-conventional'],
     parserPreset: {
         parserOpts: {
-            // The separator is a colon followed by whitespace. This preserves colons in Gitmoji
-            // aliases such as ":memo: Docs" while capturing the last header separator.
+            // 구분자는 공백이 뒤따르는 콜론입니다. 마지막 헤더 구분자를 찾으면서
+            // ":memo: Docs" 같은 Gitmoji 별칭 안의 콜론은 보존합니다.
             headerPattern: /^(?<type>.+):\s+(?<subject>.+)$/,
             headerCorrespondence: ['type', 'subject'],
         },

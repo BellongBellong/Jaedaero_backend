@@ -1,20 +1,27 @@
 package com.jaedaero.domain.marketreport.service.impl;
 
-import com.jaedaero.domain.marketreport.dto.MarketCondition;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorItem;
+import com.jaedaero.domain.marketreport.dto.MarketIndicatorStatus;
+import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
+import com.jaedaero.domain.marketreport.dto.MarketReportSourceItem;
 import com.jaedaero.domain.marketreport.dto.MarketReportStatus;
 import com.jaedaero.domain.marketreport.dto.TodayMarketReportResponse;
+import com.jaedaero.domain.marketreport.dto.TodayMarketIndicatorsResponse;
 import com.jaedaero.domain.marketreport.exception.MarketReportErrorCode;
 import com.jaedaero.domain.marketreport.exception.MarketReportException;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
 import com.jaedaero.domain.marketreport.mapper.DailyMarketReportMapper;
+import com.jaedaero.domain.marketreport.mapper.DailyMarketReportSourceMapper;
 import com.jaedaero.domain.marketreport.service.MarketReportService;
-import com.jaedaero.domain.marketreport.service.MilitaryProductSummaryFactory;
 import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
+import com.jaedaero.domain.marketreport.vo.DailyMarketReportSourceVo;
 import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,52 +30,39 @@ public class MarketReportServiceImpl implements MarketReportService {
 
   private final DailyMarketReportMapper reportMapper;
   private final DailyMarketIndicatorMapper indicatorMapper;
-  private final MilitaryProductSummaryFactory militaryProductSummaryFactory;
+  private final DailyMarketReportSourceMapper sourceMapper;
   private final Clock clock;
 
   public MarketReportServiceImpl(
       DailyMarketReportMapper reportMapper,
       DailyMarketIndicatorMapper indicatorMapper,
-      MilitaryProductSummaryFactory militaryProductSummaryFactory,
+      DailyMarketReportSourceMapper sourceMapper,
       Clock clock) {
     this.reportMapper = reportMapper;
     this.indicatorMapper = indicatorMapper;
-    this.militaryProductSummaryFactory = militaryProductSummaryFactory;
+    this.sourceMapper = sourceMapper;
     this.clock = clock;
   }
 
   @Override
   @Transactional(readOnly = true)
   public TodayMarketReportResponse getToday() {
-    LocalDateTime now = LocalDateTime.now(clock);
-    DailyMarketReportVo report = reportMapper.findActiveAt(now);
-    boolean stale = false;
-    if (report == null) {
-      report = reportMapper.findLatest();
-      if (report == null) {
-        throw new MarketReportException(
-            MarketReportErrorCode.NOT_FOUND,
-            "오늘의 시장 리포트가 아직 생성되지 않았습니다.");
-      }
-      stale = true;
-    }
+    ReportView reportView = loadReportView();
+    DailyMarketReportVo report = reportView.report();
 
     List<DailyMarketIndicatorVo> indicatorRows =
         indicatorMapper.findByReportId(report.getReportId());
-    MarketCondition condition =
-        report.getMarketCondition() == null
-            ? MarketCondition.NEUTRAL
-            : report.getMarketCondition();
+    List<DailyMarketReportSourceVo> sourceRows =
+        sourceMapper.findByReportId(report.getReportId());
     return TodayMarketReportResponse.builder()
         .reportId(report.getReportId())
         .reportDate(report.getReportDate())
-        .reportStatus(
-            stale ? MarketReportStatus.STALE : report.getReportStatus())
-        .marketCondition(condition)
+        .reportStatus(reportView.status())
+        .title(report.getTitle())
+        .summary(report.getSummary())
         .content(report.getContent())
-        .recommendedAction(recommendedAction(condition))
-        .indicators(indicatorRows.stream().map(this::toIndicatorItem).toList())
-        .militaryProductSummary(militaryProductSummaryFactory.create())
+        .indicators(toIndicatorItems(indicatorRows))
+        .sources(sourceRows.stream().map(this::toSourceItem).toList())
         .generationSource(report.getGenerationSource())
         .modelName(report.getModelName())
         .promptVersion(report.getPromptVersion())
@@ -77,7 +71,58 @@ public class MarketReportServiceImpl implements MarketReportService {
         .build();
   }
 
-  private MarketIndicatorItem toIndicatorItem(DailyMarketIndicatorVo vo) {
+  @Override
+  @Transactional(readOnly = true)
+  public TodayMarketIndicatorsResponse getTodayIndicators() {
+    ReportView reportView = loadReportView();
+    DailyMarketReportVo report = reportView.report();
+    return TodayMarketIndicatorsResponse.builder()
+        .reportId(report.getReportId())
+        .reportDate(report.getReportDate())
+        .reportStatus(reportView.status())
+        .indicators(toIndicatorItems(indicatorMapper.findByReportId(report.getReportId())))
+        .build();
+  }
+
+  private ReportView loadReportView() {
+    DailyMarketReportVo report = reportMapper.findActiveAt(LocalDateTime.now(clock));
+    if (report != null) {
+      return new ReportView(
+          report,
+          report.getReportStatus() == null ? MarketReportStatus.PARTIAL : report.getReportStatus());
+    }
+    report = reportMapper.findLatest();
+    if (report == null) {
+      throw new MarketReportException(
+          MarketReportErrorCode.NOT_FOUND, "오늘의 시장 리포트가 아직 생성되지 않았습니다.");
+    }
+    return new ReportView(report, MarketReportStatus.STALE);
+  }
+
+  private record ReportView(DailyMarketReportVo report, MarketReportStatus status) {}
+
+  private List<MarketIndicatorItem> toIndicatorItems(List<DailyMarketIndicatorVo> rows) {
+    Map<MarketIndicatorType, DailyMarketIndicatorVo> rowsByType =
+        new EnumMap<>(MarketIndicatorType.class);
+    for (DailyMarketIndicatorVo row : rows) {
+      if (row.getIndicatorType() != null) {
+        rowsByType.putIfAbsent(row.getIndicatorType(), row);
+      }
+    }
+    return Arrays.stream(MarketIndicatorType.values())
+        .map(type -> toIndicatorItem(type, rowsByType.get(type)))
+        .toList();
+  }
+
+  private MarketIndicatorItem toIndicatorItem(
+      MarketIndicatorType type, DailyMarketIndicatorVo vo) {
+    if (vo == null) {
+      return MarketIndicatorItem.builder()
+          .indicatorType(type)
+          .source("N/A")
+          .status(MarketIndicatorStatus.MISSING)
+          .build();
+    }
     return MarketIndicatorItem.builder()
         .indicatorType(vo.getIndicatorType())
         .dataAsOf(vo.getDataAsOf())
@@ -89,11 +134,7 @@ public class MarketReportServiceImpl implements MarketReportService {
         .build();
   }
 
-  private String recommendedAction(MarketCondition condition) {
-    return switch (condition) {
-      case BULL -> "긍정적인 흐름이지만 무리한 추가 투자보다 계획한 배분을 유지해보세요.";
-      case BEAR -> "신규 매수보다 관망을 검토해보세요.";
-      case NEUTRAL -> "큰 변동이 없는 시기이니 기존 계획을 꾸준히 유지해보세요.";
-    };
+  private MarketReportSourceItem toSourceItem(DailyMarketReportSourceVo vo) {
+    return MarketReportSourceItem.builder().title(vo.getTitle()).url(vo.getUrl()).build();
   }
 }

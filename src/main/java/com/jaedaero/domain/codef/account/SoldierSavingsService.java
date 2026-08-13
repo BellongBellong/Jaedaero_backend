@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
-/** Finds military tomorrow savings accounts from the account list already synchronized from CODEF. */
+/** CODEF에서 이미 동기화한 계좌 목록에서 장병내일준비적금 계좌를 찾습니다. */
 @Service
 public class SoldierSavingsService {
 

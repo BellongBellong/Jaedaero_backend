@@ -8,7 +8,7 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import org.springframework.stereotype.Component;
 
-/** Resolves rank from the promotion schedule and salary from {@code military_pay_policy}. */
+/** 진급 일정에서 계급을, {@code military_pay_policy}에서 급여를 조회합니다. */
 @Component
 public class DefaultMilitaryPayPolicy {
 

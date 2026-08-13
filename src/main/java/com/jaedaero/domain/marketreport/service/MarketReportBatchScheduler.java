@@ -17,7 +17,7 @@ public class MarketReportBatchScheduler {
 
   @Scheduled(cron = "0 0 17 * * *", zone = "Asia/Seoul")
   public void generateDailyMarketReport() {
-    log.info("오늘의 AI투자리포트 배치를 시작합니다.");
+    log.info("오늘의 AI 시장 리포트 배치를 시작합니다.");
     generationService.generateForToday();
   }
 }

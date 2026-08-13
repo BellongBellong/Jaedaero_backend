@@ -18,7 +18,7 @@ public class AnalysisHistoryItemResponse {
   private final Long expectedAsset;
   private final Boolean isApplied;
 
-  // What-if 카드 전용 필드
+  // 가정 시뮬레이션 카드 전용 필드
   private final Long monthlySpendingAmount;
   private final Long monthlySavingAmount;
   private final Long monthlyInvestmentAmount;

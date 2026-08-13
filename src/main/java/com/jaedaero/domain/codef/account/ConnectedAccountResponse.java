@@ -41,7 +41,7 @@ public class ConnectedAccountResponse {
     this.institutionCode = account.institutionCode();
     this.businessType = account.businessType();
     this.institutionName = account.institutionName();
-    this.accountMasked = account.accountMasked();
+    this.accountMasked = AccountNumberMasker.mask(account.accountMasked());
     this.accountType = account.accountType();
     this.productName = account.productName();
     this.currentBalance = account.currentBalance();

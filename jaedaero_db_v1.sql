@@ -1,5 +1,5 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.1, 2026-08-07)
+-- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
 -- MySQL 8.0+
 -- ============================================================
 SET NAMES utf8mb4;
@@ -10,6 +10,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `notification_history`;
 DROP TABLE IF EXISTS `device_token`;
+DROP TABLE IF EXISTS `daily_market_report_source`;
 DROP TABLE IF EXISTS `daily_market_indicator`;
 DROP TABLE IF EXISTS `daily_market_report`;
 DROP TABLE IF EXISTS `leave_mode`;
@@ -35,6 +36,7 @@ DROP TABLE IF EXISTS `challenge_monthly_result`;
 DROP TABLE IF EXISTS `challenge_member`;
 DROP TABLE IF EXISTS `challenge_group`;
 DROP TABLE IF EXISTS `asset_snapshot`;
+DROP TABLE IF EXISTS `account_transaction_sync`;
 DROP TABLE IF EXISTS `transaction_history`;
 DROP TABLE IF EXISTS `soldier_saving`;
 DROP TABLE IF EXISTS `connected_account`;
@@ -235,27 +237,30 @@ CREATE TABLE codef_connection (
 -- 9. codef_institution_connection : 기관별 CODEF 로그인 정보
 -- ---------------------------------------------
 CREATE TABLE codef_institution_connection (
-    institution_connection_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    connection_id BIGINT NOT NULL,
-    institution_code VARCHAR(20) NOT NULL,
-    business_type ENUM('BK', 'ST') NOT NULL,
-    login_type VARCHAR(10) NOT NULL,
-    login_id_encrypted VARCHAR(1024) NULL,
-    login_password_encrypted VARCHAR(1024) NOT NULL,
-    birth_date_encrypted VARCHAR(1024) NULL,
-    status ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE',
-    last_sync_at TIMESTAMP NULL,
-    last_sync_error_message VARCHAR(500) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    institution_connection_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '기관별 연동 ID',
+    connection_id               BIGINT NOT NULL COMMENT 'CODEF 금융 연동 ID',
+    institution_code            VARCHAR(20) NOT NULL COMMENT 'CODEF organization 코드',
+    business_type               ENUM('BK', 'ST') NOT NULL COMMENT 'CODEF 업무 구분(BK 은행, ST 증권)',
+    login_type                  VARCHAR(10) NOT NULL COMMENT 'CODEF 로그인 방식(아이디/비밀번호는 1)',
+    login_id_encrypted          VARCHAR(1024) NULL COMMENT '암호화된 기관 로그인 ID',
+    login_password_encrypted    VARCHAR(1024) NOT NULL COMMENT '암호화된 기관 로그인 비밀번호',
+    birth_date_encrypted        VARCHAR(1024) NULL COMMENT '암호화된 생년월일',
+    status                      ENUM('ACTIVE', 'DISCONNECTED', 'ERROR') NOT NULL DEFAULT 'ACTIVE' COMMENT '기관 연동 상태',
+    last_sync_at                TIMESTAMP NULL COMMENT '기관별 마지막 동기화 시각',
+    last_sync_error_message     VARCHAR(500) NULL COMMENT '기관별 최근 동기화 실패 사유',
+    created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+    updated_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
     CONSTRAINT uq_codef_institution_connection
         UNIQUE (connection_id, institution_code, business_type),
     CONSTRAINT fk_codef_institution_connection_connection
         FOREIGN KEY (connection_id) REFERENCES codef_connection(connection_id)
             ON DELETE CASCADE,
     INDEX idx_codef_institution_connection_status (connection_id, status)
-) DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci;
+) COMMENT='CODEF 기관별 로그인 정보 및 동기화 상태. 로그인 식별자와 비밀번호는 평문 저장 금지'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
 -- 10. connected_account : CODEF 연동 계좌
@@ -348,7 +353,29 @@ CREATE TABLE transaction_history (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 12. asset_snapshot : 일별 자산 스냅샷
+-- 12. account_transaction_sync : 계좌별 거래내역 동기화 범위
+-- ---------------------------------------------
+CREATE TABLE account_transaction_sync (
+                                          transaction_sync_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '거래내역 동기화 ID',
+                                          account_id            BIGINT NOT NULL COMMENT '연동 계좌 ID',
+                                          inquiry_type          ENUM('DEMAND_DEPOSIT', 'INSTALLMENT_SAVINGS') NOT NULL COMMENT '거래 조회 유형',
+                                          requested_start_date  DATE NOT NULL COMMENT 'CODEF 조회 시작일',
+                                          requested_end_date    DATE NOT NULL COMMENT 'CODEF 조회 종료일',
+                                          synced_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '동기화 일시',
+
+                                          CONSTRAINT uq_account_transaction_sync_period
+                                              UNIQUE (account_id, inquiry_type, requested_start_date, requested_end_date),
+                                          CONSTRAINT fk_account_transaction_sync_account
+                                              FOREIGN KEY (account_id) REFERENCES connected_account(account_id)
+                                                  ON DELETE CASCADE,
+                                          CONSTRAINT chk_account_transaction_sync_period
+                                              CHECK (requested_start_date <= requested_end_date)
+) COMMENT='계좌별 CODEF 거래내역 동기화 범위'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 13. asset_snapshot : 일별 자산 스냅샷
 -- ---------------------------------------------
 CREATE TABLE asset_snapshot (
                                 snapshot_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '자산 스냅샷 ID',
@@ -394,6 +421,7 @@ CREATE TABLE challenge_member (
                                   user_id      BIGINT NOT NULL COMMENT '사용자 ID',
                                   joined_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '참여 일시',
 
+                                  INDEX idx_challenge_member_user_joined_at (user_id, joined_at DESC),
                                   CONSTRAINT uq_challenge_member_group_user UNIQUE (group_id, user_id),
                                   CONSTRAINT fk_challenge_member_group
                                       FOREIGN KEY (group_id) REFERENCES challenge_group(group_id)
@@ -413,7 +441,6 @@ CREATE TABLE challenge_monthly_result (
                                           member_id           BIGINT NOT NULL COMMENT '챌린지 참여 ID',
                                           result_month         DATE NOT NULL COMMENT '결과 월의 첫날',
                                           mission_completion_count INT NOT NULL DEFAULT 0 COMMENT '해당 월 미션 완료 수',
-                                          ranking_no           INT NULL COMMENT '동기 그룹 내 순위',
                                           created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                           CONSTRAINT uq_challenge_monthly_result
@@ -423,7 +450,7 @@ CREATE TABLE challenge_monthly_result (
                                                   ON DELETE CASCADE,
                                           CONSTRAINT chk_challenge_monthly_result_completion_count
                                               CHECK (mission_completion_count >= 0)
-) COMMENT='월별 챌린지 결과 — 월별 미션 완료 수와 동기 그룹 내 순위 이력'
+) COMMENT='월별 챌린지 결과 — 월별 미션 완료 수 집계'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -433,7 +460,6 @@ CREATE TABLE challenge_monthly_result (
 CREATE TABLE challenge_member_summary (
                                            member_id               BIGINT PRIMARY KEY COMMENT '챌린지 참여 ID',
                                            total_mission_count     INT NOT NULL DEFAULT 0 COMMENT '누적 미션 완료 수',
-                                           overall_ranking_no      INT NULL COMMENT '전체 기간 동기 그룹 내 순위',
                                            updated_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                                                ON UPDATE CURRENT_TIMESTAMP COMMENT '집계 갱신 일시',
 
@@ -442,7 +468,7 @@ CREATE TABLE challenge_member_summary (
                                                    ON DELETE CASCADE,
                                            CONSTRAINT chk_challenge_member_summary_mission_count
                                                CHECK (total_mission_count >= 0)
-) COMMENT='챌린지 참여자의 누적 미션 완료 수와 전체 동기 랭킹용 집계값'
+) COMMENT='챌린지 참여자의 누적 미션 완료 수 집계값'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
@@ -717,6 +743,8 @@ CREATE TABLE investment_guidance (
     market_value                    BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가금액',
     unrealized_profit_loss          BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가손익',
     return_rate                     DECIMAL(9,4) NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 수익률(%)',
+    safe_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 예수금(안전자산)',
+    risk_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 전체 보유종목 평가액(위험자산)',
     expected_return_rate            DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '결정론 계산에 사용한 연 예상수익률(%)',
     remaining_contribution_count    INT NOT NULL DEFAULT 0 COMMENT '전역일까지 남은 적립 회차 수',
     safety_buffer_amount            BIGINT NOT NULL DEFAULT 0 COMMENT 'SAFE_FOCUS 판정용 안전 여유금',
@@ -1008,6 +1036,7 @@ CREATE TABLE leave_mode (
                             budget_amount   BIGINT NULL COMMENT '휴가 예산 설정값(선택 입력)',
                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
+                            INDEX idx_leave_mode_user_start_date (user_id, start_date),
                             CONSTRAINT fk_leave_mode_user
                                 FOREIGN KEY (user_id) REFERENCES users(user_id)
                                     ON DELETE CASCADE
@@ -1016,29 +1045,30 @@ CREATE TABLE leave_mode (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 31. daily_market_report : 오늘의 AI투자리포트
+-- 31. daily_market_report : 오늘의 AI 시장 리포트
 -- ---------------------------------------------
 CREATE TABLE daily_market_report (
                                      report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
                                      report_date        DATE NOT NULL COMMENT '서비스 기준일(18:00~익일 17:59 노출 구간의 기준 날짜)',
-                                     content            TEXT NOT NULL COMMENT 'OpenAI GPT(gpt-5-nano)가 생성한 오늘의 시장 경향 리포트 텍스트',
-                                     market_condition   ENUM('BULL', 'BEAR', 'NEUTRAL') NOT NULL COMMENT '오늘의 AI 판단 시장 상황',
+                                     title              VARCHAR(200) NOT NULL COMMENT '오늘의 AI 시장 리포트 제목',
+                                     summary            VARCHAR(500) NOT NULL COMMENT '오늘의 AI 시장 리포트 한줄 요약',
+                                     content            TEXT NOT NULL COMMENT '선별된 Finnhub 뉴스에 근거해 Gemini가 생성한 사실 기반 시장 리포트 본문',
                                      report_status      ENUM('NORMAL', 'PARTIAL', 'STALE') NOT NULL DEFAULT 'NORMAL' COMMENT '리포트 전체 상태 — PARTIAL: 일부 지표 DELAYED/MISSING, STALE: 당일 배치 실패로 이전 리포트 노출 중',
-                                     generation_source  ENUM('OPENAI', 'FALLBACK') NOT NULL COMMENT '서술 생성 출처',
-                                     model_name         VARCHAR(50) NOT NULL COMMENT '생성에 사용한 모델명(gpt-5-nano)',
-                                     prompt_version     VARCHAR(50) NOT NULL COMMENT 'Structured Outputs 프롬프트 버전',
+                                     generation_source  ENUM('GEMINI', 'FALLBACK') NOT NULL COMMENT '본문 생성 경로 — Gemini 성공 또는 안전한 대체 상태',
+                                     model_name         VARCHAR(100) NOT NULL COMMENT '생성에 사용한 모델명(gemini-3.6-flash)',
+                                     prompt_version     VARCHAR(100) NOT NULL COMMENT 'Gemini Interactions 프롬프트 버전',
                                      valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 18:00)',
                                      valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 17:59)',
                                      created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                      CONSTRAINT uq_daily_market_report_date
                                          UNIQUE (report_date)
-) COMMENT='오늘의 AI투자리포트 — 전체 사용자 공통 1일 1건'
+) COMMENT='오늘의 AI 시장 리포트 — 전체 사용자 공통 1일 1건'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 31-B. daily_market_indicator : 오늘의 AI투자리포트 지표 원본값
+-- 31-B. daily_market_indicator : 오늘의 AI 시장 리포트 지표 원본값
 -- ---------------------------------------------
 CREATE TABLE daily_market_indicator (
                                          indicator_id     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '지표 ID',
@@ -1057,7 +1087,29 @@ CREATE TABLE daily_market_indicator (
                                          CONSTRAINT fk_daily_market_indicator_report
                                              FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
                                                  ON DELETE CASCADE
-) COMMENT='오늘의 AI투자리포트 지표별 원본값 — 리포트 1건당 4행'
+) COMMENT='오늘의 AI 시장 리포트 지표별 원본값 — 리포트 1건당 4행'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 31-C. daily_market_report_source : 오늘의 AI 시장 리포트 인용 출처
+-- ---------------------------------------------
+CREATE TABLE daily_market_report_source (
+                                             source_id       BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '출처 ID',
+                                             report_id       BIGINT NOT NULL COMMENT '소속 리포트',
+                                             source_order    SMALLINT UNSIGNED NOT NULL COMMENT '리포트 응답에 노출할 출처 순서',
+                                             title           VARCHAR(500) NOT NULL COMMENT '인용 출처 제목',
+                                             url             VARCHAR(2048) NOT NULL COMMENT '인용 출처 URL(http/https만 허용)',
+                                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+
+                                             CONSTRAINT uq_daily_market_report_source_order
+                                                 UNIQUE (report_id, source_order),
+                                             CONSTRAINT chk_daily_market_report_source_url
+                                                 CHECK (LOWER(url) REGEXP '^(http|https)://'),
+                                             CONSTRAINT fk_daily_market_report_source_report
+                                                 FOREIGN KEY (report_id) REFERENCES daily_market_report (report_id)
+                                                     ON DELETE CASCADE
+) COMMENT='오늘의 AI 시장 리포트가 사용한 인용 출처 메타데이터 — 기사 전문은 저장하지 않음'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 

@@ -1,11 +1,16 @@
 package com.jaedaero.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MultipartResolver;
@@ -18,8 +23,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 /**
- * 🌐 Spring MVC Web Context 설정 클래스
- * - Spring MVC의 웹 계층(Presentation Layer)을 담당하는 컨텍스트 설정 클래스
+ * 🌐 Spring MVC 웹 컨텍스트 설정 클래스
+ * - Spring MVC의 웹 계층(프레젠테이션 계층)을 담당하는 컨텍스트 설정 클래스
  * - 사용자 요청 처리와 관련된 모든 웹 컴포넌트들을 관리하고 설정함
  */
 @Configuration
@@ -44,6 +49,8 @@ public class ServletConfig implements WebMvcConfigurer {
                 .exposedHeaders("Authorization")
                 .maxAge(3600);
     }
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * RootConfig와 별개의 서블릿(자식) 컨텍스트라, 여기서도 직접 등록해야 이 컨텍스트의 빈(Controller 등)에서
@@ -62,6 +69,15 @@ public class ServletConfig implements WebMvcConfigurer {
         return configurer;
     }
 
+    /** RootConfig의 Java Time 설정을 MVC JSON 응답에도 적용합니다. */
+    @Override
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        converters.stream()
+                .filter(MappingJackson2HttpMessageConverter.class::isInstance)
+                .map(MappingJackson2HttpMessageConverter.class::cast)
+                .forEach(converter -> converter.setObjectMapper(objectMapper));
+    }
+
     /**
      * "/" 요청 시 /resources/index.html로 포워드 설정
      * @param registry
@@ -71,7 +87,7 @@ public class ServletConfig implements WebMvcConfigurer {
         registry.addViewController("/")
                 .setViewName("forward:/resources/index.html");
 
-        // Springfox 3 Swagger UI entry point.
+        // Springfox 3 Swagger UI 진입 경로입니다.
         registry.addViewController("/swagger-ui.html")
                 .setViewName("redirect:/swagger-ui/index.html");
     }
@@ -86,7 +102,7 @@ public class ServletConfig implements WebMvcConfigurer {
                 .addResourceHandler("/resources/**")
                 .addResourceLocations("/resources/");
 
-        // 프론트엔드 assets 핸들러
+        // 프론트엔드 정적 자원 핸들러
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("/resources/assets/");
 
@@ -113,7 +129,7 @@ public class ServletConfig implements WebMvcConfigurer {
         return resolver;
     }
 
-    /** JSP view name (for example, codef-demo/login) to WEB-INF JSP path mapping. */
+    /** JSP 뷰 이름을 WEB-INF 아래 JSP 경로로 매핑합니다. */
     @Bean
     public InternalResourceViewResolver jspViewResolver() {
         InternalResourceViewResolver resolver = new InternalResourceViewResolver();

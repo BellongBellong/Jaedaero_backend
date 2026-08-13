@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Reads the local mock brokerage account snapshot without calling CODEF. */
+/** CODEF를 호출하지 않고 로컬 목 증권 계좌 스냅샷을 읽습니다. */
 @Component
 @RequiredArgsConstructor
 public class MockDbBrokeragePositionProvider implements BrokeragePositionProvider {
@@ -30,10 +30,12 @@ public class MockDbBrokeragePositionProvider implements BrokeragePositionProvide
     cashBalance = Math.max(0L, Math.min(accountValue, cashBalance));
     long marketValue = accountValue - cashBalance;
 
-    // connected_account에는 보유종목별 매입원가를 저장하지 않는다. 로컬 mock에서는
+    // connected_account에는 보유종목별 매입원가를 저장하지 않습니다. 로컬 목 환경에서는
     // 평가금액을 투자원금으로 간주해 평가손익과 수익률을 0으로 고정한다.
     return new BrokeragePositionSnapshot(
         accountValue,
+        cashBalance,
+        marketValue,
         marketValue,
         marketValue,
         0L,

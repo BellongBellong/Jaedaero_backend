@@ -4,9 +4,9 @@ import java.time.Instant;
 import org.springframework.stereotype.Component;
 
 /**
- * Reuses the CODEF OAuth token until shortly before its expiration.
+ * CODEF OAuth 토큰을 만료 직전까지 재사용합니다.
  *
- * <p>The token stays only in application memory. It is not returned to the frontend or persisted.
+ * <p>토큰은 애플리케이션 메모리에만 보관하며 프런트엔드에 반환하거나 저장하지 않습니다.
  */
 @Component
 public class CodefAccessTokenProvider {

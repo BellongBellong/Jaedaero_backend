@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** Common CODEF resource API client following the official Java sample request format. */
+/** 공식 Java 예제의 요청 형식을 따르는 공통 CODEF 리소스 API 클라이언트입니다. */
 @Component
 public class CodefApiClient {
 
@@ -61,7 +61,7 @@ public class CodefApiClient {
     return response;
   }
 
-  /** Calls a CODEF product API and rejects a business-level failure response. */
+  /** CODEF 상품 API를 호출하고 업무 수준의 실패 응답은 예외로 처리합니다. */
   public JsonNode postProduct(String path, Object requestBody) {
     JsonNode response = post(path, requestBody);
     JsonNode result = response.path("result");
