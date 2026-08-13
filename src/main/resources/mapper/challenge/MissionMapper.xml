@@ -141,7 +141,8 @@
                           SELECT 1
                           FROM leave_mode lm
                           WHERE lm.user_id = #{userId}
-                            AND lm.start_date = CURDATE()
+                            AND lm.is_leave_mode_enabled = TRUE
+                            AND CURDATE() BETWEEN lm.start_date AND lm.end_date
                       ))
                   OR (m.trigger_type = 'PAYDAY'
                       AND DAY(CURDATE()) = m.trigger_value)

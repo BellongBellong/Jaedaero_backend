@@ -1,26 +1,31 @@
 -- 노션 운영 기준에 맞춘 챌린지 미션 마스터 데이터입니다.
 -- 운영 기준: 데일리 2개, 성향별 추천 2개, 1회 미션 1개, 이벤트 미션 1개.
--- 실행: mysql -u <DB_USER> -p jaedaero < sql/seed/challenge_mission_mock_data.sql
+-- 실행 전 20260813_add_mission_code.sql 마이그레이션이 적용되어 있어야 합니다.
 -- 기존 완료 이력은 보존하고, 운영 목록 밖의 미션은 비활성화합니다.
 
-SET NAMES utf8mb4;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+09:00';
 START TRANSACTION;
 
 CREATE TEMPORARY TABLE expected_mission (
-    mission_type   VARCHAR(10) COLLATE utf8mb4_unicode_ci NULL,
+    mission_code     VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    mission_type     VARCHAR(10) COLLATE utf8mb4_unicode_ci NULL,
     mission_category VARCHAR(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-    title          VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-    description    TEXT COLLATE utf8mb4_unicode_ci NULL,
-    action_type    VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-    display_order  INT NOT NULL,
-    trigger_type   VARCHAR(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-    trigger_value  INT NULL,
-    event_priority INT NOT NULL
+    title            VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    description      TEXT COLLATE utf8mb4_unicode_ci NULL,
+    action_type      VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+    display_order    INT NOT NULL,
+    trigger_type     VARCHAR(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+    trigger_value    INT NULL,
+    event_priority   INT NOT NULL,
+
+    PRIMARY KEY (mission_code)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO expected_mission (
+    mission_code,
     mission_type,
     mission_category,
     title,
@@ -32,33 +37,31 @@ INSERT INTO expected_mission (
     event_priority
 )
 VALUES
-    (NULL, 'DAILY', '오늘의 시장 리포트 보기', '오늘의 AI 시장 리포트를 확인해보세요.', 'VIEW_MARKET_REPORT', 1, 'NONE', NULL, 0),
-    (NULL, 'DAILY', '오늘의 거래 내역 확인하기', '오늘 발생한 거래 내역을 확인해보세요.', 'VIEW_TRANSACTION_HISTORY', 2, 'NONE', NULL, 0),
-    ('SAFE', 'RECOMMENDED', '예금상품 살펴보기', '나에게 맞는 예금 상품을 확인해보세요.', 'VIEW_DEPOSIT_PRODUCT', 1, 'NONE', NULL, 0),
-    ('AGGRESSIVE', 'RECOMMENDED', '투자 추천 확인하기', 'AI가 제안한 투자 추천 내용을 확인해보세요.', 'VIEW_REBALANCING', 1, 'NONE', NULL, 0),
-    ('SAFE', 'ONE_TIME', 'What-if 시뮬레이션 하기', '시뮬레이션으로 자산 변화 목표를 설정해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'NONE', NULL, 0),
-    (NULL, 'EVENT', '월급날 자산 배분 해보기', '월급을 저축·투자·소비 목표에 맞춰 배분해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'PAYDAY', 10, 1);
+    ('DAILY_MARKET_REPORT', NULL, 'DAILY', '오늘의 시장 리포트 보기', '오늘의 AI 시장 리포트를 확인해보세요.', 'VIEW_MARKET_REPORT', 1, 'NONE', NULL, 0),
+    ('DAILY_TRANSACTION_HISTORY', NULL, 'DAILY', '오늘의 거래 내역 확인하기', '오늘 발생한 거래 내역을 확인해보세요.', 'VIEW_TRANSACTION_HISTORY', 2, 'NONE', NULL, 0),
+    ('SAFE_DEPOSIT_PRODUCT', 'SAFE', 'RECOMMENDED', '예금상품 살펴보기', '나에게 맞는 예금 상품을 확인해보세요.', 'VIEW_DEPOSIT_PRODUCT', 1, 'NONE', NULL, 0),
+    ('AGGRESSIVE_REBALANCING', 'AGGRESSIVE', 'RECOMMENDED', '투자 추천 확인하기', 'AI가 제안한 투자 추천 내용을 확인해보세요.', 'VIEW_REBALANCING', 1, 'NONE', NULL, 0),
+    ('SAFE_WHAT_IF_SIMULATION', 'SAFE', 'ONE_TIME', 'What-if 시뮬레이션 하기', '시뮬레이션으로 자산 변화 목표를 설정해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'NONE', NULL, 0),
+    ('EVENT_PAYDAY_ASSET_ALLOCATION', NULL, 'EVENT', '월급날 자산 배분 해보기', '월급을 저축·투자·소비 목표에 맞춰 배분해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'PAYDAY', 10, 1);
 
--- 운영 목록에 없는 기존 미션은 완료 이력을 남긴 채 노출만 중지합니다.
-UPDATE mission
-SET is_active = FALSE;
-
+-- 코드를 기준으로 수정하여 노출 순서 변경이 기존 미션 ID의 의미를 바꾸지 않게 합니다.
 UPDATE mission m
 INNER JOIN expected_mission e
-    ON m.mission_category = e.mission_category
-   AND (m.mission_type = e.mission_type
-        OR (m.mission_type IS NULL AND e.mission_type IS NULL))
-   AND m.display_order = e.display_order
-SET m.title = e.title,
+    ON m.mission_code = e.mission_code
+SET m.mission_type = e.mission_type,
+    m.mission_category = e.mission_category,
+    m.title = e.title,
     m.description = e.description,
     m.action_type = e.action_type,
+    m.display_order = e.display_order,
     m.trigger_type = e.trigger_type,
     m.trigger_value = e.trigger_value,
     m.event_priority = e.event_priority,
     m.is_active = TRUE;
 
--- 운영 미션이 없는 DB에서도 동일한 시드 파일로 누락분을 생성합니다.
+-- 운영 미션이 없는 DB에서도 같은 식별 코드로 누락분만 생성합니다.
 INSERT INTO mission (
+    mission_code,
     mission_type,
     mission_category,
     title,
@@ -71,6 +74,7 @@ INSERT INTO mission (
     is_active
 )
 SELECT
+    e.mission_code,
     e.mission_type,
     e.mission_category,
     e.title,
@@ -83,11 +87,16 @@ SELECT
     TRUE
 FROM expected_mission e
 LEFT JOIN mission m
-    ON m.mission_category = e.mission_category
-   AND (m.mission_type = e.mission_type
-        OR (m.mission_type IS NULL AND e.mission_type IS NULL))
-   AND m.display_order = e.display_order
+    ON m.mission_code = e.mission_code
 WHERE m.mission_id IS NULL;
+
+-- 운영 목록에 없는 기존 미션은 완료 이력을 남긴 채 노출만 중지합니다.
+UPDATE mission m
+LEFT JOIN expected_mission e
+    ON m.mission_code = e.mission_code
+SET m.is_active = FALSE
+WHERE e.mission_code IS NULL
+  AND m.is_active = TRUE;
 
 DROP TEMPORARY TABLE expected_mission;
 COMMIT;

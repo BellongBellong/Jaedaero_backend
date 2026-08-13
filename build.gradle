@@ -107,6 +107,18 @@ tasks.withType(JavaCompile).configureEach {
 // 커넥션 정보는 src/main/resources/application-local.properties(db.url/db.username/db.password)에서 읽는다.
 // ---------------------------------------------------------------------------
 
+def resolveEnvironmentPlaceholder(String value) {
+    if (value == null) {
+        return null
+    }
+    def matcher = (value =~ /^\$\{([A-Za-z_][A-Za-z0-9_]*)(?::(.*))?\}$/)
+    if (!matcher.matches()) {
+        return value
+    }
+    def environmentValue = System.getenv(matcher.group(1))
+    return environmentValue != null ? environmentValue : (matcher.group(2) ?: '')
+}
+
 def loadDbConnectionInfo() {
     def localPropsFile = file('src/main/resources/application-local.properties')
     if (!localPropsFile.exists()) {
@@ -116,9 +128,13 @@ def loadDbConnectionInfo() {
     def props = new Properties()
     localPropsFile.withInputStream { props.load(it) }
 
-    def url = props.getProperty('db.url')
-    def username = props.getProperty('db.username')
-    def password = props.getProperty('db.password') ?: ''
+    def url = System.getenv('DB_URL')
+            ?: resolveEnvironmentPlaceholder(props.getProperty('db.url'))
+    def username = System.getenv('DB_USERNAME')
+            ?: resolveEnvironmentPlaceholder(props.getProperty('db.username'))
+    def password = System.getenv('DB_PASSWORD')
+            ?: resolveEnvironmentPlaceholder(props.getProperty('db.password'))
+            ?: ''
     if (!url || !username) {
         throw new GradleException("application-local.properties에 db.url/db.username이 설정되어 있지 않습니다.")
     }
@@ -136,6 +152,19 @@ def loadDbConnectionInfo() {
     ]
 }
 
+def requireConfirmedLocalDatabase(Map db, String taskName) {
+    if (!(db.host in ['localhost', '127.0.0.1', '::1'])) {
+        throw new GradleException(
+                "${taskName}은 로컬 DB에서만 실행할 수 있습니다: ${db.database}@${db.host}")
+    }
+    def confirmedDatabase = project.findProperty('confirmLocalDb')?.toString()
+    if (confirmedDatabase != db.database) {
+        throw new GradleException(
+                "${taskName} 실행 전 대상 DB명을 확인해야 합니다. "
+                        + "-PconfirmLocalDb=${db.database} 옵션을 명시하세요.")
+    }
+}
+
 def runSqlFile(File sqlFile) {
     if (!sqlFile.exists()) {
         throw new GradleException("SQL 파일이 없습니다: ${sqlFile}")
@@ -143,7 +172,13 @@ def runSqlFile(File sqlFile) {
     def db = loadDbConnectionInfo()
     logger.lifecycle("mysql 실행: ${sqlFile.name} -> ${db.database}@${db.host}:${db.port}")
 
-    def processBuilder = new ProcessBuilder('mysql', '-h', db.host, '-P', db.port, '-u', db.username, db.database)
+    def processBuilder = new ProcessBuilder(
+            'mysql',
+            '--default-character-set=utf8mb4',
+            '-h', db.host,
+            '-P', db.port,
+            '-u', db.username,
+            db.database)
     processBuilder.redirectErrorStream(true)
     if (db.password) {
         processBuilder.environment().put('MYSQL_PWD', db.password)
@@ -174,25 +209,43 @@ def runSqlFile(File sqlFile) {
 
 tasks.register('dbMigrate') {
     group = 'database'
-    description = '전체 스키마(jaedaero_db_v1.sql)를 로컬 DB에 재적용합니다. 기존 테이블을 DROP 후 재생성하므로 데이터가 모두 사라집니다.'
+    description = '전체 스키마(jaedaero_db_v2.sql)를 로컬 DB에 재적용합니다. 기존 테이블과 데이터가 모두 삭제됩니다.'
     doLast {
-        runSqlFile(file('jaedaero_db_v1.sql'))
+        def db = loadDbConnectionInfo()
+        requireConfirmedLocalDatabase(db, 'dbMigrate')
+        runSqlFile(file('jaedaero_db_v2.sql'))
     }
 }
 
 tasks.register('dbSeed') {
     group = 'database'
-    description = 'sql/seed/*.sql 목업 데이터를 정해진 순서로 모두 적재합니다. 반복 실행해도 안전하도록 작성된 스크립트들입니다.'
+    description = '봉급·뱃지·미션 운영 기준 데이터를 정해진 순서로 적재합니다.'
     doLast {
-        // cohort_test_users.sql은 challenge_mission_mock_data.sql 선행 실행이 필요하다(파일 상단 주석 근거).
-        def orderedSeedFiles = [
+        def referenceSeedFiles = [
                 'military_pay_policy.sql',
-                'ai_coach_mock_data.sql',
+                'badge_policy.sql',
                 'challenge_mission_mock_data.sql',
-                'cohort_test_users.sql',
-                'user1_mypage_mock_data.sql',
         ]
-        orderedSeedFiles.each { name ->
+        referenceSeedFiles.each { name ->
+            runSqlFile(file("sql/seed/${name}"))
+        }
+    }
+}
+
+tasks.register('dbSeedMock') {
+    group = 'database'
+    description = '운영 기준 시드 후 개발·QA 전용 목 사용자를 적재합니다. 운영 DB에서는 실행하지 않습니다.'
+    doLast {
+        def db = loadDbConnectionInfo()
+        requireConfirmedLocalDatabase(db, 'dbSeedMock')
+        def mockSeedFiles = [
+                'military_pay_policy.sql',
+                'badge_policy.sql',
+                'challenge_mission_mock_data.sql',
+                'ai_coach_mock_data.sql',
+                'cohort_test_users.sql',
+        ]
+        mockSeedFiles.each { name ->
             runSqlFile(file("sql/seed/${name}"))
         }
     }
@@ -200,7 +253,14 @@ tasks.register('dbSeed') {
 
 tasks.register('dbReset') {
     group = 'database'
-    description = 'DDL 재생성(dbMigrate) 후 목업 데이터 적재(dbSeed)까지 한 번에 수행합니다.'
+    description = '로컬 DB를 v2 기준으로 재생성하고 운영 기준 데이터만 적재합니다.'
     dependsOn 'dbMigrate', 'dbSeed'
 }
 tasks.named('dbSeed') { mustRunAfter 'dbMigrate' }
+
+tasks.register('dbResetWithMock') {
+    group = 'database'
+    description = '로컬 DB를 재생성하고 운영 기준 데이터와 개발·QA 목데이터를 모두 적재합니다.'
+    dependsOn 'dbReset', 'dbSeedMock'
+}
+tasks.named('dbSeedMock') { mustRunAfter 'dbReset' }

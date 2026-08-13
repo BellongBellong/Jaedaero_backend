@@ -1,9 +1,11 @@
 -- AI Coach 개발용 Mock 데이터
 --
--- 전제: jaedaero_db_v1.sql을 적용한 로컬 jaedaero DB
+-- 전제: jaedaero_db_v2.sql과 운영 기준 시드를 적용한 로컬 jaedaero DB
 -- 이 파일은 DROP/TRUNCATE를 수행하지 않으며, 전용 소셜 식별자로 찾은 목업 데이터만 upsert한다.
 -- 실행: mysql -u <DB_USER> -p jaedaero < sql/seed/ai_coach_mock_data.sql
 
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+09:00';
 START TRANSACTION;
 
 SET @mock_social_id = 'mock-ai-coach-user-900001';
@@ -43,19 +45,6 @@ ON DUPLICATE KEY UPDATE
     target_amount = VALUES(target_amount),
     target_date = VALUES(target_date),
     status = VALUES(status);
-
--- 정책 데이터가 아직 없을 때만 보충한다. 기존 팀 정책 값은 덮어쓰지 않는다.
-INSERT IGNORE INTO military_pay_policy (
-    soldier_type, rank_name, effective_year, monthly_salary, effective_from, effective_to
-) VALUES
-    ('ARMY', '이병', 2026, 200000, '2026-01-01', '2026-12-31'),
-    ('ARMY', '일병', 2026, 350000, '2026-01-01', '2026-12-31'),
-    ('ARMY', '상병', 2026, 650000, '2026-01-01', '2026-12-31'),
-    ('ARMY', '병장', 2026, 950000, '2026-01-01', '2026-12-31'),
-    ('ARMY', '이병', 2027, 200000, '2027-01-01', '2027-12-31'),
-    ('ARMY', '일병', 2027, 350000, '2027-01-01', '2027-12-31'),
-    ('ARMY', '상병', 2027, 650000, '2027-01-01', '2027-12-31'),
-    ('ARMY', '병장', 2027, 950000, '2027-01-01', '2027-12-31');
 
 -- ---------------------------------------------------------------------------
 -- 2. 계좌·적금·거래·자산: 캐시플로우 입력
@@ -184,8 +173,8 @@ INSERT INTO transaction_history (
     (@mock_narasarang_account_id, '2026-07-05 20:10:00', 29300, 1766300, 'WITHDRAW', 'SHOPPING', 'RULE', '쿠팡', SHA2('mock-transaction-900012', 256)),
     (@mock_narasarang_account_id, '2026-07-06 09:00:00', 550000, 1245600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900007', 256)),
     (@mock_narasarang_account_id, '2026-07-08 19:30:00', 48000, 1814500, 'WITHDRAW', '여가', 'AI', '외출 식사', SHA2('mock-transaction-900002', 256)),
-    (@mock_narasarang_account_id, '2026-07-15 09:00:00', 350000, 2164500, 'DEPOSIT', NULL, NULL, '월급', SHA2('mock-transaction-900003', 256)),
-    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 614500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900004', 256)),
+    (@mock_narasarang_account_id, '2026-07-15 09:00:00', 900000, 2714500, 'DEPOSIT', NULL, NULL, '월급', SHA2('mock-transaction-900003', 256)),
+    (@mock_narasarang_account_id, '2026-07-22 18:20:00', 1164500, 1550000, 'WITHDRAW', '저축', 'USER', '장병내일준비적금 및 저축 이체', SHA2('mock-transaction-900004', 256)),
     (@mock_narasarang_account_id, '2026-08-02 12:30:00', 82400, 1467600, 'WITHDRAW', 'FOOD', 'RULE', '외식', SHA2('mock-transaction-900008', 256)),
     (@mock_narasarang_account_id, '2026-08-04 09:00:00', 17000, 1450600, 'WITHDRAW', 'LEISURE', 'AI', '넷플릭스', SHA2('mock-transaction-900009', 256)),
     (@mock_narasarang_account_id, '2026-08-05 09:00:00', 550000, 900600, 'WITHDRAW', 'ASSET', 'USER', '장병내일준비적금 납입', SHA2('mock-transaction-900010', 256)),
@@ -200,7 +189,7 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO asset_snapshot (
     user_id, total_asset, total_saving, total_spending, snapshot_date
 ) VALUES (
-    @mock_user_id, 4300000, 2750000, 60500, '2026-07-31'
+    @mock_user_id, 5400000, 2750000, 60500, '2026-07-31'
 )
 ON DUPLICATE KEY UPDATE
     total_asset = VALUES(total_asset),
@@ -216,34 +205,34 @@ INSERT INTO cashflow_forecast (
     financial_discharge_date, policy_version, generated_at
 )
 SELECT
-    @mock_user_id, 4300000, 10950000, 10450000,
-    18150000, 180000, 90.75,
-    NULL, 'mock-ai-coach-v1', '2026-07-31 09:00:00'
+    @mock_user_id, 5400000, 17400000, 21268959,
+    33618959, 350000, 168.09,
+    '2027-08-05', 'mock-ai-coach-v2', '2026-08-13 09:00:00'
 WHERE NOT EXISTS (
     SELECT 1
     FROM cashflow_forecast
     WHERE user_id = @mock_user_id
-      AND policy_version = 'mock-ai-coach-v1'
+      AND policy_version = 'mock-ai-coach-v2'
 );
 
 UPDATE cashflow_forecast
 SET
-    base_asset = 4300000,
-    expected_salary = 10950000,
-    expected_saving_amount = 10450000,
-    expected_asset = 18150000,
-    monthly_spending_limit = 180000,
-    achievement_rate = 90.75,
-    financial_discharge_date = NULL,
-    generated_at = '2026-07-31 09:00:00'
+    base_asset = 5400000,
+    expected_salary = 17400000,
+    expected_saving_amount = 21268959,
+    expected_asset = 33618959,
+    monthly_spending_limit = 350000,
+    achievement_rate = 168.09,
+    financial_discharge_date = '2027-08-05',
+    generated_at = '2026-08-13 09:00:00'
 WHERE user_id = @mock_user_id
-  AND policy_version = 'mock-ai-coach-v1';
+  AND policy_version = 'mock-ai-coach-v2';
 
 SET @mock_forecast_id = (
     SELECT forecast_id
     FROM cashflow_forecast
     WHERE user_id = @mock_user_id
-      AND policy_version = 'mock-ai-coach-v1'
+      AND policy_version = 'mock-ai-coach-v2'
     ORDER BY forecast_id DESC
     LIMIT 1
 );
@@ -252,14 +241,29 @@ INSERT INTO cashflow_forecast_month (
     forecast_id, forecast_month, expected_rank, expected_salary,
     expected_saving_amount, expected_spending_amount, expected_ending_asset
 ) VALUES
-    (@mock_forecast_id, '2026-08-01', '일병', 350000, 170000, 180000, 4470000),
-    (@mock_forecast_id, '2026-09-01', '상병', 650000, 470000, 180000, 4940000),
-    (@mock_forecast_id, '2026-10-01', '상병', 650000, 470000, 180000, 5410000)
+    (@mock_forecast_id, '2026-08-01', '일병', 900000, 550000, 0, 6300000),
+    (@mock_forecast_id, '2026-09-01', '일병', 900000, 550000, 0, 7200000),
+    (@mock_forecast_id, '2026-10-01', '일병', 900000, 550000, 0, 8100000),
+    (@mock_forecast_id, '2026-11-01', '상병', 1200000, 550000, 0, 9300000),
+    (@mock_forecast_id, '2026-12-01', '상병', 1200000, 550000, 0, 10500000),
+    (@mock_forecast_id, '2027-01-01', '상병', 1200000, 550000, 0, 11700000),
+    (@mock_forecast_id, '2027-02-01', '상병', 1200000, 550000, 0, 12900000),
+    (@mock_forecast_id, '2027-03-01', '상병', 1200000, 550000, 0, 14100000),
+    (@mock_forecast_id, '2027-04-01', '상병', 1200000, 550000, 0, 15300000),
+    (@mock_forecast_id, '2027-05-01', '병장', 1500000, 550000, 0, 16800000),
+    (@mock_forecast_id, '2027-06-01', '병장', 1500000, 550000, 0, 18300000),
+    (@mock_forecast_id, '2027-07-01', '병장', 1500000, 550000, 0, 19800000),
+    (@mock_forecast_id, '2027-08-01', '병장', 1500000, 550000, 0, 21300000),
+    (@mock_forecast_id, '2027-09-01', '병장', 1500000, 550000, 0, 33618959)
 ON DUPLICATE KEY UPDATE
     expected_rank = VALUES(expected_rank),
     expected_salary = VALUES(expected_salary),
     expected_saving_amount = VALUES(expected_saving_amount),
     expected_spending_amount = VALUES(expected_spending_amount),
     expected_ending_asset = VALUES(expected_ending_asset);
+
+DELETE FROM cashflow_forecast_month
+WHERE forecast_id = @mock_forecast_id
+  AND forecast_month NOT BETWEEN '2026-08-01' AND '2027-09-01';
 
 COMMIT;
