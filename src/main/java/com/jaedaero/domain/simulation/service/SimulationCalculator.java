@@ -2,7 +2,6 @@ package com.jaedaero.domain.simulation.service;
 
 import com.jaedaero.domain.cashflow.service.ConservativeMonthlyCashflowEngine;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
-import com.jaedaero.domain.cashflow.service.AggregateInvestmentPrincipalProvider;
 import com.jaedaero.domain.cashflow.service.InvestmentPrincipalBackfill;
 import com.jaedaero.domain.simulation.dto.SimulationRequest;
 import java.math.BigDecimal;
@@ -26,18 +25,15 @@ public class SimulationCalculator {
 
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
   private final ConservativeMonthlyCashflowEngine cashflowEngine;
-  private final AggregateInvestmentPrincipalProvider investmentPrincipalProvider;
   private final InvestmentPrincipalBackfill investmentPrincipalBackfill;
 
   @Autowired
   public SimulationCalculator(
       DefaultMilitaryPayPolicy militaryPayPolicy,
       ConservativeMonthlyCashflowEngine cashflowEngine,
-      AggregateInvestmentPrincipalProvider investmentPrincipalProvider,
       InvestmentPrincipalBackfill investmentPrincipalBackfill) {
     this.militaryPayPolicy = militaryPayPolicy;
     this.cashflowEngine = cashflowEngine;
-    this.investmentPrincipalProvider = investmentPrincipalProvider;
     this.investmentPrincipalBackfill = investmentPrincipalBackfill;
   }
 
@@ -46,7 +42,6 @@ public class SimulationCalculator {
     this(
         militaryPayPolicy,
         new ConservativeMonthlyCashflowEngine(),
-        userId -> java.util.Optional.empty(),
         new InvestmentPrincipalBackfill(militaryPayPolicy));
   }
 
@@ -92,15 +87,11 @@ public class SimulationCalculator {
             : BigDecimal.ZERO;
     BigDecimal finalInvestmentRatio = investmentRatio;
     long existingInvestmentPrincipal =
-        investmentPrincipalProvider
-            .resolveLinkedPrincipal(input.userId())
-            .orElseGet(
-                () ->
-                    investmentPrincipalBackfill.estimate(
-                        input.soldierType(),
-                        input.enlistmentDate(),
-                        calculationDate,
-                        finalInvestmentRatio));
+        investmentPrincipalBackfill.estimate(
+            input.soldierType(),
+            input.enlistmentDate(),
+            calculationDate,
+            finalInvestmentRatio);
     ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
         cashflowEngine.calculateProjectedBenefit(
             input.soldierSavings(),

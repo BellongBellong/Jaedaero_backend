@@ -230,19 +230,9 @@ public class CashflowCalculator {
         List.copyOf(months));
   }
 
-  /** 오늘까지 확정된 계좌 잔액과 장병 적금 이자·정부 매칭지원금을 같은 기준으로 평가합니다. */
+  /** 현재 총자산은 동기화된 연결 계좌의 실제 잔액만 사용합니다. */
   public long calculateCurrentAsset(CashflowInput input, LocalDate calculationDate) {
-    ConservativeMonthlyCashflowEngine.ProjectedBenefit currentBenefit =
-        cashflowEngine.calculateProjectedBenefit(
-            input.soldierSavings(),
-            calculationDate,
-            List.of(),
-            List.of(),
-            calculationDate,
-            0L,
-            List.of(),
-            BigDecimal.ZERO);
-    return cashflowEngine.unifiedAsset(input.baseAsset(), currentBenefit);
+    return input.baseAsset();
   }
 
   private long requiredSaving(long targetAmount, long asset, int remainingMonths) {
