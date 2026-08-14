@@ -51,6 +51,11 @@ class InitialCashflowInitializerTest {
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public long getCurrentAsset(long userId) {
+      return 0L;
+    }
+
     private final boolean missing;
     private int generateCount;
     private boolean failGeneration;

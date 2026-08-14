@@ -74,6 +74,11 @@ class GoalServiceImplTest {
     }
 
     @Override
+    public long getCurrentAsset(long userId) {
+      return 0L;
+    }
+
+    @Override
     public CashflowForecastResponse generate(long userId) {
       generatedUserId = userId;
       return null;

@@ -22,6 +22,7 @@ import com.jaedaero.domain.cashflow.service.CashflowCalculator;
 import com.jaedaero.domain.cashflow.service.CashflowForecastCalculation;
 import com.jaedaero.domain.cashflow.service.CashflowInput;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
+import com.jaedaero.domain.cashflow.service.SoldierSavingInput;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -90,10 +91,10 @@ class SimulationServiceImplTest {
     assertEquals(4_500_000L, preview.getCalculationDetail().getSoldierSavingPrincipal());
     assertEquals(3_600_000L, preview.getCalculationDetail().getInvestmentPrincipal());
     assertEquals(7_090_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
-    assertEquals(131_250L, preview.getExpectedEffect().getSoldierSavingInterest());
+    assertEquals(130_000L, preview.getExpectedEffect().getSoldierSavingInterest());
     assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
     assertEquals(115_916L, preview.getExpectedEffect().getExpectedInvestmentReturn());
-    assertEquals(4_747_166L, preview.getExpectedEffect().getProjectedBenefitAmount());
+    assertEquals(4_745_916L, preview.getExpectedEffect().getProjectedBenefitAmount());
     assertEquals(
         Math.addExact(
             preview.getCalculationDetail().getBaseAsset()
@@ -259,6 +260,44 @@ class SimulationServiceImplTest {
     assertEquals(cashflow.soldierSavingInterest(), whatIf.soldierSavingInterest());
     assertEquals(cashflow.governmentMatchingSupport(), whatIf.governmentMatchingSupport());
     assertEquals(cashflow.expectedInvestmentReturn(), whatIf.expectedInvestmentReturn());
+  }
+
+  @Test
+  void financialDischargeDateUsesTheSameUnifiedAssetAsExpectedAsset() {
+    MilitaryPayPolicyMapper payMapper =
+        (soldierType, rankName, monthStart, monthEnd) -> 1_500_000L;
+    SimulationCalculator calculator =
+        new SimulationCalculator(new DefaultMilitaryPayPolicy(payMapper));
+    SimulationRequest request = new SimulationRequest();
+    request.setMonthlySpendingAmount(200_000L);
+    request.setMonthlySavingAmount(550_000L);
+    request.setMonthlyInvestmentAmount(750_000L);
+    request.setExpectedReturnRate(new BigDecimal("10.00"));
+    request.setIsSaved(false);
+
+    SimulationCalculationResult result =
+        calculator.calculate(
+            new SimulationInput(
+                1L,
+                4_148_044L,
+                10_000_000L,
+                200_000L,
+                SoldierType.ARMY,
+                LocalDate.of(2026, 1, 14),
+                LocalDate.of(2026, 12, 7),
+                List.of(
+                    new SoldierSavingInput(
+                        4_000_000L,
+                        550_000L,
+                        new BigDecimal("5.00"),
+                        4_000_000L,
+                        LocalDate.of(2026, 1, 14),
+                        LocalDate.of(2026, 12, 7)))),
+            request,
+            LocalDate.of(2026, 8, 14));
+
+    assertTrue(result.expectedAsset() > 10_000_000L);
+    assertEquals(LocalDate.of(2026, 8, 30), result.financialDischargeDate());
   }
 
   @Test

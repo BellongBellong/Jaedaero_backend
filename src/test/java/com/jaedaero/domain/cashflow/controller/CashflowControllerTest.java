@@ -60,6 +60,11 @@ class CashflowControllerTest {
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public long getCurrentAsset(long userId) {
+      return 0L;
+    }
+
     private long latestUserId;
     private long generatedUserId;
     private int requestedMonths;

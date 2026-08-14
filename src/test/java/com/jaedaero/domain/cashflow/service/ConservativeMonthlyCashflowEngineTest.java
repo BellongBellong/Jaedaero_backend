@@ -1,7 +1,6 @@
 package com.jaedaero.domain.cashflow.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -19,29 +18,23 @@ class ConservativeMonthlyCashflowEngineTest {
         engine.project(
             1_000_000L,
             600_000L,
-            250_000L,
-            10_000_000L,
-            LocalDate.of(2026, 1, 10),
-            LocalDate.of(2026, 12, 7),
-            YearMonth.of(2026, 1));
+            250_000L);
 
     assertEquals(1_350_000L, result.endingAsset());
-    assertNull(result.targetReachedDate());
   }
 
   @Test
   void targetDateIsCappedToTheActualDischargePeriod() {
-    ConservativeMonthlyCashflowEngine.MonthProjection result =
-        engine.project(
+    LocalDate result =
+        engine.estimateTargetReachedDate(
             0L,
             100_000L,
-            0L,
             50_000L,
             LocalDate.of(2026, 1, 1),
             LocalDate.of(2026, 1, 11),
             YearMonth.of(2026, 1));
 
-    assertEquals(LocalDate.of(2026, 1, 6), result.targetReachedDate());
+    assertEquals(LocalDate.of(2026, 1, 6), result);
   }
 
   @Test
@@ -61,10 +54,32 @@ class ConservativeMonthlyCashflowEngineTest {
             List.of(),
             java.math.BigDecimal.ZERO);
 
-    // 12,000,000 * 5% * 12/12 = 600,000
-    assertEquals(600_000L, benefit.soldierSavingInterest());
+    // 평가 시점(2027-01-10)까지 24개월 누적 이자를 동일한 시간축으로 계산한다.
+    assertEquals(1_200_000L, benefit.soldierSavingInterest());
     assertEquals(12_000_000L, benefit.soldierSavingPrincipal());
     assertEquals(12_000_000L, benefit.governmentMatchingSupport());
+  }
+
+  @Test
+  void currentValuationIncludesAccruedSavingInterestAndGovernmentMatching() {
+    ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
+        engine.calculateProjectedBenefit(
+            List.of(
+                new SoldierSavingInput(
+                    4_000_000L, 550_000L, null, 0L,
+                    LocalDate.of(2026, 1, 14),
+                    LocalDate.of(2026, 12, 7))),
+            LocalDate.of(2026, 8, 14),
+            List.of(),
+            List.of(),
+            LocalDate.of(2026, 8, 14),
+            0L,
+            List.of(),
+            java.math.BigDecimal.ZERO);
+
+    assertEquals(116_667L, benefit.soldierSavingInterest());
+    assertEquals(4_000_000L, benefit.governmentMatchingSupport());
+    assertEquals(8_116_667L, engine.unifiedAsset(4_000_000L, benefit));
   }
 
   @Test

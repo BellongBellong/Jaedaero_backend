@@ -47,7 +47,7 @@ class DashboardServiceImplTest {
     DashboardResponse response = service.get(1L);
 
     assertEquals(1, cashflowService.generateCount);
-    assertEquals(1_000_000L, response.getCurrentAsset());
+    assertEquals(1_500_000L, response.getCurrentAsset());
     assertEquals(10_000_000L, response.getExpectedAsset());
   }
 
@@ -104,6 +104,11 @@ class DashboardServiceImplTest {
     public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
         long userId) {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getCurrentAsset(long userId) {
+      return 1_500_000L;
     }
 
     private final CashflowForecastResponse generated;

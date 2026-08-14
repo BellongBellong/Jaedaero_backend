@@ -18,7 +18,7 @@ import lombok.Getter;
 @Builder
 @ApiModel(description = "홈 대시보드에 표시할 캐시플로우 요약 정보")
 public class DashboardResponse {
-  @ApiModelProperty(value = "재정 목표를 달성하는 예상 일자", example = "2027-03-15")
+  @ApiModelProperty(value = "통합 자산이 재정 목표를 최초 달성하는 예상 일자", example = "2027-03-15")
   private final LocalDate financialDischargeDate;
 
   @ApiModelProperty(value = "프로필에 등록된 실제 전역일", example = "2027-06-20")
@@ -27,7 +27,7 @@ public class DashboardResponse {
   @ApiModelProperty(value = "실제 전역일 대비 재정적 전역일 차이(일). 양수면 실제 전역일보다 빠름", example = "97")
   private final Long deltaDaysVsActual;
 
-  @ApiModelProperty(value = "계산 기준 현재 자산", example = "1250000")
+  @ApiModelProperty(value = "계좌 잔액과 현재 누적 군적금 이자·정부 매칭지원금을 합산한 현재 자산", example = "1250000")
   private final Long currentAsset;
 
   @ApiModelProperty(value = "실제 전역일까지의 예상 자산", example = "18250000")
@@ -65,6 +65,7 @@ public class DashboardResponse {
 
   public static DashboardResponse from(
       CashflowForecastResponse cashflow,
+      long currentAsset,
       LocalDate actualDischargeDate,
       StrategyApplicationVo latestApplication,
       LocalDate today,
@@ -88,7 +89,7 @@ public class DashboardResponse {
         .financialDischargeDate(financialDischargeDate)
         .actualDischargeDate(actualDischargeDate)
         .deltaDaysVsActual(daysVsActual(financialDischargeDate, actualDischargeDate))
-        .currentAsset(cashflow.getBaseAsset())
+        .currentAsset(currentAsset)
         .expectedAsset(cashflow.getExpectedAsset())
         .achievementRate(cashflow.getAchievementRate())
         .thisMonthIncome(thisMonthIncome)

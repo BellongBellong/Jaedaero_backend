@@ -73,7 +73,6 @@ public class CashflowCalculator {
     long expectedSavingAmount = 0L;
     long expectedInvestmentAmount = 0L;
     long firstMonthSpendingLimit = 0L;
-    LocalDate financialDischargeDate = asset >= input.targetAmount() ? calculationDate : null;
     List<CashflowForecastMonthCalculation> months = new ArrayList<>();
     List<Long> savingContributions = new ArrayList<>();
     List<Long> investmentContributions = new ArrayList<>();
@@ -104,12 +103,40 @@ public class CashflowCalculator {
       }
     }
 
+    BigDecimal investmentAnnualReturnRate =
+        hasAppliedStrategy ? input.appliedStrategy().expectedReturnRate() : BigDecimal.ZERO;
+    BigDecimal finalInvestmentRatio = investmentRatio;
+    long existingInvestmentPrincipal =
+        investmentPrincipalProvider
+            .resolveLinkedPrincipal(input.userId())
+            .orElseGet(
+                () ->
+                    investmentPrincipalBackfill.estimate(
+                        input.soldierType(),
+                        input.enlistmentDate(),
+                        calculationDate,
+                        finalInvestmentRatio));
+    ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
+        cashflowEngine.calculateProjectedBenefit(
+            input.soldierSavings(),
+            calculationDate,
+            List.of(),
+            List.of(),
+            calculationDate,
+            existingInvestmentPrincipal,
+            List.of(),
+            investmentAnnualReturnRate);
+    long currentUnifiedAsset = cashflowEngine.unifiedAsset(asset, benefit);
+    long openingUnifiedAsset = currentUnifiedAsset;
+    LocalDate financialDischargeDate =
+        currentUnifiedAsset >= input.targetAmount() ? calculationDate : null;
+
     for (int index = 0; index < totalMonths; index++) {
       YearMonth month = startMonth.plusMonths(index);
       int remainingMonths = totalMonths - index;
       DefaultMilitaryPayPolicy.MilitaryPay pay =
           militaryPayPolicy.resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), month);
-      long requiredSaving = requiredSaving(input.targetAmount(), asset, remainingMonths);
+      long requiredSaving = requiredSaving(input.targetAmount(), openingUnifiedAsset, remainingMonths);
       long spending =
           hasAppliedStrategy
               ? scale(spendingRatio, pay.monthlySalary())
@@ -136,11 +163,7 @@ public class CashflowCalculator {
           cashflowEngine.project(
               assetBeforeMonth,
               pay.monthlySalary(),
-              spending,
-              input.targetAmount(),
-              calculationDate,
-              input.dischargeDate(),
-              month);
+              spending);
       asset = projection.endingAsset();
       expectedSalary += pay.monthlySalary();
       expectedSpending += spending;
@@ -148,11 +171,33 @@ public class CashflowCalculator {
       expectedInvestmentAmount += monthlyInvestment;
       savingContributions.add(monthlySaving);
       investmentContributions.add(monthlyInvestment);
-      savingContributionDates.add(month.atDay(1));
+      savingContributionDates.add(
+          month.equals(startMonth) ? calculationDate : month.atDay(1));
+      LocalDate valuationDate =
+          month.equals(dischargeMonth) ? input.dischargeDate() : month.atEndOfMonth();
+      benefit =
+          cashflowEngine.calculateProjectedBenefit(
+              input.soldierSavings(),
+              calculationDate,
+              savingContributions,
+              savingContributionDates,
+              valuationDate,
+              existingInvestmentPrincipal,
+              investmentContributions,
+              investmentAnnualReturnRate);
+      long endingUnifiedAsset = cashflowEngine.unifiedAsset(asset, benefit);
       if (index == 0) firstMonthSpendingLimit = spendingLimit;
-      if (financialDischargeDate == null && projection.targetReachedDate() != null) {
-        financialDischargeDate = projection.targetReachedDate();
+      if (financialDischargeDate == null) {
+        financialDischargeDate =
+            cashflowEngine.estimateTargetReachedDate(
+                openingUnifiedAsset,
+                endingUnifiedAsset,
+                input.targetAmount(),
+                calculationDate,
+                input.dischargeDate(),
+                month);
       }
+      openingUnifiedAsset = endingUnifiedAsset;
       months.add(
           new CashflowForecastMonthCalculation(
               month.atDay(1),
@@ -161,36 +206,10 @@ public class CashflowCalculator {
               monthlySaving,
               monthlyInvestment,
               spending,
-              asset));
+              endingUnifiedAsset));
     }
 
-    BigDecimal investmentAnnualReturnRate =
-        hasAppliedStrategy ? input.appliedStrategy().expectedReturnRate() : BigDecimal.ZERO;
-    BigDecimal finalInvestmentRatio = investmentRatio;
-    long existingInvestmentPrincipal =
-        investmentPrincipalProvider
-            .resolveLinkedPrincipal(input.userId())
-            .orElseGet(
-                () ->
-                    investmentPrincipalBackfill.estimate(
-                        input.soldierType(),
-                        input.enlistmentDate(),
-                        calculationDate,
-                        finalInvestmentRatio));
-    ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
-        cashflowEngine.calculateProjectedBenefit(
-            input.soldierSavings(),
-            calculationDate,
-            savingContributions,
-            savingContributionDates,
-            input.dischargeDate(),
-            existingInvestmentPrincipal,
-            investmentContributions,
-            investmentAnnualReturnRate);
-    long expectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
-    if (financialDischargeDate == null && expectedAsset >= input.targetAmount()) {
-      financialDischargeDate = input.dischargeDate();
-    }
+    long expectedAsset = openingUnifiedAsset;
 
     return new CashflowForecastCalculation(
         expectedSalary,
@@ -209,6 +228,21 @@ public class CashflowCalculator {
         achievementRate(expectedAsset, input.targetAmount()),
         financialDischargeDate,
         List.copyOf(months));
+  }
+
+  /** 오늘까지 확정된 계좌 잔액과 장병 적금 이자·정부 매칭지원금을 같은 기준으로 평가합니다. */
+  public long calculateCurrentAsset(CashflowInput input, LocalDate calculationDate) {
+    ConservativeMonthlyCashflowEngine.ProjectedBenefit currentBenefit =
+        cashflowEngine.calculateProjectedBenefit(
+            input.soldierSavings(),
+            calculationDate,
+            List.of(),
+            List.of(),
+            calculationDate,
+            0L,
+            List.of(),
+            BigDecimal.ZERO);
+    return cashflowEngine.unifiedAsset(input.baseAsset(), currentBenefit);
   }
 
   private long requiredSaving(long targetAmount, long asset, int remainingMonths) {

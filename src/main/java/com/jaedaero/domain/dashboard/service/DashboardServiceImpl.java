@@ -4,6 +4,7 @@ import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
 import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.service.CashflowService;
+import com.jaedaero.domain.cashflow.service.ConservativeMonthlyCashflowEngine;
 import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
 import com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper;
@@ -54,6 +55,7 @@ public class DashboardServiceImpl implements DashboardService {
     CashflowForecastResponse cashflow = latestOrGenerate(userId);
     return DashboardResponse.from(
         cashflow,
+        cashflowService.getCurrentAsset(userId),
         dashboardMapper.findActualDischargeDateByUserId(userId),
         strategyApplicationMapper.findLatestByUserId(userId),
         LocalDate.now(clock),
@@ -62,7 +64,12 @@ public class DashboardServiceImpl implements DashboardService {
 
   private CashflowForecastResponse latestOrGenerate(long userId) {
     try {
-      return cashflowService.getLatest(userId);
+      CashflowForecastResponse latest = cashflowService.getLatest(userId);
+      if (!ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION.equals(
+          latest.getCalculationPolicyVersion())) {
+        return cashflowService.generate(userId);
+      }
+      return latest;
     } catch (CashflowException exception) {
       if (exception.getErrorCode() != CashflowErrorCode.NOT_FOUND) {
         throw exception;
