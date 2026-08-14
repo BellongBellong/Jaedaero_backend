@@ -79,6 +79,7 @@ class AiAnalysisServiceImplTest {
             simulationInput,
             simulationCalculator(),
             new SimulationAllocationPolicy(),
+            new ConsumptionReductionPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("생성된 AI 코치 문구입니다.", "생성된 추천 사유입니다."),
             new SpendingPatternAnalyzer());
@@ -171,10 +172,11 @@ class AiAnalysisServiceImplTest {
             simulationInput,
             simulationCalculator(),
             new SimulationAllocationPolicy(),
+            new ConsumptionReductionPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> {
               generatedPrompt.set(prompt);
-              return new AiCoachNarrative("시나리오 분석입니다.", "월 투자금액을 유지하세요.");
+              return new AiCoachNarrative("시나리오 분석입니다.", "주말에 장을 보고 식사 준비를 하세요.");
             },
             new SpendingPatternAnalyzer());
     AiAnalysisRequest request = new AiAnalysisRequest();
@@ -193,7 +195,10 @@ class AiAnalysisServiceImplTest {
     assertTrue(generatedPrompt.get().contains("유지할 월 투자금액: 150,000원"));
     assertTrue(generatedPrompt.get().contains("반복 결제 확인 필요"));
     assertTrue(generatedPrompt.get().contains("넷플릭스"));
+    assertTrue(generatedPrompt.get().contains("영내 생활 중인 군 장병"));
     assertFalse(generatedPrompt.get().contains("추천 투자 비율"));
+    assertFalse(created.getRecommendedScenario().getRecommendReason().contains("장을 보고"));
+    assertTrue(created.getRecommendedScenario().getRecommendReason().contains("배달·외식·카페·PX 간식"));
     assertTrue(mapper.analyses.get(0).getResultJson().contains("monthlyInvestmentAmount"));
     assertFalse(mapper.analyses.get(0).getResultJson().contains("investmentRatio"));
   }
@@ -220,7 +225,7 @@ class AiAnalysisServiceImplTest {
           }
           return new AiCoachNarrative("복구된 AI 코치 문구입니다.", "복구된 추천 사유입니다.");
         };
-    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, simulationCalculator(), new SimulationAllocationPolicy(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator, new SpendingPatternAnalyzer());
+    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, simulationCalculator(), new SimulationAllocationPolicy(), new ConsumptionReductionPolicy(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator, new SpendingPatternAnalyzer());
 
     AiAnalysisResponse fallback = service.analyze(1L, new AiAnalysisRequest());
     AiAnalysisResponse recovered = service.analyze(1L, new AiAnalysisRequest());
@@ -231,7 +236,7 @@ class AiAnalysisServiceImplTest {
     assertEquals(0L, fallback.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
     assertEquals(AiGenerationSource.FALLBACK, fallback.getGenerationSource());
     assertEquals(
-        "openai-chat-v6-consumption-guidance", mapper.analyses.get(0).getPromptVersion());
+        "openai-chat-v7-military-consumption-guidance", mapper.analyses.get(0).getPromptVersion());
     assertEquals(AiGenerationSource.FALLBACK, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, recovered.getGenerationSource());
     assertEquals("복구된 AI 코치 문구입니다.", recovered.getComment());
@@ -275,6 +280,7 @@ class AiAnalysisServiceImplTest {
             simulationInput,
             simulationCalculator(),
             new SimulationAllocationPolicy(),
+            new ConsumptionReductionPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("소비 분석", "추천 사유"),
             new SpendingPatternAnalyzer());
@@ -332,6 +338,7 @@ class AiAnalysisServiceImplTest {
             simulationInput,
             calculator,
             new SimulationAllocationPolicy(),
+            new ConsumptionReductionPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("소비 분석", "반복 결제를 먼저 점검하세요."),
             new SpendingPatternAnalyzer());
@@ -354,7 +361,7 @@ class AiAnalysisServiceImplTest {
     assertEquals(550_000L, response.getRecommendedScenario().getMonthlySavingAmount());
     assertEquals(850_000L, response.getRecommendedScenario().getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("13.00"), response.getRecommendedScenario().getExpectedReturnRate());
-    assertTrue(response.getRecommendedScenario().getRecommendReason().contains("원 줄인"));
+    assertTrue(response.getRecommendedScenario().getRecommendReason().contains("소비 계획을 유지"));
   }
 
   @Test
@@ -377,7 +384,7 @@ class AiAnalysisServiceImplTest {
         userId -> new SimulationInput(4_300_000L, 20_000_000L, 180_000L, SoldierType.ARMY, LocalDate.of(2026, 3, 1), LocalDate.of(2027, 9, 1));
     return new AiAnalysisServiceImpl(
         new InMemoryAiAnalysisMapper(), analysisInput, new EmptySimulationMapper(), simulationInput,
-        simulationCalculator(), new SimulationAllocationPolicy(),
+        simulationCalculator(), new SimulationAllocationPolicy(), new ConsumptionReductionPolicy(),
         new ObjectMapper().registerModule(new JavaTimeModule()),
         (model, prompt) -> new AiCoachNarrative("소비 분석", "실행 팁"),
         new SpendingPatternAnalyzer());

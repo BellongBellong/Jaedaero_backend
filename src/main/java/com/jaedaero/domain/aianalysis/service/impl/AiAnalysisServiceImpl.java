@@ -20,6 +20,7 @@ import com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper;
 import com.jaedaero.domain.aianalysis.service.AiAnalysisInput;
 import com.jaedaero.domain.aianalysis.service.AiAnalysisInputProvider;
 import com.jaedaero.domain.aianalysis.service.AiAnalysisService;
+import com.jaedaero.domain.aianalysis.service.ConsumptionReductionPolicy;
 import com.jaedaero.domain.aianalysis.service.RecurringPaymentMetric;
 import com.jaedaero.domain.aianalysis.service.SpendingAnalysis;
 import com.jaedaero.domain.aianalysis.service.SpendingCategoryMetric;
@@ -56,13 +57,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AiAnalysisServiceImpl implements AiAnalysisService {
-  private static final String PROMPT_VERSION = "openai-chat-v6-consumption-guidance";
+  private static final String PROMPT_VERSION = "openai-chat-v7-military-consumption-guidance";
+  private static final String[] UNSUITABLE_MILITARY_ADVICE = {
+    "장보기", "장을 보", "직접 요리", "요리해", "식사 준비", "도시락", "출퇴근", "월세", "공과금", "식사를 거"
+  };
   private final AiAnalysisMapper analysisMapper;
   private final AiAnalysisInputProvider analysisInputProvider;
   private final SimulationMapper simulationMapper;
   private final SimulationInputProvider simulationInputProvider;
   private final SimulationCalculator simulationCalculator;
   private final SimulationAllocationPolicy simulationAllocationPolicy;
+  private final ConsumptionReductionPolicy consumptionReductionPolicy;
   private final ObjectMapper objectMapper;
   private final AiCoachNarrativeGenerator narrativeGenerator;
   private final SpendingPatternAnalyzer spendingPatternAnalyzer;
@@ -142,8 +147,14 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
       SimulationRequest currentPlan,
       long suggestedMonthlyReductionAmount,
       LocalDate today) {
+    long referenceMonthlyIncome = simulationCalculator.referenceMonthlyIncome(input, today);
+    long reasonableReduction =
+        consumptionReductionPolicy.recommendReduction(
+            currentPlan.getMonthlySpendingAmount(),
+            suggestedMonthlyReductionAmount,
+            referenceMonthlyIncome);
     long spending =
-        Math.max(0L, currentPlan.getMonthlySpendingAmount() - suggestedMonthlyReductionAmount);
+        currentPlan.getMonthlySpendingAmount() - reasonableReduction;
     SimulationRequest request = new SimulationRequest();
     request.setMonthlySavingAmount(currentPlan.getMonthlySavingAmount());
     request.setMonthlySpendingAmount(spending);
@@ -219,12 +230,18 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     try {
       AiCoachNarrative narrative = narrativeGenerator.generate(model, prompt(base, simulation, result, recommended));
       result.setComment(narrative.comment());
-      String recommendReason = recommended.getRecommendReason() + " " + narrative.recommendReason();
+      String recommendReason =
+          recommended.getRecommendReason()
+              + " "
+              + militaryAppropriateTip(result, narrative.recommendReason());
       recommended.setRecommendReason(recommendReason);
       result.getRecommendedScenario().setRecommendReason(recommendReason);
       return AiGenerationSource.OPENAI;
     } catch (AiCoachNarrativeGenerationException e) {
       log.warn("AI 코치 문구 생성에 실패해 템플릿 문구로 대체합니다. model={}, reason={}", model.apiName(), e.getMessage());
+      String recommendReason = recommended.getRecommendReason() + " " + militaryTemplateTip(result);
+      recommended.setRecommendReason(recommendReason);
+      result.getRecommendedScenario().setRecommendReason(recommendReason);
       return AiGenerationSource.FALLBACK;
     }
   }
@@ -242,7 +259,9 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         + "유지할 기대수익률: " + recommended.getExpectedReturnRate() + "%\n"
         + "위 확정값을 변경하거나 새 숫자를 만들지 말고 comment에는 소비 변화의 원인과 개선 방향을 포함한 결과 해석, "
         + "recommendReason에는 금액을 다시 계산하거나 표현하지 말고, 소비 절감을 실행할 구체적인 방법 한 가지만 작성하세요. "
-        + "서버가 확정 절감액과 조정 후 소비 한도 문구를 앞에 붙입니다.";
+        + "서버가 확정 절감액과 조정 후 소비 한도 문구를 앞에 붙입니다. "
+        + "사용자는 영내 생활 중인 군 장병이므로 장보기·직접 요리·식사 준비·출퇴근·월세·공과금 절약을 제안하지 마세요. "
+        + "식비는 식사를 거르라는 뜻이 아니라 배달·외식·카페·PX 간식 같은 선택 소비를 점검하도록 안내하세요.";
   }
   private String hash(
       AiAnalysisInput b,
@@ -252,7 +271,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
       AiRecommendedScenarioVo recommendation,
       OpenAiModel model) {
     String raw =
-        "analysis-v6-consumption-guidance|"
+        "analysis-v7-military-consumption-guidance|"
             + PROMPT_VERSION
             + "|"
             + model.apiName()
@@ -477,6 +496,36 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
           .append(payment.currentTransactionCount()).append(':').append(payment.previousTransactionCount());
     }
     return material.toString();
+  }
+  private String militaryAppropriateTip(AiAnalysisResult result, String generatedTip) {
+    if (result.getSpendingImprovement().getSuggestedMonthlyReductionAmount() == 0L) {
+      return militaryTemplateTip(result);
+    }
+    for (String unsuitable : UNSUITABLE_MILITARY_ADVICE) {
+      if (generatedTip.contains(unsuitable)) {
+        return militaryTemplateTip(result);
+      }
+    }
+    return generatedTip;
+  }
+  private String militaryTemplateTip(AiAnalysisResult result) {
+    if (result.getSpendingImprovement().getSuggestedMonthlyReductionAmount() == 0L) {
+      return "현재 소비 한도를 더 낮추기보다 반복 결제와 선택 소비가 계획 안에서 유지되는지 점검하세요.";
+    }
+    String category = result.getSpendingImprovement().getTargetCategory();
+    if ("FOOD".equals(category)) {
+      return "영내 식사는 유지하고 배달·외식·카페·PX 간식 같은 선택 소비부터 점검하세요.";
+    }
+    if ("SHOPPING".equals(category)) {
+      return "휴가·외출 전 구매 목록을 정하고 PX와 온라인 쇼핑의 충동구매부터 줄여보세요.";
+    }
+    if ("TRANSPORT".equals(category)) {
+      return "휴가·외출 일정을 미리 정해 택시 대신 대중교통을 이용할 수 있는 구간부터 점검하세요.";
+    }
+    if ("LEISURE".equals(category)) {
+      return "유료 콘텐츠와 게임 결제 중 사용 빈도가 낮은 항목부터 한 가지씩 줄여보세요.";
+    }
+    return "기타 거래의 가맹점과 반복 결제 내역을 확인해 불필요한 항목부터 줄여보세요.";
   }
   private BigDecimal rate(long expected, long target) { return target == 0 ? new BigDecimal("100.00") : BigDecimal.valueOf(expected).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(target), 2, RoundingMode.HALF_UP); }
   private Integer days(LocalDate start, LocalDate end) { return start == null || end == null ? null : Math.toIntExact(ChronoUnit.DAYS.between(start, end)); }

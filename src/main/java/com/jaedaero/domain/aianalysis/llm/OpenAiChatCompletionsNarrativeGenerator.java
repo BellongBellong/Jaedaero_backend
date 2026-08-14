@@ -31,6 +31,8 @@ public class OpenAiChatCompletionsNarrativeGenerator implements AiCoachNarrative
           + "입력으로 받은 확정 결과만 자연스럽고 신중한 한국어로 설명하세요. "
           + "개인화된 투자 자문·수익 보장을 하지 말고, 두 문구는 각각 2문장 이내로 작성하세요. "
           + "recommendReason에서는 금액을 다시 계산하거나 언급하지 말고 실행 방법만 설명하세요. "
+          + "사용자는 영내 생활 중인 군 장병입니다. 장보기·직접 요리·식사 준비·출퇴근·월세·공과금 절약이나 식사를 거르는 행동은 제안하지 마세요. "
+          + "식비는 배달·외식·카페·PX 간식 등 선택 소비만 점검하도록 안내하세요. "
           + "응답 스키마의 comment와 recommendReason 필드만 채우세요.";
 
   private final RestTemplate restTemplate;
@@ -64,7 +66,7 @@ public class OpenAiChatCompletionsNarrativeGenerator implements AiCoachNarrative
                 "type", "json_schema",
                 "json_schema",
                 Map.of(
-                    "name", "ai_consumption_narrative_v6",
+                    "name", "ai_consumption_narrative_v7_military",
                     "strict", true,
                     "schema",
                     Map.of(

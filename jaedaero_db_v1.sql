@@ -1052,7 +1052,7 @@ CREATE TABLE leave_mode (
 -- ---------------------------------------------
 CREATE TABLE daily_market_report (
                                      report_id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '오늘의 리포트 ID',
-                                     report_date        DATE NOT NULL COMMENT '서비스 기준일(18:00~익일 17:59 노출 구간의 기준 날짜)',
+                                     report_date        DATE NOT NULL COMMENT '서비스 기준일(17:00~익일 16:59:59 노출 구간의 기준 날짜)',
                                      title              VARCHAR(200) NOT NULL COMMENT '오늘의 AI 시장 리포트 제목',
                                      summary            VARCHAR(500) NOT NULL COMMENT '오늘의 AI 시장 리포트 한줄 요약',
                                      content            TEXT NOT NULL COMMENT '선별된 Finnhub 뉴스에 근거해 Gemini가 생성한 사실 기반 시장 리포트 본문',
@@ -1060,8 +1060,8 @@ CREATE TABLE daily_market_report (
                                      generation_source  ENUM('GEMINI', 'FALLBACK') NOT NULL COMMENT '본문 생성 경로 — Gemini 성공 또는 안전한 대체 상태',
                                      model_name         VARCHAR(100) NOT NULL COMMENT '생성에 사용한 모델명(gemini-3.6-flash)',
                                      prompt_version     VARCHAR(100) NOT NULL COMMENT 'Gemini Interactions 프롬프트 버전',
-                                     valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 18:00)',
-                                     valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 17:59)',
+                                     valid_from         TIMESTAMP NOT NULL COMMENT '노출 시작 시각(해당일 17:00)',
+                                     valid_until        TIMESTAMP NOT NULL COMMENT '노출 종료 시각(익일 16:59:59)',
                                      created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
                                      CONSTRAINT uq_daily_market_report_date
