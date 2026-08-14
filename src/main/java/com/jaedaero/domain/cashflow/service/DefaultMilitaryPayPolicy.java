@@ -35,7 +35,7 @@ public class DefaultMilitaryPayPolicy implements MilitaryPayPolicy {
     return new MilitaryPay(rankName, monthlySalary);
   }
 
-  private String rankName(SoldierType soldierType, long elapsedMonths) {
+  public static String rankName(SoldierType soldierType, long elapsedMonths) {
     long privateMonths =
         switch (soldierType) {
           case ARMY, NAVY, MARINE -> 2;

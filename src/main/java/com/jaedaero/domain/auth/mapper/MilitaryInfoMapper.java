@@ -2,6 +2,7 @@ package com.jaedaero.domain.auth.mapper;
 
 import com.jaedaero.domain.auth.vo.SoldierProfileVo;
 import java.math.BigDecimal;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,6 +17,12 @@ public interface MilitaryInfoMapper {
 
   /** 군 복무 프로필을 등록하거나 갱신합니다. */
   void upsertSoldierProfile(SoldierProfileVo soldierProfile);
+
+  /** 입대일 기준 현재 계급을 갱신할 복무 프로필을 조회합니다. */
+  List<SoldierProfileVo> findProfilesForRankRefresh();
+
+  /** 사용자 입력이 아닌 배치 계산 결과로 현재 계급만 갱신합니다. */
+  int updateRankName(@Param("userId") long userId, @Param("rankName") String rankName);
 
   /** 입대 동기 챌린지 그룹을 생성합니다. */
   void insertChallengeGroupIgnore(

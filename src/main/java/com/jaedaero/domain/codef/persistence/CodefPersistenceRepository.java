@@ -37,6 +37,13 @@ public class CodefPersistenceRepository {
     return rows.stream().findFirst();
   }
 
+  /** 매일 일괄 동기화할 활성 CODEF 연결 사용자를 반환합니다. */
+  public List<Long> findActiveConnectionUserIds() {
+    return jdbcTemplate.query(
+        "SELECT DISTINCT user_id FROM codef_connection WHERE status = 'ACTIVE' ORDER BY user_id",
+        (rs, rowNum) -> rs.getLong("user_id"));
+  }
+
   public void saveConnection(long userId, String encryptedConnectedId, String connectedIdHash) {
     jdbcTemplate.update(
         "INSERT INTO codef_connection (user_id, connected_id_encrypted, connected_id_hash, status) "
