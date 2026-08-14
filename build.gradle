@@ -209,11 +209,11 @@ def runSqlFile(File sqlFile) {
 
 tasks.register('dbMigrate') {
     group = 'database'
-    description = '전체 스키마(jaedaero_db_v2.sql)를 로컬 DB에 재적용합니다. 기존 테이블과 데이터가 모두 삭제됩니다.'
+    description = '전체 스키마(jaedaero_db_v1.sql)를 로컬 DB에 재적용합니다. 기존 테이블과 데이터가 모두 삭제됩니다.'
     doLast {
         def db = loadDbConnectionInfo()
         requireConfirmedLocalDatabase(db, 'dbMigrate')
-        runSqlFile(file('jaedaero_db_v2.sql'))
+        runSqlFile(file('jaedaero_db_v1.sql'))
     }
 }
 
@@ -253,7 +253,7 @@ tasks.register('dbSeedMock') {
 
 tasks.register('dbReset') {
     group = 'database'
-    description = '로컬 DB를 v2 기준으로 재생성하고 운영 기준 데이터만 적재합니다.'
+    description = '로컬 DB를 v1 기준으로 재생성하고 운영 기준 데이터만 적재합니다.'
     dependsOn 'dbMigrate', 'dbSeed'
 }
 tasks.named('dbSeed') { mustRunAfter 'dbMigrate' }
