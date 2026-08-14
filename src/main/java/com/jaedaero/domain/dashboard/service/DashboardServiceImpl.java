@@ -9,6 +9,8 @@ import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
 import com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper;
 import com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper;
+import com.jaedaero.domain.simulation.mapper.SimulationMapper;
+import com.jaedaero.domain.simulation.vo.SimulationVo;
 import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,18 +24,21 @@ public class DashboardServiceImpl implements DashboardService {
   private final DashboardSpendingMapper dashboardSpendingMapper;
   private final StrategyApplicationMapper strategyApplicationMapper;
   private final Clock clock;
+  private final SimulationMapper simulationMapper;
 
   @Autowired
   public DashboardServiceImpl(
       CashflowService cashflowService,
       DashboardMapper dashboardMapper,
       StrategyApplicationMapper strategyApplicationMapper,
-      DashboardSpendingMapper dashboardSpendingMapper) {
+      DashboardSpendingMapper dashboardSpendingMapper,
+      SimulationMapper simulationMapper) {
     this(
         cashflowService,
         dashboardMapper,
         strategyApplicationMapper,
         dashboardSpendingMapper,
+        simulationMapper,
         Clock.systemDefaultZone());
   }
 
@@ -43,10 +48,27 @@ public class DashboardServiceImpl implements DashboardService {
       StrategyApplicationMapper strategyApplicationMapper,
       DashboardSpendingMapper dashboardSpendingMapper,
       Clock clock) {
+    this(
+        cashflowService,
+        dashboardMapper,
+        strategyApplicationMapper,
+        dashboardSpendingMapper,
+        null,
+        clock);
+  }
+
+  public DashboardServiceImpl(
+      CashflowService cashflowService,
+      DashboardMapper dashboardMapper,
+      StrategyApplicationMapper strategyApplicationMapper,
+      DashboardSpendingMapper dashboardSpendingMapper,
+      SimulationMapper simulationMapper,
+      Clock clock) {
     this.cashflowService = cashflowService;
     this.dashboardMapper = dashboardMapper;
     this.strategyApplicationMapper = strategyApplicationMapper;
     this.dashboardSpendingMapper = dashboardSpendingMapper;
+    this.simulationMapper = simulationMapper;
     this.clock = clock;
   }
 
@@ -58,8 +80,16 @@ public class DashboardServiceImpl implements DashboardService {
         cashflowService.getCurrentAsset(userId),
         dashboardMapper.findActualDischargeDateByUserId(userId),
         strategyApplicationMapper.findLatestByUserId(userId),
+        latestSimulation(userId),
         LocalDate.now(clock),
         dashboardSpendingMapper.sumThisMonthSpendingByUserId(userId));
+  }
+
+  private SimulationVo latestSimulation(long userId) {
+    if (simulationMapper == null) {
+      return null;
+    }
+    return simulationMapper.findByUserId(userId, 0, 1).stream().findFirst().orElse(null);
   }
 
   private CashflowForecastResponse latestOrGenerate(long userId) {

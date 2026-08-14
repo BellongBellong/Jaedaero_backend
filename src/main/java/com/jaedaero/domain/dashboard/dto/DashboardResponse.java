@@ -3,6 +3,7 @@ package com.jaedaero.domain.dashboard.dto;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastMonthResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
 import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo;
+import com.jaedaero.domain.simulation.vo.SimulationVo;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import java.math.BigDecimal;
@@ -68,6 +69,7 @@ public class DashboardResponse {
       long currentAsset,
       LocalDate actualDischargeDate,
       StrategyApplicationVo latestApplication,
+      SimulationVo latestSimulation,
       LocalDate today,
       Long actualThisMonthSpending) {
     CashflowForecastMonthResponse currentMonth =
@@ -75,23 +77,32 @@ public class DashboardResponse {
             .filter(month -> YearMonth.from(month.getForecastMonth()).equals(YearMonth.from(today)))
             .findFirst()
             .orElse(null);
-    LocalDate financialDischargeDate = cashflow.getFinancialDischargeDate();
+    boolean hasSimulation = latestSimulation != null;
+    LocalDate financialDischargeDate =
+        hasSimulation ? latestSimulation.getFinancialDischargeDate() : cashflow.getFinancialDischargeDate();
+    Long expectedAsset = hasSimulation ? latestSimulation.getExpectedAsset() : cashflow.getExpectedAsset();
     long thisMonthIncome = currentMonth == null ? 0L : currentMonth.getExpectedSalary();
     long thisMonthInvestment =
         currentMonth == null || currentMonth.getExpectedInvestmentAmount() == null
             ? 0L
             : currentMonth.getExpectedInvestmentAmount();
     long thisMonthSpending = actualThisMonthSpending == null ? 0L : actualThisMonthSpending;
-    Long monthlyInvestmentGoal = monthlyInvestmentGoal(latestApplication);
+    Long monthlyInvestmentGoal =
+        hasSimulation ? latestSimulation.getMonthlyInvestmentAmount() : monthlyInvestmentGoal(latestApplication);
     Long monthlySpendingGoal =
-        latestApplication == null ? 0L : latestApplication.getAppliedMonthlySpendingAmount();
+        hasSimulation
+            ? latestSimulation.getMonthlySpendingAmount()
+            : latestApplication == null ? 0L : latestApplication.getAppliedMonthlySpendingAmount();
     return DashboardResponse.builder()
         .financialDischargeDate(financialDischargeDate)
         .actualDischargeDate(actualDischargeDate)
         .deltaDaysVsActual(daysVsActual(financialDischargeDate, actualDischargeDate))
         .currentAsset(currentAsset)
-        .expectedAsset(cashflow.getExpectedAsset())
-        .achievementRate(cashflow.getAchievementRate())
+        .expectedAsset(expectedAsset)
+        .achievementRate(
+            hasSimulation
+                ? achievementRate(expectedAsset, latestSimulation.getTargetAmount())
+                : cashflow.getAchievementRate())
         .thisMonthIncome(thisMonthIncome)
         .thisMonthInvestment(thisMonthInvestment)
         .thisMonthSpending(thisMonthSpending)
@@ -100,11 +111,33 @@ public class DashboardResponse {
         .investmentGoalAchievementRate(achievementRate(thisMonthInvestment, monthlyInvestmentGoal))
         .spendingGoalAchievementRate(achievementRate(thisMonthSpending, monthlySpendingGoal))
         .goalSource(
-            latestApplication == null || latestApplication.getSourceType() == null
+            hasSimulation
+                ? "SIMULATION"
+                : latestApplication == null || latestApplication.getSourceType() == null
                 ? null
                 : latestApplication.getSourceType().name())
-        .goalAppliedAt(latestApplication == null ? null : latestApplication.getAppliedAt())
+        .goalAppliedAt(
+            hasSimulation
+                ? latestSimulation.getCreatedAt()
+                : latestApplication == null ? null : latestApplication.getAppliedAt())
         .build();
+  }
+
+  public static DashboardResponse from(
+      CashflowForecastResponse cashflow,
+      long currentAsset,
+      LocalDate actualDischargeDate,
+      StrategyApplicationVo latestApplication,
+      LocalDate today,
+      Long actualThisMonthSpending) {
+    return from(
+        cashflow,
+        currentAsset,
+        actualDischargeDate,
+        latestApplication,
+        null,
+        today,
+        actualThisMonthSpending);
   }
 
   private static Long monthlyInvestmentGoal(StrategyApplicationVo application) {
