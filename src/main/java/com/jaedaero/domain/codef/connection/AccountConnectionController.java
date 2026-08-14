@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -86,6 +87,24 @@ public class AccountConnectionController {
     if (repository.deactivateAccountByIdAndUserId(accountId, userId) == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자의 활성 연동 계좌를 찾을 수 없습니다.");
     }
+    return ResponseEntity.noContent().build();
+  }
+
+  @ApiOperation(
+      value = "비활성 연동 계좌 다시 사용",
+      notes =
+          "사용자가 비활성화한 연동 계좌를 다시 ACTIVE 상태로 전환하고, CODEF에서 최신 계좌 정보를 동기화합니다. "
+              + "CODEF 전체 연동을 해제한 경우에는 계좌 연동 시작 API로 금융기관을 다시 연결해야 합니다.")
+  @PatchMapping("/{accountId}/activate")
+  public ResponseEntity<Void> activateAccount(
+      @ApiParam(value = "다시 활성화할 계좌 ID", required = true, example = "5") @PathVariable long accountId,
+      @ApiParam(value = "사용자 ID. JWT 도입 후 인증 사용자 ID로 대체합니다.", required = true, example = "1")
+          @RequestParam
+          long userId) {
+    if (repository.activateAccountByIdAndUserId(accountId, userId) == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자의 비활성 연동 계좌를 찾을 수 없습니다.");
+    }
+    accountSyncService.refreshAllAccounts(userId);
     return ResponseEntity.noContent().build();
   }
 }
