@@ -9,7 +9,7 @@ import java.util.List;
 public record SecuritiesPortfolioResponse(
     @ApiModelProperty(value = "연동 계좌 ID", example = "10") long accountId,
     @ApiModelProperty(value = "증권사 이름", example = "미래에셋증권") String institutionName,
-    @ApiModelProperty(value = "마스킹된 계좌번호", example = "***-***-1234") String accountMasked,
+    @ApiModelProperty(value = "마스킹된 계좌번호", example = "639602-**-****75") String accountMasked,
     @ApiModelProperty(value = "계좌 상품명", example = "위탁 계좌") String productName,
     @ApiModelProperty(value = "저장된 계좌 평가금액", example = "1500000") long currentBalance,
     @ApiModelProperty(value = "출금 또는 주문 가능 금액", example = "1200000") Long availableBalance,
