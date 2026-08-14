@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /** 진급 일정에서 계급을, {@code military_pay_policy}에서 급여를 조회합니다. */
 @Component
-public class DefaultMilitaryPayPolicy {
+public class DefaultMilitaryPayPolicy implements MilitaryPayPolicy {
 
   public static final String POLICY_VERSION = "database-military-pay-policy";
 
@@ -20,6 +20,7 @@ public class DefaultMilitaryPayPolicy {
     this.militaryPayPolicyMapper = militaryPayPolicyMapper;
   }
 
+  @Override
   public MilitaryPay resolve(SoldierType soldierType, YearMonth enlistmentMonth, YearMonth month) {
     long elapsedMonths = ChronoUnit.MONTHS.between(enlistmentMonth, month);
     String rankName = rankName(soldierType, elapsedMonths);

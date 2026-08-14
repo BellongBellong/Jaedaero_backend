@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Getter;
 
-/** 수익 가정에 따른 참고 효과와 보수적 예상자산의 관계를 명시한다. */
+/** 군적금·투자 이자·수익 참고 정보를 원금과 분리해 제공한다. */
 @Getter
 @Builder
 public class SimulationExpectedEffectResponse {
@@ -19,9 +19,6 @@ public class SimulationExpectedEffectResponse {
   private final Long governmentMatchingSupport;
   private final Long expectedInvestmentReturn;
   private final Long projectedBenefitAmount;
-  private final Boolean returnsIncludedInExpectedAsset;
-  private final Long conservativeExpectedAsset;
-  private final Long potentialExpectedAsset;
   private final String calculationPolicyVersion;
 
   public static SimulationExpectedEffectResponse from(SimulationVo simulation) {
@@ -44,9 +41,6 @@ public class SimulationExpectedEffectResponse {
         .governmentMatchingSupport(simulation.getGovernmentMatchingSupport())
         .expectedInvestmentReturn(simulation.getExpectedInvestmentReturn())
         .projectedBenefitAmount(projectedBenefit)
-        .returnsIncludedInExpectedAsset(true)
-        .conservativeExpectedAsset(simulation.getExpectedAsset())
-        .potentialExpectedAsset(simulation.getPotentialExpectedAsset())
         .calculationPolicyVersion(simulation.getCalculationPolicyVersion())
         .build();
   }

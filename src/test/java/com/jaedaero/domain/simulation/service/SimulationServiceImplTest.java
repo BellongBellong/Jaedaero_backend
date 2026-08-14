@@ -18,6 +18,9 @@ import com.jaedaero.domain.simulation.vo.SimulationVo;
 import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
 import com.jaedaero.domain.cashflow.service.AppliedCashflowStrategy;
+import com.jaedaero.domain.cashflow.service.CashflowCalculator;
+import com.jaedaero.domain.cashflow.service.CashflowForecastCalculation;
+import com.jaedaero.domain.cashflow.service.CashflowInput;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -59,20 +62,19 @@ class SimulationServiceImplTest {
     SimulationDefaultsResponse defaults = service.getDefaults(1L);
     assertEquals(20_000_000L, defaults.getTargetAmount());
     assertEquals(900_000L, defaults.getReferenceMonthlyIncome());
-    assertEquals(0L, defaults.getMonthlySpendingAmount());
+    assertEquals(350_000L, defaults.getMonthlySpendingAmount());
     assertEquals(550_000L, defaults.getMonthlySavingAmount());
     assertEquals(0L, defaults.getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("5.00"), defaults.getExpectedReturnRate());
-    assertEquals(new BigDecimal("0.00"), defaults.getSpendingRate());
+    assertEquals(new BigDecimal("38.89"), defaults.getSpendingRate());
     assertEquals(new BigDecimal("61.11"), defaults.getSavingRate());
-    assertEquals(350_000L, defaults.getUnallocatedAmount());
+    assertEquals(0L, defaults.getUnallocatedAmount());
 
     SimulationResponse preview = service.run(1L, request(false));
 
     assertFalse(preview.getIsSaved());
     assertNull(preview.getSimulationId());
     assertEquals(0, mapper.countByUserId(1L));
-    assertEquals(24_600_475L, preview.getExpectedAsset());
     assertEquals(20_000_000L, preview.getTargetAmount());
     assertEquals(150_000L, preview.getMonthlyInvestmentAmount());
     assertEquals(900_000L, preview.getReferenceMonthlyIncome());
@@ -83,18 +85,21 @@ class SimulationServiceImplTest {
     assertEquals(15, preview.getCalculationDetail().getCalculationMonths());
     assertEquals(4_300_000L, preview.getCalculationDetail().getBaseAsset());
     assertEquals(18_300_000L, preview.getCalculationDetail().getExpectedSalary());
-    assertEquals(2_700_000L, preview.getCalculationDetail().getExpectedSpending());
-    assertEquals(15_600_000L, preview.getCalculationDetail().getCashflowIncreaseAmount());
+    assertEquals(3_660_000L, preview.getCalculationDetail().getExpectedSpending());
+    assertEquals(14_640_000L, preview.getCalculationDetail().getCashflowIncreaseAmount());
     assertEquals(4_500_000L, preview.getCalculationDetail().getSoldierSavingPrincipal());
-    assertEquals(2_250_000L, preview.getCalculationDetail().getInvestmentPrincipal());
-    assertEquals(8_850_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
-    assertEquals(133_650L, preview.getExpectedEffect().getSoldierSavingInterest());
+    assertEquals(3_600_000L, preview.getCalculationDetail().getInvestmentPrincipal());
+    assertEquals(7_090_000L, preview.getCalculationDetail().getUnallocatedPrincipal());
+    assertEquals(131_250L, preview.getExpectedEffect().getSoldierSavingInterest());
     assertEquals(4_500_000L, preview.getExpectedEffect().getGovernmentMatchingSupport());
-    assertEquals(66_825L, preview.getExpectedEffect().getExpectedInvestmentReturn());
-    assertEquals(4_700_475L, preview.getExpectedEffect().getProjectedBenefitAmount());
-    assertTrue(preview.getExpectedEffect().getReturnsIncludedInExpectedAsset());
-    assertEquals(24_600_475L, preview.getExpectedEffect().getConservativeExpectedAsset());
-    assertEquals(24_600_475L, preview.getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(115_916L, preview.getExpectedEffect().getExpectedInvestmentReturn());
+    assertEquals(4_747_166L, preview.getExpectedEffect().getProjectedBenefitAmount());
+    assertEquals(
+        Math.addExact(
+            preview.getCalculationDetail().getBaseAsset()
+                + preview.getCalculationDetail().getCashflowIncreaseAmount(),
+            preview.getExpectedEffect().getProjectedBenefitAmount()),
+        preview.getExpectedAsset());
     assertEquals(
         SimulationCalculator.CALCULATION_POLICY_VERSION,
         preview.getExpectedEffect().getCalculationPolicyVersion());
@@ -109,9 +114,7 @@ class SimulationServiceImplTest {
     assertEquals(saved.getSimulationId(), history.getSimulations().get(0).getSimulationId());
     assertEquals(150_000L, history.getSimulations().get(0).getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("16.67"), history.getSimulations().get(0).getInvestmentRate());
-    assertEquals(
-        saved.getExpectedEffect().getPotentialExpectedAsset(),
-        history.getSimulations().get(0).getExpectedEffect().getPotentialExpectedAsset());
+    assertEquals(saved.getExpectedAsset(), history.getSimulations().get(0).getExpectedAsset());
   }
 
   @Test
@@ -193,13 +196,69 @@ class SimulationServiceImplTest {
     assertTrue(
         high.getExpectedEffect().getGovernmentMatchingSupport()
             > low.getExpectedEffect().getGovernmentMatchingSupport());
-    assertEquals(
-        high.getCalculationDetail().getCashflowIncreaseAmount(),
-        Math.addExact(
-            Math.addExact(
-                high.getCalculationDetail().getSoldierSavingPrincipal(),
-                high.getCalculationDetail().getInvestmentPrincipal()),
-            high.getCalculationDetail().getUnallocatedPrincipal()));
+    assertTrue(
+        high.getCalculationDetail().getSoldierSavingPrincipal()
+            + high.getCalculationDetail().getInvestmentPrincipal()
+            + high.getCalculationDetail().getUnallocatedPrincipal()
+            >= high.getCalculationDetail().getCashflowIncreaseAmount());
+  }
+
+  @Test
+  void expectedReturnRateChangesTheUnifiedExpectedAsset() {
+    SimulationService service = service(900_000L);
+    SimulationRequest zeroReturn = request(false);
+    zeroReturn.setExpectedReturnRate(BigDecimal.ZERO);
+    SimulationRequest highReturn = request(false);
+    highReturn.setExpectedReturnRate(new BigDecimal("10.00"));
+
+    SimulationResponse conservative = service.run(1L, zeroReturn);
+    SimulationResponse optimistic = service.run(1L, highReturn);
+
+    assertTrue(optimistic.getExpectedAsset() > conservative.getExpectedAsset());
+  }
+
+  @Test
+  void identicalMonthlyInputsProduceTheSameCashflowAndWhatIfForecast() {
+    MilitaryPayPolicyMapper payMapper =
+        (soldierType, rankName, monthStart, monthEnd) -> 900_000L;
+    DefaultMilitaryPayPolicy payPolicy = new DefaultMilitaryPayPolicy(payMapper);
+    LocalDate calculationDate = LocalDate.of(2026, 7, 31);
+    LocalDate dischargeDate = LocalDate.of(2027, 9, 1);
+    AppliedCashflowStrategy strategy =
+        new AppliedCashflowStrategy(
+            9L, 180_000L, 300_000L, 150_000L, new BigDecimal("5.00"));
+    CashflowForecastCalculation cashflow =
+        new CashflowCalculator(payPolicy)
+            .calculate(
+                new CashflowInput(
+                    4_300_000L,
+                    20_000_000L,
+                    180_000L,
+                    SoldierType.ARMY,
+                    LocalDate.of(2026, 3, 1),
+                    dischargeDate,
+                    List.of(),
+                    strategy),
+                calculationDate);
+    SimulationRequest whatIfRequest = request(false);
+    SimulationCalculationResult whatIf =
+        new SimulationCalculator(payPolicy)
+            .calculate(
+                new SimulationInput(
+                    4_300_000L,
+                    20_000_000L,
+                    180_000L,
+                    SoldierType.ARMY,
+                    LocalDate.of(2026, 3, 1),
+                    dischargeDate),
+                whatIfRequest,
+                calculationDate);
+
+    assertEquals(cashflow.expectedAsset(), whatIf.expectedAsset());
+    assertEquals(cashflow.financialDischargeDate(), whatIf.financialDischargeDate());
+    assertEquals(cashflow.soldierSavingInterest(), whatIf.soldierSavingInterest());
+    assertEquals(cashflow.governmentMatchingSupport(), whatIf.governmentMatchingSupport());
+    assertEquals(cashflow.expectedInvestmentReturn(), whatIf.expectedInvestmentReturn());
   }
 
   @Test

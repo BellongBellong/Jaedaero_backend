@@ -3,13 +3,12 @@ package com.jaedaero.domain.cashflow.service;
 import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /** 월별 급여, 저축·투자 배분, 지출 및 기말 자산 예측을 계산합니다. */
@@ -18,40 +17,92 @@ public class CashflowCalculator {
 
   /** 동기화된 장병 적금 금액을 가져오기 전까지 사용할 초기 배분값입니다. */
   public static final long DEFAULT_MONTHLY_SAVING_AMOUNT = 550_000L;
-  public static final long DEFAULT_MONTHLY_SPENDING_AMOUNT = 0L;
-  private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
-  private static final BigDecimal PERCENT = BigDecimal.valueOf(100);
 
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
+  private final ConservativeMonthlyCashflowEngine cashflowEngine;
+  private final AggregateInvestmentPrincipalProvider investmentPrincipalProvider;
+  private final InvestmentPrincipalBackfill investmentPrincipalBackfill;
 
-  public CashflowCalculator(DefaultMilitaryPayPolicy militaryPayPolicy) {
+  @Autowired
+  public CashflowCalculator(
+      DefaultMilitaryPayPolicy militaryPayPolicy,
+      ConservativeMonthlyCashflowEngine cashflowEngine,
+      AggregateInvestmentPrincipalProvider investmentPrincipalProvider,
+      InvestmentPrincipalBackfill investmentPrincipalBackfill) {
     this.militaryPayPolicy = militaryPayPolicy;
+    this.cashflowEngine = cashflowEngine;
+    this.investmentPrincipalProvider = investmentPrincipalProvider;
+    this.investmentPrincipalBackfill = investmentPrincipalBackfill;
+  }
+
+  /** 단위 테스트와 독립 계산 호출의 하위 호환용 생성자입니다. */
+  public CashflowCalculator(DefaultMilitaryPayPolicy militaryPayPolicy) {
+    this(
+        militaryPayPolicy,
+        new ConservativeMonthlyCashflowEngine(),
+        userId -> java.util.Optional.empty(),
+        new InvestmentPrincipalBackfill(militaryPayPolicy));
   }
 
   public CashflowForecastCalculation calculate(CashflowInput input, LocalDate calculationDate) {
     YearMonth startMonth = YearMonth.from(calculationDate);
     YearMonth dischargeMonth = YearMonth.from(input.dischargeDate());
-    if (startMonth.isAfter(dischargeMonth)) {
+    if (calculationDate.isAfter(input.dischargeDate())) {
       return new CashflowForecastCalculation(
-          0L, 0L, input.baseAsset(), 0L, achievementRate(input.baseAsset(), input.targetAmount()), null, List.of());
+          0L,
+          0L,
+          0L,
+          0L,
+          input.baseAsset(),
+          0L,
+          0L,
+          0L,
+          0L,
+          0L,
+          0L,
+          ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,
+          0L,
+          achievementRate(input.baseAsset(), input.targetAmount()),
+          null,
+          List.of());
     }
 
     long asset = input.baseAsset();
     long expectedSalary = 0L;
+    long expectedSpending = 0L;
     long expectedSavingAmount = 0L;
-    long expectedInvestmentReturn = 0L;
+    long expectedInvestmentAmount = 0L;
     long firstMonthSpendingLimit = 0L;
     LocalDate financialDischargeDate = asset >= input.targetAmount() ? calculationDate : null;
     List<CashflowForecastMonthCalculation> months = new ArrayList<>();
+    List<Long> savingContributions = new ArrayList<>();
+    List<Long> investmentContributions = new ArrayList<>();
+    List<LocalDate> savingContributionDates = new ArrayList<>();
     int totalMonths = (int) ChronoUnit.MONTHS.between(startMonth, dischargeMonth) + 1;
     boolean hasAppliedStrategy = input.appliedStrategy() != null;
-    List<SavingMaturity> savings =
-        savingsMaturingByDischarge(
-            input.soldierSavings(),
-            startMonth,
-            dischargeMonth,
-            hasAppliedStrategy ? input.appliedStrategy().monthlySavingAmount() : null);
-    boolean hasSoldierSavings = !savings.isEmpty();
+    if (hasAppliedStrategy
+        && (input.appliedStrategy().expectedReturnRate() == null
+            || input.appliedStrategy().expectedReturnRate().signum() < 0)) {
+      throw new CashflowException(
+          CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 금액이 유효하지 않습니다.");
+    }
+
+    BigDecimal spendingRatio = BigDecimal.ZERO;
+    BigDecimal investmentRatio = BigDecimal.ZERO;
+    if (hasAppliedStrategy) {
+      long firstMonthSalary =
+          militaryPayPolicy
+              .resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), startMonth)
+              .monthlySalary();
+      if (firstMonthSalary > 0L) {
+        spendingRatio =
+            BigDecimal.valueOf(input.appliedStrategy().monthlySpendingAmount())
+                .divide(BigDecimal.valueOf(firstMonthSalary), 10, java.math.RoundingMode.HALF_UP);
+        investmentRatio =
+            BigDecimal.valueOf(input.appliedStrategy().monthlyInvestmentAmount())
+                .divide(BigDecimal.valueOf(firstMonthSalary), 10, java.math.RoundingMode.HALF_UP);
+      }
+    }
 
     for (int index = 0; index < totalMonths; index++) {
       YearMonth month = startMonth.plusMonths(index);
@@ -59,52 +110,48 @@ public class CashflowCalculator {
       DefaultMilitaryPayPolicy.MilitaryPay pay =
           militaryPayPolicy.resolve(input.soldierType(), YearMonth.from(input.enlistmentDate()), month);
       long requiredSaving = requiredSaving(input.targetAmount(), asset, remainingMonths);
-      if (hasAppliedStrategy) {
-        validateAppliedStrategy(input.appliedStrategy(), pay.monthlySalary());
-      }
       long spending =
           hasAppliedStrategy
-              ? input.appliedStrategy().monthlySpendingAmount()
-              : DEFAULT_MONTHLY_SPENDING_AMOUNT;
+              ? scale(spendingRatio, pay.monthlySalary())
+              : Math.max(0L, input.monthlySpendingAverage());
       long monthlySaving =
           hasAppliedStrategy
               ? input.appliedStrategy().monthlySavingAmount()
-              : hasSoldierSavings
-              ? savings.stream()
-                  .filter(saving -> !month.isAfter(saving.maturityMonth()))
-                  .mapToLong(saving -> saving.input().monthlyAmount())
-                  .sum()
-              : Math.max(DEFAULT_MONTHLY_SAVING_AMOUNT, requiredSaving);
-      long spendingLimit =
-          hasAppliedStrategy
-              ? spending
-              : Math.max(0L, pay.monthlySalary() - monthlySaving);
+              : Math.min(DEFAULT_MONTHLY_SAVING_AMOUNT, pay.monthlySalary());
+      long spendingLimit = Math.max(0L, pay.monthlySalary() - requiredSaving);
       long monthlyInvestment =
           hasAppliedStrategy
-              ? input.appliedStrategy().monthlyInvestmentAmount()
-              : 0L;
-      long maturityBonus =
-          savings.stream()
-              .filter(saving -> month.equals(saving.maturityMonth()))
-              .mapToLong(SavingMaturity::bonus)
-              .sum();
-      long cumulativeInvestmentReturn =
-          hasAppliedStrategy
-              ? compoundReturn(
-                  monthlyInvestment, input.appliedStrategy().expectedReturnRate(), index + 1)
-              : 0L;
-      long monthlyInvestmentReturn = cumulativeInvestmentReturn - expectedInvestmentReturn;
+              ? scale(investmentRatio, pay.monthlySalary())
+              : Math.max(
+                  0L,
+                  Math.min(
+                      pay.monthlySalary() - spending - monthlySaving,
+                      requiredSaving - monthlySaving));
+      if (hasAppliedStrategy) {
+        validateAppliedStrategy(spending, monthlySaving, monthlyInvestment, pay.monthlySalary());
+      }
 
       long assetBeforeMonth = asset;
-      asset += pay.monthlySalary() - spending + maturityBonus + monthlyInvestmentReturn;
-      expectedInvestmentReturn = cumulativeInvestmentReturn;
+      ConservativeMonthlyCashflowEngine.MonthProjection projection =
+          cashflowEngine.project(
+              assetBeforeMonth,
+              pay.monthlySalary(),
+              spending,
+              input.targetAmount(),
+              calculationDate,
+              input.dischargeDate(),
+              month);
+      asset = projection.endingAsset();
       expectedSalary += pay.monthlySalary();
-      if (hasAppliedStrategy || !hasSoldierSavings) expectedSavingAmount += monthlySaving;
+      expectedSpending += spending;
+      expectedSavingAmount += monthlySaving;
+      expectedInvestmentAmount += monthlyInvestment;
+      savingContributions.add(monthlySaving);
+      investmentContributions.add(monthlyInvestment);
+      savingContributionDates.add(month.atDay(1));
       if (index == 0) firstMonthSpendingLimit = spendingLimit;
-      if (financialDischargeDate == null) {
-        financialDischargeDate =
-            estimatedFinancialDischargeDate(
-                assetBeforeMonth, asset, input.targetAmount(), calculationDate, month);
+      if (financialDischargeDate == null && projection.targetReachedDate() != null) {
+        financialDischargeDate = projection.targetReachedDate();
       }
       months.add(
           new CashflowForecastMonthCalculation(
@@ -117,16 +164,49 @@ public class CashflowCalculator {
               asset));
     }
 
-    if (hasSoldierSavings) {
-      expectedSavingAmount = savings.stream().mapToLong(SavingMaturity::maturityPayout).sum();
+    BigDecimal investmentAnnualReturnRate =
+        hasAppliedStrategy ? input.appliedStrategy().expectedReturnRate() : BigDecimal.ZERO;
+    BigDecimal finalInvestmentRatio = investmentRatio;
+    long existingInvestmentPrincipal =
+        investmentPrincipalProvider
+            .resolveLinkedPrincipal(input.userId())
+            .orElseGet(
+                () ->
+                    investmentPrincipalBackfill.estimate(
+                        input.soldierType(),
+                        input.enlistmentDate(),
+                        calculationDate,
+                        finalInvestmentRatio));
+    ConservativeMonthlyCashflowEngine.ProjectedBenefit benefit =
+        cashflowEngine.calculateProjectedBenefit(
+            input.soldierSavings(),
+            calculationDate,
+            savingContributions,
+            savingContributionDates,
+            input.dischargeDate(),
+            existingInvestmentPrincipal,
+            investmentContributions,
+            investmentAnnualReturnRate);
+    long expectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
+    if (financialDischargeDate == null && expectedAsset >= input.targetAmount()) {
+      financialDischargeDate = input.dischargeDate();
     }
 
     return new CashflowForecastCalculation(
         expectedSalary,
+        expectedSpending,
         expectedSavingAmount,
-        asset,
+        expectedInvestmentAmount,
+        expectedAsset,
+        benefit.soldierSavingPrincipal(),
+        benefit.soldierSavingInterest(),
+        benefit.governmentMatchingSupport(),
+        benefit.investmentPrincipal(),
+        benefit.expectedInvestmentReturn(),
+        benefit.projectedBenefitAmount(),
+        ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,
         firstMonthSpendingLimit,
-        achievementRate(asset, input.targetAmount()),
+        achievementRate(expectedAsset, input.targetAmount()),
         financialDischargeDate,
         List.copyOf(months));
   }
@@ -136,23 +216,26 @@ public class CashflowCalculator {
     return (remainingAmount + remainingMonths - 1) / remainingMonths;
   }
 
+  private long scale(BigDecimal ratio, long referenceSalary) {
+    return ratio
+        .multiply(BigDecimal.valueOf(referenceSalary))
+        .setScale(0, java.math.RoundingMode.HALF_UP)
+        .longValueExact();
+  }
+
   private void validateAppliedStrategy(
-      AppliedCashflowStrategy strategy, long referenceMonthlyIncome) {
-    if (strategy.monthlySpendingAmount() < 0
-        || strategy.monthlySavingAmount() < 0
-        || strategy.monthlySavingAmount() > DEFAULT_MONTHLY_SAVING_AMOUNT
-        || strategy.monthlyInvestmentAmount() < 0
-        || strategy.expectedReturnRate() == null
-        || strategy.expectedReturnRate().signum() < 0) {
+      long spending, long saving, long investment, long referenceMonthlyIncome) {
+    if (spending < 0
+        || saving < 0
+        || saving > DEFAULT_MONTHLY_SAVING_AMOUNT
+        || investment < 0) {
       throw new CashflowException(
           CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 금액이 유효하지 않습니다.");
     }
     try {
       long allocated =
           Math.addExact(
-              Math.addExact(
-                  strategy.monthlySpendingAmount(), strategy.monthlySavingAmount()),
-              strategy.monthlyInvestmentAmount());
+              Math.addExact(spending, saving), investment);
       if (allocated > referenceMonthlyIncome) {
         throw new CashflowException(
             CashflowErrorCode.INPUT_NOT_READY, "활성 AI 전략의 월 배분 합계가 해당 월 군 월급을 초과합니다.");
@@ -163,141 +246,8 @@ public class CashflowCalculator {
     }
   }
 
-  /**
-   * 해당 월의 순자산 증가액을 남은 날짜에 균등하게 배분해 목표 달성일을 추정합니다. 급여·지출·만기
-   * 혜택이 현재 월 단위로 예측되므로 이 값은 추정치입니다.
-   */
-  private LocalDate estimatedFinancialDischargeDate(
-      long assetBeforeMonth,
-      long assetAfterMonth,
-      long targetAmount,
-      LocalDate calculationDate,
-      YearMonth forecastMonth) {
-    if (assetBeforeMonth >= targetAmount || assetAfterMonth < targetAmount) {
-      return null;
-    }
-    long monthlyNetIncrease = assetAfterMonth - assetBeforeMonth;
-    if (monthlyNetIncrease <= 0L) {
-      return null;
-    }
-
-    LocalDate periodStart =
-        forecastMonth.equals(YearMonth.from(calculationDate))
-            ? calculationDate
-            : forecastMonth.atDay(1);
-    int remainingDays = (int) ChronoUnit.DAYS.between(periodStart, forecastMonth.atEndOfMonth()) + 1;
-    long amountNeeded = targetAmount - assetBeforeMonth;
-    long daysToReach = (amountNeeded * remainingDays + monthlyNetIncrease - 1) / monthlyNetIncrease;
-    return periodStart.plusDays(daysToReach - 1);
-  }
-
-  private List<SavingMaturity> savingsMaturingByDischarge(
-      List<SoldierSavingInput> inputs,
-      YearMonth startMonth,
-      YearMonth dischargeMonth,
-      Long monthlySavingAmountOverride) {
-    List<SoldierSavingInput> validInputs =
-        inputs.stream()
-        .filter(Objects::nonNull)
-        .toList();
-    long configuredMonthlyAmount =
-        validInputs.stream().mapToLong(SoldierSavingInput::monthlyAmount).sum();
-    List<SavingMaturity> savings = new ArrayList<>();
-    long remainingOverride = monthlySavingAmountOverride == null ? 0L : monthlySavingAmountOverride;
-    for (int index = 0; index < validInputs.size(); index++) {
-      SoldierSavingInput input = validInputs.get(index);
-      long monthlyAmount =
-          monthlySavingAmountOverride == null
-              ? input.monthlyAmount()
-              : allocatedMonthlySavingAmount(
-                  input, index, validInputs.size(), configuredMonthlyAmount, remainingOverride, monthlySavingAmountOverride);
-      if (monthlySavingAmountOverride != null) {
-        remainingOverride -= monthlyAmount;
-      }
-      SavingMaturity saving = toSavingMaturity(input, startMonth, monthlyAmount);
-      if (!saving.maturityMonth().isBefore(startMonth) && !saving.maturityMonth().isAfter(dischargeMonth)) {
-        savings.add(saving);
-      }
-    }
-    return List.copyOf(savings);
-  }
-
-  private long allocatedMonthlySavingAmount(
-      SoldierSavingInput input,
-      int index,
-      int totalCount,
-      long configuredMonthlyAmount,
-      long remainingOverride,
-      long monthlySavingAmountOverride) {
-    if (index == totalCount - 1) {
-      return remainingOverride;
-    }
-    if (configuredMonthlyAmount == 0L) {
-      return monthlySavingAmountOverride / totalCount;
-    }
-    return BigDecimal.valueOf(monthlySavingAmountOverride)
-        .multiply(BigDecimal.valueOf(input.monthlyAmount()))
-        .divide(BigDecimal.valueOf(configuredMonthlyAmount), 0, RoundingMode.HALF_UP)
-        .longValueExact();
-  }
-
-  private SavingMaturity toSavingMaturity(
-      SoldierSavingInput input, YearMonth startMonth, long monthlyAmount) {
-    YearMonth maturityMonth = YearMonth.from(input.maturityDate());
-    int depositMonths =
-        maturityMonth.isBefore(startMonth)
-            ? 0
-            : (int) ChronoUnit.MONTHS.between(startMonth, maturityMonth) + 1;
-    long futurePrincipal = Math.multiplyExact(monthlyAmount, depositMonths);
-    long principal = Math.addExact(input.currentBalance(), futurePrincipal);
-    long interest = estimatedInterest(input, monthlyAmount, depositMonths);
-    // 장병내일준비적금은 만기 해지 시 납입 원금의 100%를 매칭지원금으로 지급한다.
-    // 현재 잔액은 이미 납입한 원금으로, 미래 납입액까지 합산해 지원금을 계산한다.
-    long governmentSupport = principal;
-    return new SavingMaturity(
-        input, maturityMonth, principal + interest + governmentSupport, interest + governmentSupport);
-  }
-
-  private long estimatedInterest(SoldierSavingInput input, long monthlyAmount, int depositMonths) {
-    BigDecimal annualRate = input.annualInterestRate().movePointLeft(2);
-    BigDecimal currentBalanceInterest =
-        BigDecimal.valueOf(input.currentBalance())
-            .multiply(annualRate)
-            .multiply(BigDecimal.valueOf(depositMonths))
-            .divide(BigDecimal.valueOf(12), 0, RoundingMode.HALF_UP);
-    long depositMonthWeights = (long) depositMonths * (depositMonths - 1) / 2;
-    BigDecimal depositInterest =
-        BigDecimal.valueOf(monthlyAmount)
-            .multiply(annualRate)
-            .multiply(BigDecimal.valueOf(depositMonthWeights))
-            .divide(BigDecimal.valueOf(12), 0, RoundingMode.HALF_UP);
-    return currentBalanceInterest.add(depositInterest).longValueExact();
-  }
-
-  private long compoundReturn(long monthlyContribution, BigDecimal annualRatePercent, int months) {
-    if (monthlyContribution == 0L || annualRatePercent.signum() == 0 || months <= 1) {
-      return 0L;
-    }
-    BigDecimal monthlyRate =
-        annualRatePercent
-            .divide(PERCENT, 20, RoundingMode.HALF_UP)
-            .divide(MONTHS_PER_YEAR, 20, RoundingMode.HALF_UP);
-    BigDecimal balance = BigDecimal.ZERO;
-    BigDecimal growthFactor = BigDecimal.ONE.add(monthlyRate);
-    for (int month = 0; month < months; month++) {
-      balance =
-          balance.multiply(growthFactor).add(BigDecimal.valueOf(monthlyContribution));
-    }
-    long principal = Math.multiplyExact(monthlyContribution, months);
-    return balance.subtract(BigDecimal.valueOf(principal)).setScale(0, RoundingMode.HALF_UP)
-        .longValueExact();
-  }
-
   private double achievementRate(long expectedAsset, long targetAmount) {
     if (targetAmount == 0L) return 100D;
     return Math.min(999.99D, expectedAsset * 100D / targetAmount);
   }
-
-  private record SavingMaturity(
-      SoldierSavingInput input, YearMonth maturityMonth, long maturityPayout, long bonus) {}
 }

@@ -35,6 +35,17 @@ class CashflowServiceImplTest {
     assertEquals(1L, generated.getForecastId());
     assertEquals(18, generated.getMonths().size());
     assertEquals(10_200_000L, generated.getExpectedSalary());
+    assertEquals(8_000_000L, generated.getExpectedSavingAmount());
+    assertEquals(2_200_000L, generated.getExpectedInvestmentAmount());
+    assertEquals(240_000L, generated.getSoldierSavingInterest());
+    assertEquals(8_000_000L, generated.getGovernmentMatchingSupport());
+    assertEquals(0L, generated.getExpectedInvestmentReturn());
+    assertEquals(18_440_000L, generated.getExpectedAsset());
+    assertEquals(8_000_000L, generated.getSoldierSavingPrincipal());
+    assertEquals(2_200_000L, generated.getInvestmentPrincipal());
+    assertEquals(
+        ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION,
+        generated.getCalculationPolicyVersion());
     assertEquals(0L, generated.getMonths().get(0).getExpectedInvestmentAmount());
     assertEquals(1, mapper.forecasts.size());
     assertEquals(18, mapper.months.size());

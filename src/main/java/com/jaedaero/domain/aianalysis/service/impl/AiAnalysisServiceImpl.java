@@ -292,12 +292,14 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
   private long remainingMonths(LocalDate today, LocalDate discharge) { YearMonth first = YearMonth.from(today).plusMonths(1); YearMonth last = YearMonth.from(discharge); return first.isAfter(last) ? 0 : ChronoUnit.MONTHS.between(first, last) + 1; }
   private SimulationInput withTargetAmount(SimulationInput input, long targetAmount) {
     return new SimulationInput(
+        input.userId(),
         input.baseAsset(),
         targetAmount,
         input.monthlySpendingAverage(),
         input.soldierType(),
         input.enlistmentDate(),
         input.dischargeDate(),
+        input.soldierSavings(),
         input.appliedStrategy());
   }
   private long targetAmount(AiAnalysisInput base, SimulationVo simulation) { return simulation == null ? base.targetAmount() : simulation.getTargetAmount(); }

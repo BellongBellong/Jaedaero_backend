@@ -4,7 +4,7 @@ import com.jaedaero.domain.simulation.vo.SimulationVo;
 import lombok.Builder;
 import lombok.Getter;
 
-/** 전역 예상자산의 보수적 현금흐름과 월 배분 원금을 설명하는 상세 응답이다. */
+/** 전역 예상자산의 순수 현금흐름과 월 배분 원금을 설명하는 상세 응답이다. */
 @Getter
 @Builder
 public class SimulationCalculationDetailResponse {
