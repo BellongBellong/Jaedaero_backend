@@ -1,6 +1,6 @@
 -- AI Coach 개발용 Mock 데이터
 --
--- 전제: jaedaero_db_v2.sql과 운영 기준 시드를 적용한 로컬 jaedaero DB
+-- 전제: jaedaero_db_v1.sql과 운영 기준 시드를 적용한 로컬 jaedaero DB
 -- 이 파일은 DROP/TRUNCATE를 수행하지 않으며, 전용 소셜 식별자로 찾은 목업 데이터만 upsert한다.
 -- 실행: mysql -u <DB_USER> -p jaedaero < sql/seed/ai_coach_mock_data.sql
 

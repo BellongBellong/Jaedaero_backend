@@ -1,7 +1,15 @@
 -- ============================================================
--- JAEDAERO Database Schema (ERD_v1.1, 2026-08-05)
--- MySQL 8.0+
+-- JAEDAERO Database Baseline v1.0 (V3 unified, 2026-08-14)
+-- Target: MySQL 8.4 / utf8mb4
+--
+-- 신규 환경 구축 또는 전체 초기화 전용 스크립트입니다.
+-- 실행하면 아래 서비스 테이블과 데이터가 모두 삭제됩니다.
+-- 기존 운영 DB의 증분 업그레이드에는 sql/migration만 사용합니다.
+-- 기준 데이터와 테스트 데이터는 sql/seed에서 별도로 적용합니다.
 -- ============================================================
+
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+09:00';
 
 -- ---------------------------------------------
 -- Drop existing tables in reverse dependency order
@@ -748,8 +756,8 @@ CREATE TABLE investment_guidance (
     market_value                    BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가금액',
     unrealized_profit_loss          BIGINT NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 평가손익',
     return_rate                     DECIMAL(9,4) NOT NULL DEFAULT 0 COMMENT '선택 투자대상의 수익률(%)',
-    safe_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 예수금(안전자산)',
-    risk_asset_amount               BIGINT NOT NULL DEFAULT 0 COMMENT '가이드 계산 당시 증권계좌 전체 보유종목 평가액(위험자산)',
+    safe_asset_amount               BIGINT NULL COMMENT '가이드 계산 당시 증권계좌 예수금(안전자산)',
+    risk_asset_amount               BIGINT NULL COMMENT '가이드 계산 당시 증권계좌 전체 보유종목 평가액(위험자산)',
     expected_return_rate            DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '결정론 계산에 사용한 연 예상수익률(%)',
     remaining_contribution_count    INT NOT NULL DEFAULT 0 COMMENT '전역일까지 남은 적립 회차 수',
     safety_buffer_amount            BIGINT NOT NULL DEFAULT 0 COMMENT 'SAFE_FOCUS 판정용 안전 여유금',
@@ -882,6 +890,7 @@ CREATE TABLE refresh_token (
 -- ---------------------------------------------
 CREATE TABLE mission (
                          mission_id      BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '미션 ID',
+                         mission_code    VARCHAR(50) NULL COMMENT '변경되지 않는 미션 식별 코드',
                          mission_type    ENUM('SAFE', 'AGGRESSIVE') NULL COMMENT '미션 성향(공통 미션은 NULL)',
                          mission_category ENUM('DAILY', 'RECOMMENDED', 'ONE_TIME', 'EVENT') NOT NULL DEFAULT 'DAILY' COMMENT '미션 노출 분류',
                          title           VARCHAR(255) NOT NULL COMMENT '미션명 (예: 30일 연속 출석 체크, ETF 첫 투자 미션)',
@@ -894,6 +903,8 @@ CREATE TABLE mission (
                          is_active       BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성 여부',
                          created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 
+                         CONSTRAINT uq_mission_code
+                             UNIQUE (mission_code),
                          CONSTRAINT chk_mission_display_order
                              CHECK (display_order >= 0),
                          CONSTRAINT chk_mission_trigger_value
@@ -966,28 +977,6 @@ CREATE TABLE badge (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 뱃지 마스터 초기 데이터 : 성향별 미션 완료 수 티어
--- ---------------------------------------------
-INSERT INTO badge (
-    badge_name,
-    badge_description,
-    mission_type,
-    required_completion_count,
-    grade,
-    is_active
-) VALUES
-    ('안정형 브론즈', '안정형 미션 1개 완료', 'SAFE', 1, 'BRONZE', TRUE),
-    ('안정형 실버', '안정형 미션 10개 완료', 'SAFE', 10, 'SILVER', TRUE),
-    ('안정형 골드', '안정형 미션 50개 완료', 'SAFE', 50, 'GOLD', TRUE),
-    ('안정형 플래티넘', '안정형 미션 100개 완료', 'SAFE', 100, 'PLATINUM', TRUE),
-    ('안정형 다이아', '안정형 미션 300개 완료', 'SAFE', 300, 'DIAMOND', TRUE),
-    ('공격형 브론즈', '공격형 미션 1개 완료', 'AGGRESSIVE', 1, 'BRONZE', TRUE),
-    ('공격형 실버', '공격형 미션 10개 완료', 'AGGRESSIVE', 10, 'SILVER', TRUE),
-    ('공격형 골드', '공격형 미션 50개 완료', 'AGGRESSIVE', 50, 'GOLD', TRUE),
-    ('공격형 플래티넘', '공격형 미션 100개 완료', 'AGGRESSIVE', 100, 'PLATINUM', TRUE),
-    ('공격형 다이아', '공격형 미션 300개 완료', 'AGGRESSIVE', 300, 'DIAMOND', TRUE);
-
--- ---------------------------------------------
 -- 30. investment_badge : 투자 뱃지
 -- ---------------------------------------------
 CREATE TABLE user_badge (
@@ -1036,16 +1025,25 @@ CREATE TABLE investment_badge (
 CREATE TABLE leave_mode (
                             leave_mode_id   BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '휴가모드 ID',
                             user_id         BIGINT NOT NULL COMMENT '사용자 ID',
+                            event_name      VARCHAR(100) NOT NULL COMMENT '이벤트명(휴가, 외출, 외박 등)',
                             start_date      DATE NOT NULL COMMENT '휴가 시작일',
                             end_date        DATE NOT NULL COMMENT '휴가 종료일',
+                            is_leave_mode_enabled BOOLEAN NOT NULL DEFAULT TRUE COMMENT '일정 기간 휴가모드 자동 전환 여부',
                             budget_amount   BIGINT NULL COMMENT '휴가 예산 설정값(선택 입력)',
                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                            updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
                             INDEX idx_leave_mode_user_start_date (user_id, start_date),
+                            INDEX idx_leave_mode_user_enabled_period
+                                (user_id, is_leave_mode_enabled, start_date, end_date),
+                            CONSTRAINT chk_leave_mode_period
+                                CHECK (start_date <= end_date),
+                            CONSTRAINT chk_leave_mode_budget
+                                CHECK (budget_amount IS NULL OR budget_amount >= 0),
                             CONSTRAINT fk_leave_mode_user
                                 FOREIGN KEY (user_id) REFERENCES users(user_id)
                                     ON DELETE CASCADE
-) COMMENT='휴가모드 — 대시보드 UI/UX 전환 트리거 + 휴가 예산 추적(2026-07-25)'
+) COMMENT='사용자 일정 및 휴가모드 자동 전환'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 
