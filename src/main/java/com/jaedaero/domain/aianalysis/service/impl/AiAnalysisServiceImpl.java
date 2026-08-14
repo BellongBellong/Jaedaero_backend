@@ -35,6 +35,7 @@ import com.jaedaero.domain.simulation.service.SimulationCalculationResult;
 import com.jaedaero.domain.simulation.service.SimulationCalculator;
 import com.jaedaero.domain.simulation.service.SimulationInput;
 import com.jaedaero.domain.simulation.service.SimulationInputProvider;
+import com.jaedaero.domain.simulation.exception.SimulationException;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,12 +56,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AiAnalysisServiceImpl implements AiAnalysisService {
-  private static final String PROMPT_VERSION = "openai-chat-v5-consumption-analysis";
+  private static final String PROMPT_VERSION = "openai-chat-v6-consumption-guidance";
   private final AiAnalysisMapper analysisMapper;
   private final AiAnalysisInputProvider analysisInputProvider;
   private final SimulationMapper simulationMapper;
   private final SimulationInputProvider simulationInputProvider;
   private final SimulationCalculator simulationCalculator;
+  private final SimulationAllocationPolicy simulationAllocationPolicy;
   private final ObjectMapper objectMapper;
   private final AiCoachNarrativeGenerator narrativeGenerator;
   private final SpendingPatternAnalyzer spendingPatternAnalyzer;
@@ -68,6 +70,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
   @Override
   @Transactional
   public AiAnalysisResponse analyze(long userId, AiAnalysisRequest request) {
+    validateRequest(request);
     OpenAiModel model = AiGenerationTask.AI_COACH.model();
     AiAnalysisInput baseline = analysisInputProvider.load(userId);
     SimulationVo simulation = simulation(request.getSimulationId(), userId);
@@ -75,7 +78,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     SimulationInput simulationInput =
         withTargetAmount(simulationInputProvider.load(userId), targetAmount);
     LocalDate today = baseline.spendingPattern().periodEnd();
-    SimulationRequest currentPlan = currentPlan(simulationInput, simulation, today);
+    SimulationRequest currentPlan = currentPlan(simulationInput, simulation, request, today);
     SimulationCalculationResult currentCalculation =
         simulationCalculator.calculate(simulationInput, currentPlan, today);
     SpendingAnalysis measuredSpending =
@@ -92,7 +95,7 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
             today);
     SpendingAnalysis spendingAnalysis =
         alignExpectedEffect(measuredSpending, currentPlan, currentCalculation, recommendation);
-    String hash = hash(baseline, simulation, currentCalculation, recommendation, model);
+    String hash = hash(baseline, simulation, currentPlan, currentCalculation, recommendation, model);
     AiAnalysisVo cached = analysisMapper.findLatestSuccessfulByUserIdAndInputDataHash(userId, hash);
     if (cached != null) {
       return response(cached, read(cached.getResultJson()), AiGenerationSource.CACHE);
@@ -216,8 +219,9 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     try {
       AiCoachNarrative narrative = narrativeGenerator.generate(model, prompt(base, simulation, result, recommended));
       result.setComment(narrative.comment());
-      recommended.setRecommendReason(narrative.recommendReason());
-      result.getRecommendedScenario().setRecommendReason(narrative.recommendReason());
+      String recommendReason = recommended.getRecommendReason() + " " + narrative.recommendReason();
+      recommended.setRecommendReason(recommendReason);
+      result.getRecommendedScenario().setRecommendReason(recommendReason);
       return AiGenerationSource.OPENAI;
     } catch (AiCoachNarrativeGenerationException e) {
       log.warn("AI 코치 문구 생성에 실패해 템플릿 문구로 대체합니다. model={}, reason={}", model.apiName(), e.getMessage());
@@ -237,16 +241,18 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
         + "유지할 월 투자금액: " + money(recommended.getMonthlyInvestmentAmount()) + "원\n"
         + "유지할 기대수익률: " + recommended.getExpectedReturnRate() + "%\n"
         + "위 확정값을 변경하거나 새 숫자를 만들지 말고 comment에는 소비 변화의 원인과 개선 방향을 포함한 결과 해석, "
-        + "recommendReason에는 실행 시 유의점을 작성하세요.";
+        + "recommendReason에는 금액을 다시 계산하거나 표현하지 말고, 소비 절감을 실행할 구체적인 방법 한 가지만 작성하세요. "
+        + "서버가 확정 절감액과 조정 후 소비 한도 문구를 앞에 붙입니다.";
   }
   private String hash(
       AiAnalysisInput b,
       SimulationVo s,
+      SimulationRequest currentPlan,
       SimulationCalculationResult currentCalculation,
       AiRecommendedScenarioVo recommendation,
       OpenAiModel model) {
     String raw =
-        "analysis-v5-consumption-analysis|"
+        "analysis-v6-consumption-guidance|"
             + PROMPT_VERSION
             + "|"
             + model.apiName()
@@ -259,6 +265,14 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
             + "|"
             + b.expectedAsset()
             + "|current-plan|"
+            + currentPlan.getMonthlySpendingAmount()
+            + "|"
+            + currentPlan.getMonthlySavingAmount()
+            + "|"
+            + currentPlan.getMonthlyInvestmentAmount()
+            + "|"
+            + currentPlan.getExpectedReturnRate()
+            + "|"
             + currentCalculation.expectedAsset()
             + "|"
             + currentCalculation.financialDischargeDate()
@@ -296,8 +310,19 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
   private AiAnalysisResult read(String json) { try { return objectMapper.readValue(json, AiAnalysisResult.class); } catch (JsonProcessingException e) { throw new AiAnalysisException(AiAnalysisErrorCode.RESULT_UNREADABLE, "저장된 AI 분석 결과를 읽을 수 없습니다.", e); } }
   private String write(AiAnalysisResult result) { try { return objectMapper.writeValueAsString(result); } catch (JsonProcessingException e) { throw new AiAnalysisException(AiAnalysisErrorCode.RESULT_UNREADABLE, "AI 분석 결과를 저장할 수 없습니다.", e); } }
   private SimulationRequest currentPlan(
-      SimulationInput input, SimulationVo simulation, LocalDate today) {
+      SimulationInput input,
+      SimulationVo simulation,
+      AiAnalysisRequest analysisRequest,
+      LocalDate today) {
     SimulationRequest request = new SimulationRequest();
+    if (hasExplicitPlan(analysisRequest)) {
+      request.setMonthlySpendingAmount(analysisRequest.getMonthlySpendingAmount());
+      request.setMonthlySavingAmount(analysisRequest.getMonthlySavingAmount());
+      request.setMonthlyInvestmentAmount(analysisRequest.getMonthlyInvestmentAmount());
+      request.setExpectedReturnRate(analysisRequest.getExpectedReturnRate());
+      validateAllocation(request, input, today);
+      return request;
+    }
     if (simulation != null) {
       request.setMonthlySpendingAmount(simulation.getMonthlySpendingAmount());
       request.setMonthlySavingAmount(simulation.getMonthlySavingAmount());
@@ -322,6 +347,44 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
     request.setMonthlyInvestmentAmount(0L);
     request.setExpectedReturnRate(SimulationAllocationPolicy.DEFAULT_EXPECTED_RETURN_RATE);
     return request;
+  }
+
+  private void validateRequest(AiAnalysisRequest request) {
+    boolean anyPlanValue = hasAnyExplicitPlanValue(request);
+    if (request.getSimulationId() != null && anyPlanValue) {
+      throw invalidRequest("simulationId와 현재 What-if 배분값은 동시에 전달할 수 없습니다.");
+    }
+    if (anyPlanValue && !hasExplicitPlan(request)) {
+      throw invalidRequest("현재 What-if 배분값 4개는 모두 함께 전달해야 합니다.");
+    }
+  }
+
+  private boolean hasAnyExplicitPlanValue(AiAnalysisRequest request) {
+    return request.getMonthlySpendingAmount() != null
+        || request.getMonthlySavingAmount() != null
+        || request.getMonthlyInvestmentAmount() != null
+        || request.getExpectedReturnRate() != null;
+  }
+
+  private boolean hasExplicitPlan(AiAnalysisRequest request) {
+    return request.getMonthlySpendingAmount() != null
+        && request.getMonthlySavingAmount() != null
+        && request.getMonthlyInvestmentAmount() != null
+        && request.getExpectedReturnRate() != null;
+  }
+
+  private void validateAllocation(
+      SimulationRequest request, SimulationInput input, LocalDate today) {
+    try {
+      simulationAllocationPolicy.validate(
+          request, simulationCalculator.referenceMonthlyIncome(input, today));
+    } catch (SimulationException exception) {
+      throw invalidRequest(exception.getMessage());
+    }
+  }
+
+  private AiAnalysisException invalidRequest(String message) {
+    return new AiAnalysisException(AiAnalysisErrorCode.INVALID_REQUEST, message);
   }
 
   private SpendingAnalysis alignExpectedEffect(

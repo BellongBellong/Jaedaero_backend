@@ -3,6 +3,7 @@ package com.jaedaero.domain.aianalysis.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jaedaero.domain.aianalysis.dto.AiAnalysisRequest;
 import com.jaedaero.domain.aianalysis.dto.AiAnalysisResponse;
 import com.jaedaero.domain.aianalysis.dto.AiGenerationSource;
+import com.jaedaero.domain.aianalysis.exception.AiAnalysisException;
 import com.jaedaero.domain.aianalysis.llm.AiCoachNarrative;
 import com.jaedaero.domain.aianalysis.llm.AiCoachNarrativeGenerationException;
 import com.jaedaero.domain.aianalysis.llm.AiCoachNarrativeGenerator;
@@ -25,6 +27,9 @@ import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
 import com.jaedaero.domain.cashflow.service.AppliedCashflowStrategy;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import com.jaedaero.domain.simulation.mapper.SimulationMapper;
+import com.jaedaero.domain.simulation.dto.SimulationRequest;
+import com.jaedaero.domain.simulation.service.SimulationAllocationPolicy;
+import com.jaedaero.domain.simulation.service.SimulationCalculationResult;
 import com.jaedaero.domain.simulation.service.SimulationCalculator;
 import com.jaedaero.domain.simulation.service.SimulationInput;
 import com.jaedaero.domain.simulation.vo.SimulationVo;
@@ -73,6 +78,7 @@ class AiAnalysisServiceImplTest {
             new EmptySimulationMapper(),
             simulationInput,
             simulationCalculator(),
+            new SimulationAllocationPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("생성된 AI 코치 문구입니다.", "생성된 추천 사유입니다."),
             new SpendingPatternAnalyzer());
@@ -86,7 +92,8 @@ class AiAnalysisServiceImplTest {
     assertEquals(1, mapper.recommendations.size());
     assertNotNull(second.getRecommendedScenario().getScenarioId());
     assertEquals("생성된 AI 코치 문구입니다.", first.getComment());
-    assertEquals("생성된 추천 사유입니다.", first.getRecommendedScenario().getRecommendReason());
+    assertTrue(first.getRecommendedScenario().getRecommendReason().contains("20,000원 줄인 160,000원"));
+    assertTrue(first.getRecommendedScenario().getRecommendReason().endsWith("생성된 추천 사유입니다."));
     assertEquals("gpt-4o-mini", mapper.analyses.get(0).getModelName());
     assertEquals(AiGenerationSource.OPENAI, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, first.getGenerationSource());
@@ -163,6 +170,7 @@ class AiAnalysisServiceImplTest {
             new SingleSimulationMapper(simulation),
             simulationInput,
             simulationCalculator(),
+            new SimulationAllocationPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> {
               generatedPrompt.set(prompt);
@@ -212,7 +220,7 @@ class AiAnalysisServiceImplTest {
           }
           return new AiCoachNarrative("복구된 AI 코치 문구입니다.", "복구된 추천 사유입니다.");
         };
-    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, simulationCalculator(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator, new SpendingPatternAnalyzer());
+    AiAnalysisService service = new AiAnalysisServiceImpl(mapper, analysisInput, new EmptySimulationMapper(), simulationInput, simulationCalculator(), new SimulationAllocationPolicy(), new ObjectMapper().registerModule(new JavaTimeModule()), recoveringGenerator, new SpendingPatternAnalyzer());
 
     AiAnalysisResponse fallback = service.analyze(1L, new AiAnalysisRequest());
     AiAnalysisResponse recovered = service.analyze(1L, new AiAnalysisRequest());
@@ -223,7 +231,7 @@ class AiAnalysisServiceImplTest {
     assertEquals(0L, fallback.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
     assertEquals(AiGenerationSource.FALLBACK, fallback.getGenerationSource());
     assertEquals(
-        "openai-chat-v5-consumption-analysis", mapper.analyses.get(0).getPromptVersion());
+        "openai-chat-v6-consumption-guidance", mapper.analyses.get(0).getPromptVersion());
     assertEquals(AiGenerationSource.FALLBACK, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, recovered.getGenerationSource());
     assertEquals("복구된 AI 코치 문구입니다.", recovered.getComment());
@@ -266,6 +274,7 @@ class AiAnalysisServiceImplTest {
             new EmptySimulationMapper(),
             simulationInput,
             simulationCalculator(),
+            new SimulationAllocationPolicy(),
             new ObjectMapper().registerModule(new JavaTimeModule()),
             (model, prompt) -> new AiCoachNarrative("소비 분석", "추천 사유"),
             new SpendingPatternAnalyzer());
@@ -284,6 +293,94 @@ class AiAnalysisServiceImplTest {
     assertFalse(first.getAnalysisId().equals(changed.getAnalysisId()));
     assertEquals(AiGenerationSource.OPENAI, changed.getGenerationSource());
     assertEquals(2, mapper.analyses.size());
+  }
+
+  @Test
+  void explicitWhatIfPlan_usesSameCalculationAsSimulationPreview() {
+    InMemoryAiAnalysisMapper mapper = new InMemoryAiAnalysisMapper();
+    AiAnalysisInputProvider analysisInput =
+        userId ->
+            new AiAnalysisInput(
+                10L,
+                20L,
+                10_151_069L,
+                null,
+                new BigDecimal("101.51"),
+                10_000_000L,
+                LocalDate.of(2026, 12, 7),
+                365_977L,
+                spendingPattern());
+    com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
+        userId ->
+            new SimulationInput(
+                1L,
+                4_148_044L,
+                10_000_000L,
+                365_977L,
+                SoldierType.ARMY,
+                LocalDate.of(2025, 6, 9),
+                LocalDate.of(2026, 12, 7),
+                List.of(),
+                new AppliedCashflowStrategy(
+                    30L, 1_129_608L, 0L, 300_000L, new BigDecimal("5.00")));
+    SimulationCalculator calculator = simulationCalculator();
+    AiAnalysisService service =
+        new AiAnalysisServiceImpl(
+            mapper,
+            analysisInput,
+            new EmptySimulationMapper(),
+            simulationInput,
+            calculator,
+            new SimulationAllocationPolicy(),
+            new ObjectMapper().registerModule(new JavaTimeModule()),
+            (model, prompt) -> new AiCoachNarrative("소비 분석", "반복 결제를 먼저 점검하세요."),
+            new SpendingPatternAnalyzer());
+    AiAnalysisRequest request = new AiAnalysisRequest();
+    request.setMonthlySpendingAmount(100_000L);
+    request.setMonthlySavingAmount(550_000L);
+    request.setMonthlyInvestmentAmount(850_000L);
+    request.setExpectedReturnRate(new BigDecimal("13.00"));
+    SimulationRequest previewRequest = new SimulationRequest();
+    previewRequest.setMonthlySpendingAmount(100_000L);
+    previewRequest.setMonthlySavingAmount(550_000L);
+    previewRequest.setMonthlyInvestmentAmount(850_000L);
+    previewRequest.setExpectedReturnRate(new BigDecimal("13.00"));
+    SimulationCalculationResult expected =
+        calculator.calculate(simulationInput.load(1L), previewRequest, LocalDate.of(2026, 8, 7));
+
+    AiAnalysisResponse response = service.analyze(1L, request);
+
+    assertEquals(expected.expectedAsset(), response.getExpectedAsset());
+    assertEquals(550_000L, response.getRecommendedScenario().getMonthlySavingAmount());
+    assertEquals(850_000L, response.getRecommendedScenario().getMonthlyInvestmentAmount());
+    assertEquals(new BigDecimal("13.00"), response.getRecommendedScenario().getExpectedReturnRate());
+    assertTrue(response.getRecommendedScenario().getRecommendReason().contains("원 줄인"));
+  }
+
+  @Test
+  void partialOrMixedWhatIfPlan_isRejected() {
+    AiAnalysisRequest partial = new AiAnalysisRequest();
+    partial.setMonthlySpendingAmount(100_000L);
+    AiAnalysisRequest mixed = new AiAnalysisRequest();
+    mixed.setSimulationId(1L);
+    mixed.setMonthlySpendingAmount(100_000L);
+    AiAnalysisService service = serviceWithDefaultInput();
+
+    assertThrows(AiAnalysisException.class, () -> service.analyze(1L, partial));
+    assertThrows(AiAnalysisException.class, () -> service.analyze(1L, mixed));
+  }
+
+  private static AiAnalysisService serviceWithDefaultInput() {
+    AiAnalysisInputProvider analysisInput =
+        userId -> new AiAnalysisInput(10L, 20L, 18_150_000L, null, new BigDecimal("90.75"), 20_000_000L, LocalDate.of(2027, 9, 1), 180_000L, spendingPattern());
+    com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
+        userId -> new SimulationInput(4_300_000L, 20_000_000L, 180_000L, SoldierType.ARMY, LocalDate.of(2026, 3, 1), LocalDate.of(2027, 9, 1));
+    return new AiAnalysisServiceImpl(
+        new InMemoryAiAnalysisMapper(), analysisInput, new EmptySimulationMapper(), simulationInput,
+        simulationCalculator(), new SimulationAllocationPolicy(),
+        new ObjectMapper().registerModule(new JavaTimeModule()),
+        (model, prompt) -> new AiCoachNarrative("소비 분석", "실행 팁"),
+        new SpendingPatternAnalyzer());
   }
 
   private static SimulationCalculator simulationCalculator() {
