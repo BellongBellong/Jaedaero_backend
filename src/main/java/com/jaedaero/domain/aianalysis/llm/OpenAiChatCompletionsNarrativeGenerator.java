@@ -30,6 +30,7 @@ public class OpenAiChatCompletionsNarrativeGenerator implements AiCoachNarrative
       "당신은 한국 군 장병을 위한 금융 코치입니다. 숫자 계산이나 투자 판단을 새로 하지 말고, "
           + "입력으로 받은 확정 결과만 자연스럽고 신중한 한국어로 설명하세요. "
           + "개인화된 투자 자문·수익 보장을 하지 말고, 두 문구는 각각 2문장 이내로 작성하세요. "
+          + "recommendReason에서는 금액을 다시 계산하거나 언급하지 말고 실행 방법만 설명하세요. "
           + "응답 스키마의 comment와 recommendReason 필드만 채우세요.";
 
   private final RestTemplate restTemplate;
@@ -63,7 +64,7 @@ public class OpenAiChatCompletionsNarrativeGenerator implements AiCoachNarrative
                 "type", "json_schema",
                 "json_schema",
                 Map.of(
-                    "name", "ai_coach_narrative_v4_spending_pattern",
+                    "name", "ai_consumption_narrative_v6",
                     "strict", true,
                     "schema",
                     Map.of(

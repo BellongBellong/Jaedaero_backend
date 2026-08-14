@@ -32,7 +32,7 @@ public class AiAnalysisController {
   private final StrategyApplicationService strategyApplicationService;
   @PostMapping
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
-  @ApiOperation(value = "AI 소비 분석 생성", notes = "현재월과 전월 동일 일수의 실제 거래 집계를 분석합니다. 현재 What-if의 적금·투자·수익률은 유지하고 추천 소비 한도와 그에 따른 예상 전역 자산을 계산하며, gpt-4o-mini는 설명만 생성합니다.")
+  @ApiOperation(value = "AI 소비 분석 생성", notes = "현재월과 전월 동일 일수의 실제 거래 집계를 분석합니다. 저장하지 않은 What-if 기준이면 소비·군적금·투자·수익률 4개 값을 모두 요청에 전달합니다. 서버는 해당 기준의 예상 전역 자산, 추천 소비 한도와 절감 효과를 계산하며 gpt-4o-mini는 설명만 생성합니다.")
   public ResponseEntity<AiAnalysisResponse> analyze(@ApiIgnore Authentication auth, @RequestBody(required = false) AiAnalysisRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.analyze(userId(auth), request == null ? new AiAnalysisRequest() : request));
   }
