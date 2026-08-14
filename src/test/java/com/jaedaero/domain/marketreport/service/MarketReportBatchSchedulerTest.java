@@ -3,6 +3,7 @@ package com.jaedaero.domain.marketreport.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.jaedaero.global.batch.MarketReportBatchScheduler;
 import java.lang.reflect.Method;
 import java.time.Clock;
 import org.junit.jupiter.api.Test;

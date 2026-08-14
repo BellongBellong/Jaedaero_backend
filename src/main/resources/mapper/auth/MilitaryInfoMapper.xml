@@ -41,6 +41,22 @@
             saving_join_yn = VALUES(saving_join_yn)
     </insert>
 
+    <select id="findProfilesForRankRefresh"
+        resultType="com.jaedaero.domain.auth.vo.SoldierProfileVo">
+        SELECT user_id, soldier_type, rank_name, enlistment_date, discharge_date, saving_join_yn
+        FROM soldier_profile
+        WHERE enlistment_date IS NOT NULL
+          AND discharge_date IS NOT NULL
+          AND discharge_date >= CURDATE()
+    </select>
+
+    <update id="updateRankName">
+        UPDATE soldier_profile
+        SET rank_name = #{rankName}
+        WHERE user_id = #{userId}
+          AND (rank_name IS NULL OR rank_name != #{rankName})
+    </update>
+
     <insert id="insertChallengeGroupIgnore" parameterType="map">
         INSERT IGNORE INTO challenge_group (
             soldier_type,

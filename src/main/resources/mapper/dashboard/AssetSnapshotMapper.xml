@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.dashboard.mapper.AssetSnapshotMapper">
+
+    <insert id="upsertDailyAssetSnapshots">
+        INSERT INTO asset_snapshot (user_id, total_asset, total_saving, total_spending, snapshot_date)
+        SELECT u.user_id,
+               COALESCE(SUM(CASE WHEN ca.status = 'ACTIVE' AND cc.status = 'ACTIVE'
+                                 THEN ca.current_balance ELSE 0 END), 0) AS total_asset,
+               COALESCE(SUM(CASE WHEN ca.status = 'ACTIVE' AND cc.status = 'ACTIVE'
+                                  AND ca.account_type = 'INSTALLMENT_SAVINGS'
+                                 THEN ca.current_balance ELSE 0 END), 0) AS total_saving,
+               COALESCE((
+                   SELECT SUM(th.amount)
+                   FROM transaction_history th
+                   INNER JOIN connected_account spending_account ON spending_account.account_id = th.account_id
+                   INNER JOIN codef_connection spending_connection
+                       ON spending_connection.connection_id = spending_account.connection_id
+                   WHERE spending_connection.user_id = u.user_id
+                     AND spending_connection.status = 'ACTIVE'
+                     AND spending_account.status = 'ACTIVE'
+                     AND th.transaction_type = 'WITHDRAW'
+                     AND (th.category IS NULL OR th.category != 'ASSET')
+                     AND th.transaction_datetime >= #{snapshotDate}
+                     AND th.transaction_datetime &lt; DATE_ADD(#{snapshotDate}, INTERVAL 1 DAY)
+               ), 0) AS total_spending,
+               #{snapshotDate}
+        FROM users u
+        LEFT JOIN codef_connection cc ON cc.user_id = u.user_id
+        LEFT JOIN connected_account ca ON ca.connection_id = cc.connection_id
+        WHERE u.is_withdrawn = FALSE
+        GROUP BY u.user_id
+        ON DUPLICATE KEY UPDATE
+            total_asset = VALUES(total_asset),
+            total_saving = VALUES(total_saving),
+            total_spending = VALUES(total_spending)
+    </insert>
+</mapper>

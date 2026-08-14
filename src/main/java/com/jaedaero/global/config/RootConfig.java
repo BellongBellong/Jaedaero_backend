@@ -44,7 +44,9 @@ import org.springframework.web.client.RestTemplate;
 @EnableScheduling
 @MapperScan(basePackages = "com.jaedaero.domain", annotationClass = Mapper.class)
 @ComponentScan(
-        basePackages = {"com.jaedaero.domain", "com.jaedaero.global.security"},
+        basePackages = {
+            "com.jaedaero.domain", "com.jaedaero.global.batch", "com.jaedaero.global.security"
+        },
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ANNOTATION,
                 classes = Controller.class

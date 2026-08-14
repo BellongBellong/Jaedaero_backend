@@ -1,5 +1,6 @@
-package com.jaedaero.domain.marketreport.service;
+package com.jaedaero.global.batch;
 
+import com.jaedaero.domain.marketreport.service.MarketReportGenerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -10,8 +11,7 @@ public class MarketReportBatchScheduler {
 
   private final MarketReportGenerationService generationService;
 
-  public MarketReportBatchScheduler(
-      MarketReportGenerationService generationService) {
+  public MarketReportBatchScheduler(MarketReportGenerationService generationService) {
     this.generationService = generationService;
   }
 
