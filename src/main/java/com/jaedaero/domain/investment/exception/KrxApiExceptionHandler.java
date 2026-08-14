@@ -13,10 +13,14 @@ public class KrxApiExceptionHandler {
   @ExceptionHandler(KrxApiException.class)
   public ResponseEntity<Map<String, String>> handleKrxApiException(KrxApiException exception) {
     HttpStatus status = HttpStatus.resolve(exception.getStatusCode());
+    HttpStatus responseStatus =
+        status == HttpStatus.UNAUTHORIZED || status == HttpStatus.FORBIDDEN
+            ? HttpStatus.BAD_GATEWAY
+            : status == null ? HttpStatus.BAD_GATEWAY : status;
     Map<String, String> response = new LinkedHashMap<>();
     response.put("code", "KRX_REQUEST_FAILED");
     response.put("message", exception.getMessage());
-    return ResponseEntity.status(status == null ? HttpStatus.BAD_GATEWAY : status).body(response);
+    return ResponseEntity.status(responseStatus).body(response);
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
