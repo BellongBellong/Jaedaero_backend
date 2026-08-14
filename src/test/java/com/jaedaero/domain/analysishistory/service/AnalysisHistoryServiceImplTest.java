@@ -42,7 +42,7 @@ class AnalysisHistoryServiceImplTest {
     assertEquals(2, response.getHistories().size());
     assertFalse(response.getHasNext());
     assertEquals(LocalDateTime.of(2026, 8, 6, 11, 0), response.getLatestAnalyzedAt());
-    assertEquals(19_900_000L, response.getLatestExpectedAsset());
+    assertEquals(18_750_000L, response.getLatestExpectedAsset());
 
     var ai = response.getHistories().get(0);
     assertEquals(AnalysisHistoryType.AI, ai.getHistoryType());
@@ -54,6 +54,7 @@ class AnalysisHistoryServiceImplTest {
     assertEquals(new BigDecimal("-9.27"), ai.getSpendingChangeRate());
     assertEquals(1_480_000L, ai.getExpectedAssetIncreaseAmount());
     assertEquals(AiGenerationSource.OPENAI, ai.getGenerationSource());
+    assertEquals(18_750_000L, ai.getExpectedAsset());
     assertFalse(ai.getIsApplied());
     assertNull(ai.getMonthlyInvestmentAmount());
 
@@ -155,6 +156,7 @@ class AnalysisHistoryServiceImplTest {
             """
             {
               "comment": "소비가 줄었고\\n자산 흐름이 개선됐습니다.",
+              "expectedAsset": 18750000,
               "recommendedScenario": {"expectedAsset": 19900000},
               "spendingPattern": {
                 "totalSpendingAmount": 195800,

@@ -25,26 +25,26 @@ import springfox.documentation.annotations.ApiIgnore;
 
 @RestController
 @RequestMapping("/api/v1/ai-analyses")
-@Api(tags = "AI 분석")
+@Api(tags = "AI 소비 분석")
 @RequiredArgsConstructor
 public class AiAnalysisController {
   private final AiAnalysisService service;
   private final StrategyApplicationService strategyApplicationService;
   @PostMapping
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
-  @ApiOperation(value = "AI 분석 생성", notes = "현재월과 전월 동일 일수의 실제 거래 집계를 기반으로 소비 패턴·개선안·예상 효과와 추천 시나리오를 생성합니다. 금액과 비율은 서버가 계산하고 gpt-4o-mini는 설명만 생성합니다.")
+  @ApiOperation(value = "AI 소비 분석 생성", notes = "현재월과 전월 동일 일수의 실제 거래 집계를 분석합니다. 현재 What-if의 적금·투자·수익률은 유지하고 추천 소비 한도와 그에 따른 예상 전역 자산을 계산하며, gpt-4o-mini는 설명만 생성합니다.")
   public ResponseEntity<AiAnalysisResponse> analyze(@ApiIgnore Authentication auth, @RequestBody(required = false) AiAnalysisRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.analyze(userId(auth), request == null ? new AiAnalysisRequest() : request));
   }
   @GetMapping("/{analysisId}")
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
-  @ApiOperation(value = "AI 분석 상세 조회")
+  @ApiOperation(value = "AI 소비 분석 상세 조회")
   public ResponseEntity<AiAnalysisResponse> detail(@ApiIgnore Authentication auth, @PathVariable long analysisId) {
     return ResponseEntity.ok(service.getDetail(userId(auth), analysisId));
   }
   @PostMapping("/{analysisId}/apply")
   @ApiImplicitParam(name = "X-User-Id", value = "개발 환경에서 사용할 목 데이터 사용자 ID", required = true, paramType = "header", example = "1")
-  @ApiOperation(value = "AI 추천 전략 적용")
+  @ApiOperation(value = "AI 소비 절감 전략 적용")
   public ResponseEntity<StrategyApplicationResponse> apply(
       @ApiIgnore Authentication auth, @PathVariable long analysisId) {
     return ResponseEntity.status(HttpStatus.CREATED)

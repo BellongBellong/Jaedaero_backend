@@ -142,6 +142,10 @@ public class AnalysisHistoryServiceImpl implements AnalysisHistoryService {
     if (row.getHistoryType() == AnalysisHistoryType.WHAT_IF) {
       return row.getExpectedAsset();
     }
+    Long currentExpectedAsset = longValue(result, "expectedAsset");
+    if (currentExpectedAsset != null) {
+      return currentExpectedAsset;
+    }
     Long recommendedExpectedAsset =
         longValue(child(result, "recommendedScenario"), "expectedAsset");
     return recommendedExpectedAsset != null
@@ -158,8 +162,7 @@ public class AnalysisHistoryServiceImpl implements AnalysisHistoryService {
       case SAVING -> "AI 저축 분석";
       case INVESTMENT -> "AI 투자 분석";
       case POLICY -> "AI 정책 분석";
-      case DIAGNOSIS -> "오늘의 AI 금융 분석";
-      case SCENARIO_COMPARISON -> "AI 추천 자산 계획";
+      case DIAGNOSIS, SCENARIO_COMPARISON -> "AI 소비 분석";
     };
   }
 

@@ -22,6 +22,7 @@ import com.jaedaero.domain.aianalysis.vo.AiAnalysisVo;
 import com.jaedaero.domain.aianalysis.vo.AiRecommendedScenarioVo;
 import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.mapper.MilitaryPayPolicyMapper;
+import com.jaedaero.domain.cashflow.service.AppliedCashflowStrategy;
 import com.jaedaero.domain.cashflow.service.DefaultMilitaryPayPolicy;
 import com.jaedaero.domain.simulation.mapper.SimulationMapper;
 import com.jaedaero.domain.simulation.service.SimulationCalculator;
@@ -55,12 +56,16 @@ class AiAnalysisServiceImplTest {
     com.jaedaero.domain.simulation.service.SimulationInputProvider simulationInput =
         userId ->
             new SimulationInput(
+                1L,
                 4_300_000L,
                 20_000_000L,
                 180_000L,
                 SoldierType.ARMY,
                 LocalDate.of(2026, 3, 1),
-                LocalDate.of(2027, 9, 1));
+                LocalDate.of(2027, 9, 1),
+                List.of(),
+                new AppliedCashflowStrategy(
+                    30L, 180_000L, 300_000L, 150_000L, new BigDecimal("5.00")));
     AiAnalysisService service =
         new AiAnalysisServiceImpl(
             mapper,
@@ -75,7 +80,7 @@ class AiAnalysisServiceImplTest {
     AiAnalysisResponse first = service.analyze(1L, new AiAnalysisRequest());
     AiAnalysisResponse second = service.analyze(1L, new AiAnalysisRequest());
 
-    assertEquals(AiAnalysisType.DIAGNOSIS, first.getAnalysisType());
+    assertEquals(AiAnalysisType.CONSUMPTION, first.getAnalysisType());
     assertEquals(first.getAnalysisId(), second.getAnalysisId());
     assertEquals(1, mapper.analyses.size());
     assertEquals(1, mapper.recommendations.size());
@@ -88,7 +93,15 @@ class AiAnalysisServiceImplTest {
     assertEquals(AiGenerationSource.CACHE, second.getGenerationSource());
     assertEquals(117_700L, first.getSpendingPattern().getTotalSpendingAmount());
     assertEquals(20_000L, first.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
-    assertEquals(260_000L, first.getSpendingExpectedEffect().getExpectedAssetIncreaseAmount());
+    assertEquals(160_000L, first.getRecommendedScenario().getMonthlySpendingAmount());
+    assertEquals(300_000L, first.getRecommendedScenario().getMonthlySavingAmount());
+    assertEquals(150_000L, first.getRecommendedScenario().getMonthlyInvestmentAmount());
+    assertEquals(new BigDecimal("5.00"), first.getRecommendedScenario().getExpectedReturnRate());
+    assertNotNull(first.getExpectedAsset());
+    assertEquals(386_667L, first.getSpendingExpectedEffect().getExpectedAssetIncreaseAmount());
+    assertEquals(
+        first.getRecommendedScenario().getExpectedAsset(),
+        first.getSpendingExpectedEffect().getExpectedAssetAfterImprovement());
     assertEquals(
         first.getRecommendedScenario().getMonthlyInvestmentAmount(),
         mapper.recommendations.get(0).getMonthlyInvestmentAmount());
@@ -169,7 +182,7 @@ class AiAnalysisServiceImplTest {
     assertEquals(
         created.getRecommendedScenario().getMonthlyInvestmentAmount(),
         detail.getRecommendedScenario().getMonthlyInvestmentAmount());
-    assertTrue(generatedPrompt.get().contains("추천 월 투자금액: 150,000원"));
+    assertTrue(generatedPrompt.get().contains("유지할 월 투자금액: 150,000원"));
     assertTrue(generatedPrompt.get().contains("반복 결제 확인 필요"));
     assertTrue(generatedPrompt.get().contains("넷플릭스"));
     assertFalse(generatedPrompt.get().contains("추천 투자 비율"));
@@ -207,10 +220,10 @@ class AiAnalysisServiceImplTest {
 
     assertNotNull(fallback.getComment());
     assertNotNull(fallback.getSpendingPattern());
-    assertEquals(20_000L, fallback.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
+    assertEquals(0L, fallback.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
     assertEquals(AiGenerationSource.FALLBACK, fallback.getGenerationSource());
     assertEquals(
-        "openai-chat-v4-spending-pattern", mapper.analyses.get(0).getPromptVersion());
+        "openai-chat-v5-consumption-analysis", mapper.analyses.get(0).getPromptVersion());
     assertEquals(AiGenerationSource.FALLBACK, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, recovered.getGenerationSource());
     assertEquals("복구된 AI 코치 문구입니다.", recovered.getComment());
