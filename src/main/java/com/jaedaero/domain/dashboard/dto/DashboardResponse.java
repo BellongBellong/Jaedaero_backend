@@ -31,6 +31,18 @@ public class DashboardResponse {
   @ApiModelProperty(value = "계좌 잔액과 현재 누적 군적금 이자·정부 매칭지원금을 합산한 현재 자산", example = "1250000")
   private final Long currentAsset;
 
+  @ApiModelProperty(value = "현재 적금 원금의 예상 이자와 정부 매칭지원금을 반영한 현재 시점 예상 자산", example = "2350000")
+  private final Long currentExpectedAsset;
+
+  @ApiModelProperty(value = "현재 시점 예상 자산 계산에 사용한 군적금 원금", example = "1100000")
+  private final Long currentSoldierSavingPrincipal;
+
+  @ApiModelProperty(value = "현재 군적금 원금에 대한 예상 이자(연 5%)", example = "55000")
+  private final Long currentExpectedSavingInterest;
+
+  @ApiModelProperty(value = "현재 군적금 원금에 대한 예상 정부 매칭지원금", example = "1100000")
+  private final Long currentGovernmentMatchingSupport;
+
   @ApiModelProperty(value = "실제 전역일까지의 예상 자산", example = "18250000")
   private final Long expectedAsset;
 
@@ -72,6 +84,32 @@ public class DashboardResponse {
       SimulationVo latestSimulation,
       LocalDate today,
       Long actualThisMonthSpending) {
+    return from(
+        cashflow,
+        currentAsset,
+        currentAsset,
+        0L,
+        0L,
+        0L,
+        actualDischargeDate,
+        latestApplication,
+        latestSimulation,
+        today,
+        actualThisMonthSpending);
+  }
+
+  public static DashboardResponse from(
+      CashflowForecastResponse cashflow,
+      long currentAsset,
+      long currentExpectedAsset,
+      long currentSoldierSavingPrincipal,
+      long currentExpectedSavingInterest,
+      long currentGovernmentMatchingSupport,
+      LocalDate actualDischargeDate,
+      StrategyApplicationVo latestApplication,
+      SimulationVo latestSimulation,
+      LocalDate today,
+      Long actualThisMonthSpending) {
     CashflowForecastMonthResponse currentMonth =
         cashflow.getMonths().stream()
             .filter(month -> YearMonth.from(month.getForecastMonth()).equals(YearMonth.from(today)))
@@ -98,6 +136,10 @@ public class DashboardResponse {
         .actualDischargeDate(actualDischargeDate)
         .deltaDaysVsActual(daysVsActual(financialDischargeDate, actualDischargeDate))
         .currentAsset(currentAsset)
+        .currentExpectedAsset(currentExpectedAsset)
+        .currentSoldierSavingPrincipal(currentSoldierSavingPrincipal)
+        .currentExpectedSavingInterest(currentExpectedSavingInterest)
+        .currentGovernmentMatchingSupport(currentGovernmentMatchingSupport)
         .expectedAsset(expectedAsset)
         .achievementRate(
             hasSimulation

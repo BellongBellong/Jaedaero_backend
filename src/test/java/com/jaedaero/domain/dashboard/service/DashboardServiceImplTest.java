@@ -2,10 +2,13 @@ package com.jaedaero.domain.dashboard.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
 import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.service.CashflowService;
+import com.jaedaero.domain.cashflow.service.ConservativeMonthlyCashflowEngine;
+import com.jaedaero.domain.cashflow.service.SoldierSavingInput;
 import com.jaedaero.domain.dashboard.dto.DashboardResponse;
 import com.jaedaero.domain.dashboard.mapper.DashboardMapper;
 import com.jaedaero.domain.dashboard.mapper.DashboardSpendingMapper;
@@ -89,6 +92,42 @@ class DashboardServiceImplTest {
     assertEquals("SIMULATION", response.getGoalSource());
   }
 
+  @Test
+  void includesCurrentSavingBenefitsInCurrentExpectedAsset() {
+    CashflowForecastResponse cashflow =
+        CashflowForecastResponse.builder().calculationPolicyVersion(
+            ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION).months(List.of()).build();
+    RecordingCashflowService cashflowService = new RecordingCashflowService(cashflow);
+    cashflowService.calculationInput =
+        CashflowCalculationInputResponse.builder()
+            .baseAsset(1_917_500L)
+            .soldierSavings(
+                List.of(
+                    new SoldierSavingInput(
+                        1_100_000L,
+                        550_000L,
+                        new BigDecimal("5.00"),
+                        0L,
+                        LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2027, 12, 15))))
+            .build();
+    DashboardServiceImpl service =
+        new DashboardServiceImpl(
+            cashflowService,
+            userId -> LocalDate.of(2027, 12, 15),
+            new EmptyStrategyApplicationMapper(),
+            userId -> 0L,
+            FIXED_CLOCK);
+
+    DashboardResponse response = service.get(1L);
+
+    assertEquals(1_917_500L, response.getCurrentAsset());
+    assertEquals(1_100_000L, response.getCurrentSoldierSavingPrincipal());
+    assertEquals(55_000L, response.getCurrentExpectedSavingInterest());
+    assertEquals(1_100_000L, response.getCurrentGovernmentMatchingSupport());
+    assertEquals(3_072_500L, response.getCurrentExpectedAsset());
+  }
+
   private static final Clock FIXED_CLOCK =
       Clock.fixed(Instant.parse("2026-08-04T00:00:00Z"), ZoneId.of("Asia/Seoul"));
 
@@ -169,10 +208,12 @@ class DashboardServiceImplTest {
 
   private static class RecordingCashflowService implements CashflowService {
 
+    private CashflowCalculationInputResponse calculationInput =
+        CashflowCalculationInputResponse.builder().baseAsset(1_500_000L).soldierSavings(List.of()).build();
+
     @Override
-    public com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse getCalculationInput(
-        long userId) {
-      throw new UnsupportedOperationException();
+    public CashflowCalculationInputResponse getCalculationInput(long userId) {
+      return calculationInput;
     }
 
     @Override
