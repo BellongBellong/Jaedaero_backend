@@ -13,6 +13,8 @@ import com.jaedaero.domain.investmentguidance.vo.InvestmentGuidanceAction;
 import com.jaedaero.domain.recurringinvestment.vo.InvestmentFrequency;
 import com.jaedaero.domain.strategyapplication.mapper.StrategyApplicationMapper;
 import com.jaedaero.domain.strategyapplication.vo.StrategyApplicationVo;
+import com.jaedaero.domain.simulation.mapper.SimulationMapper;
+import com.jaedaero.domain.simulation.vo.SimulationVo;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -49,6 +51,73 @@ class DashboardServiceImplTest {
     assertEquals(1, cashflowService.generateCount);
     assertEquals(1_500_000L, response.getCurrentAsset());
     assertEquals(10_000_000L, response.getExpectedAsset());
+  }
+
+  @Test
+  void usesLatestSavedWhatIfAsDashboardFinancialGoal() {
+    CashflowForecastResponse cashflow =
+        CashflowForecastResponse.builder()
+            .baseAsset(1_000_000L)
+            .expectedAsset(10_000_000L)
+            .achievementRate(new BigDecimal("50.00"))
+            .months(List.of())
+            .build();
+    SimulationVo simulation =
+        SimulationVo.builder()
+            .simulationId(7L)
+            .targetAmount(20_000_000L)
+            .monthlySpendingAmount(120_000L)
+            .monthlyInvestmentAmount(180_000L)
+            .expectedAsset(21_000_000L)
+            .financialDischargeDate(LocalDate.of(2027, 3, 15))
+            .build();
+    DashboardServiceImpl service =
+        new DashboardServiceImpl(
+            new RecordingCashflowService(cashflow),
+            userId -> LocalDate.of(2027, 6, 20),
+            new EmptyStrategyApplicationMapper(),
+            userId -> 0L,
+            new LatestSimulationMapper(simulation),
+            FIXED_CLOCK);
+
+    DashboardResponse response = service.get(1L);
+
+    assertEquals(21_000_000L, response.getExpectedAsset());
+    assertEquals(LocalDate.of(2027, 3, 15), response.getFinancialDischargeDate());
+    assertEquals(120_000L, response.getMonthlySpendingGoal());
+    assertEquals(180_000L, response.getMonthlyInvestmentGoal());
+    assertEquals("SIMULATION", response.getGoalSource());
+  }
+
+  private static final Clock FIXED_CLOCK =
+      Clock.fixed(Instant.parse("2026-08-04T00:00:00Z"), ZoneId.of("Asia/Seoul"));
+
+  private static class LatestSimulationMapper implements SimulationMapper {
+    private final SimulationVo simulation;
+
+    private LatestSimulationMapper(SimulationVo simulation) {
+      this.simulation = simulation;
+    }
+
+    @Override
+    public int insert(SimulationVo simulation) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SimulationVo findByIdAndUserId(long simulationId, long userId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<SimulationVo> findByUserId(long userId, int offset, int limit) {
+      return List.of(simulation);
+    }
+
+    @Override
+    public long countByUserId(long userId) {
+      return 1L;
+    }
   }
 
   private static class EmptyStrategyApplicationMapper implements StrategyApplicationMapper {

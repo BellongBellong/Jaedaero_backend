@@ -63,13 +63,13 @@ class SimulationServiceImplTest {
     SimulationDefaultsResponse defaults = service.getDefaults(1L);
     assertEquals(20_000_000L, defaults.getTargetAmount());
     assertEquals(900_000L, defaults.getReferenceMonthlyIncome());
-    assertEquals(350_000L, defaults.getMonthlySpendingAmount());
+    assertEquals(0L, defaults.getMonthlySpendingAmount());
     assertEquals(550_000L, defaults.getMonthlySavingAmount());
     assertEquals(0L, defaults.getMonthlyInvestmentAmount());
     assertEquals(new BigDecimal("5.00"), defaults.getExpectedReturnRate());
-    assertEquals(new BigDecimal("38.89"), defaults.getSpendingRate());
+    assertEquals(BigDecimal.ZERO.setScale(2), defaults.getSpendingRate());
     assertEquals(new BigDecimal("61.11"), defaults.getSavingRate());
-    assertEquals(0L, defaults.getUnallocatedAmount());
+    assertEquals(350_000L, defaults.getUnallocatedAmount());
 
     SimulationResponse preview = service.run(1L, request(false));
 
