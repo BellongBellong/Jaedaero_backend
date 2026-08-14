@@ -19,6 +19,28 @@ class CashflowCalculatorTest {
   private final CashflowCalculator calculator = new CashflowCalculator(policy());
 
   @Test
+  void currentAssetUsesOnlyConnectedAccountBalances() {
+    CashflowInput input =
+        new CashflowInput(
+            4_818_481L,
+            10_000_000L,
+            0L,
+            SoldierType.ARMY,
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2027, 6, 1),
+            List.of(
+                new SoldierSavingInput(
+                    4_000_000L,
+                    550_000L,
+                    new BigDecimal("5.00"),
+                    4_000_000L,
+                    LocalDate.of(2026, 1, 1),
+                    LocalDate.of(2027, 6, 1))));
+
+    assertEquals(4_818_481L, calculator.calculateCurrentAsset(input, LocalDate.of(2026, 8, 14)));
+  }
+
+  @Test
   void usesDatabasePayAndRankPromotionSchedule() {
     CashflowInput input =
         new CashflowInput(
