@@ -21,13 +21,20 @@
             EXISTS (
                 SELECT 1
                 FROM strategy_application sa
-                LEFT JOIN ai_analysis applied_analysis
-                    ON applied_analysis.analysis_id = sa.analysis_id
-                   AND applied_analysis.user_id = sa.user_id
                 WHERE sa.user_id = s.user_id
-                  AND (
-                      sa.simulation_id = s.simulation_id
-                      OR applied_analysis.simulation_id = s.simulation_id
+                  AND sa.simulation_id = s.simulation_id
+                  AND sa.application_id = (
+                      SELECT active.application_id
+                      FROM strategy_application active
+                      WHERE active.user_id = s.user_id
+                        AND active.source_type = 'AI_RECOMMENDATION'
+                        AND active.analysis_id IS NOT NULL
+                        AND active.applied_monthly_spending_amount IS NOT NULL
+                        AND active.applied_monthly_saving_amount IS NOT NULL
+                        AND active.applied_monthly_investment_amount IS NOT NULL
+                        AND active.applied_expected_return_rate IS NOT NULL
+                      ORDER BY active.applied_at DESC, active.application_id DESC
+                      LIMIT 1
                   )
             ) AS applied
         FROM simulation s
@@ -53,6 +60,19 @@
                 FROM strategy_application sa
                 WHERE sa.user_id = a.user_id
                   AND sa.analysis_id = a.analysis_id
+                  AND sa.application_id = (
+                      SELECT active.application_id
+                      FROM strategy_application active
+                      WHERE active.user_id = a.user_id
+                        AND active.source_type = 'AI_RECOMMENDATION'
+                        AND active.analysis_id IS NOT NULL
+                        AND active.applied_monthly_spending_amount IS NOT NULL
+                        AND active.applied_monthly_saving_amount IS NOT NULL
+                        AND active.applied_monthly_investment_amount IS NOT NULL
+                        AND active.applied_expected_return_rate IS NOT NULL
+                      ORDER BY active.applied_at DESC, active.application_id DESC
+                      LIMIT 1
+                  )
             ) AS applied
         FROM ai_analysis a
         WHERE a.user_id = #{userId}

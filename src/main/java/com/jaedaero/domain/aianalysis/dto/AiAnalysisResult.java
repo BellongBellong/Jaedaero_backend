@@ -15,6 +15,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AiAnalysisResult {
+  private Long expectedAsset;
   private LocalDate financialDischargeDate;
   private Integer deltaDaysVsActual;
   private BigDecimal achievementRate;

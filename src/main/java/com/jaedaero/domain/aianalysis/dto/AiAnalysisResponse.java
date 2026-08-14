@@ -15,6 +15,7 @@ public class AiAnalysisResponse {
   private final Long snapshotId;
   private final AiAnalysisType analysisType;
   private final AiGenerationSource generationSource;
+  private final Long expectedAsset;
   private final LocalDate financialDischargeDate;
   private final Integer deltaDaysVsActual;
   private final BigDecimal achievementRate;
