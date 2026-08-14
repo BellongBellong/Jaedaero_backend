@@ -270,6 +270,16 @@ public class CodefPersistenceRepository {
         userId);
   }
 
+  /** 사용자가 비활성화한 계좌를 다시 조회 및 분석 대상에 포함합니다. */
+  public int activateAccountByIdAndUserId(long accountId, long userId) {
+    return jdbcTemplate.update(
+        "UPDATE connected_account ca JOIN codef_connection cc ON cc.connection_id ="
+            + " ca.connection_id SET ca.status = 'ACTIVE' WHERE ca.account_id = ?"
+            + " AND cc.user_id = ? AND cc.status = 'ACTIVE' AND ca.status = 'DISCONNECTED'",
+        accountId,
+        userId);
+  }
+
   /** 멱등 계좌 upsert 후 로컬에 준비된 계좌를 찾습니다. */
   public Optional<Long> findAccountIdByConnectionInstitutionAndAccountHash(
       long connectionId, String institutionCode, String accountNumberHash) {
