@@ -41,10 +41,11 @@ class DashboardResponseTest {
             .build();
 
     DashboardResponse response =
-        DashboardResponse.from(cashflow, LocalDate.of(2027, 9, 1), application, today, 154_000L);
+        DashboardResponse.from(
+            cashflow, 3_500_000L, LocalDate.of(2027, 9, 1), application, today, 154_000L);
 
     assertEquals(12L, response.getDeltaDaysVsActual());
-    assertEquals(3_000_000L, response.getCurrentAsset());
+    assertEquals(3_500_000L, response.getCurrentAsset());
     assertEquals(15_000_000L, response.getExpectedAsset());
     assertEquals(1_905_000L, response.getThisMonthIncome());
     assertEquals(420_000L, response.getThisMonthInvestment());
@@ -62,7 +63,8 @@ class DashboardResponseTest {
         CashflowForecastResponse.builder().months(List.of()).build();
 
     DashboardResponse response =
-        DashboardResponse.from(cashflow, LocalDate.of(2027, 9, 1), null, LocalDate.of(2026, 8, 4), 0L);
+        DashboardResponse.from(
+            cashflow, 0L, LocalDate.of(2027, 9, 1), null, LocalDate.of(2026, 8, 4), 0L);
 
     assertEquals(0L, response.getMonthlyInvestmentGoal());
     assertEquals(0L, response.getMonthlySpendingGoal());

@@ -58,6 +58,13 @@ public class CashflowServiceImpl implements CashflowService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public long getCurrentAsset(long userId) {
+    CashflowInput input = cashflowInputProvider.load(userId);
+    return cashflowCalculator.calculateCurrentAsset(input, LocalDate.now(clock));
+  }
+
+  @Override
   @Transactional
   public CashflowForecastResponse generate(long userId) {
     CashflowInput input = cashflowInputProvider.load(userId);

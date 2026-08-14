@@ -23,7 +23,7 @@ public class ConservativeMonthlyCashflowEngine {
   public static final BigDecimal SOLDIER_SAVING_ANNUAL_INTEREST_RATE =
       new BigDecimal("5.00");
   public static final BigDecimal GOVERNMENT_MATCHING_RATE = new BigDecimal("100.00");
-  public static final String CALCULATION_POLICY_VERSION = "CONSERVATIVE_CASHFLOW_V3_20260813";
+  public static final String CALCULATION_POLICY_VERSION = "UNIFIED_ASSET_TIMELINE_V4_20260814";
   private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
   private static final BigDecimal PERCENT = BigDecimal.valueOf(100);
   private static final MathContext RETURN_MATH_CONTEXT =
@@ -32,21 +32,9 @@ public class ConservativeMonthlyCashflowEngine {
   public MonthProjection project(
       long openingAsset,
       long salary,
-      long spending,
-      long targetAmount,
-      LocalDate calculationDate,
-      LocalDate dischargeDate,
-      YearMonth forecastMonth) {
+      long spending) {
     long endingAsset = Math.addExact(openingAsset, Math.subtractExact(salary, spending));
-    LocalDate targetReachedDate =
-        estimateTargetReachedDate(
-            openingAsset,
-            endingAsset,
-            targetAmount,
-            calculationDate,
-            dischargeDate,
-            forecastMonth);
-    return new MonthProjection(endingAsset, targetReachedDate);
+    return new MonthProjection(endingAsset);
   }
 
   public ProjectedBenefit calculateProjectedBenefit(
@@ -54,18 +42,19 @@ public class ConservativeMonthlyCashflowEngine {
       LocalDate calculationDate,
       List<Long> monthlySavingContributions,
       List<LocalDate> monthlySavingContributionDates,
-      LocalDate dischargeDate,
+      LocalDate valuationDate,
       long existingInvestmentPrincipal,
       List<Long> monthlyInvestmentContributions,
       BigDecimal investmentAnnualReturnRate) {
-    LocalDate savingMaturityDate = resolveSavingMaturityDate(existingSoldierSavings, dischargeDate);
+    LocalDate savingValuationDate =
+        earlierOf(resolveSavingMaturityDate(existingSoldierSavings, valuationDate), valuationDate);
 
     long existingSavingBalance = 0L;
     long existingSavingInterest = 0L;
     for (SoldierSavingInput saving : existingSoldierSavings) {
       existingSavingBalance = Math.addExact(existingSavingBalance, saving.currentBalance());
       long elapsedMonths =
-          Math.max(0L, ChronoUnit.MONTHS.between(saving.startDate(), calculationDate));
+          Math.max(0L, ChronoUnit.MONTHS.between(saving.startDate(), savingValuationDate));
       existingSavingInterest =
           Math.addExact(
               existingSavingInterest,
@@ -80,7 +69,7 @@ public class ConservativeMonthlyCashflowEngine {
           Math.max(
               0L,
               ChronoUnit.MONTHS.between(
-                  monthlySavingContributionDates.get(index), savingMaturityDate));
+                  monthlySavingContributionDates.get(index), savingValuationDate));
       futureSavingInterest =
           Math.addExact(
               futureSavingInterest,
@@ -115,6 +104,14 @@ public class ConservativeMonthlyCashflowEngine {
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(dischargeDate);
+  }
+
+  private LocalDate earlierOf(LocalDate first, LocalDate second) {
+    return first.isBefore(second) ? first : second;
+  }
+
+  public long unifiedAsset(long cashflowAsset, ProjectedBenefit benefit) {
+    return Math.addExact(cashflowAsset, benefit.projectedBenefitAmount());
   }
 
   private long simpleInterest(long principal, BigDecimal annualRatePercent, long months) {
@@ -167,7 +164,7 @@ public class ConservativeMonthlyCashflowEngine {
         .longValueExact();
   }
 
-  private LocalDate estimateTargetReachedDate(
+  public LocalDate estimateTargetReachedDate(
       long openingAsset,
       long endingAsset,
       long targetAmount,
@@ -198,7 +195,7 @@ public class ConservativeMonthlyCashflowEngine {
     return periodStart.plusDays(daysToReach - 1);
   }
 
-  public record MonthProjection(long endingAsset, LocalDate targetReachedDate) {}
+  public record MonthProjection(long endingAsset) {}
 
   public record ProjectedBenefit(
       long soldierSavingPrincipal,

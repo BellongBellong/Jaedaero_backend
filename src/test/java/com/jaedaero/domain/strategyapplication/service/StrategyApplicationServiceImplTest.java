@@ -169,6 +169,11 @@ class StrategyApplicationServiceImplTest {
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public long getCurrentAsset(long userId) {
+      return currentExpectedAsset.get();
+    }
+
     private final AtomicLong currentExpectedAsset;
     private final List<Long> generatedExpectedAssets;
     private int generateCount;

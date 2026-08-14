@@ -22,7 +22,7 @@ public class SimulationCalculator {
       ConservativeMonthlyCashflowEngine.SOLDIER_SAVING_ANNUAL_INTEREST_RATE;
   public static final BigDecimal GOVERNMENT_MATCHING_RATE =
       ConservativeMonthlyCashflowEngine.GOVERNMENT_MATCHING_RATE;
-  public static final String CALCULATION_POLICY_VERSION = "WHAT_IF_DETAIL_V3_20260813";
+  public static final String CALCULATION_POLICY_VERSION = "WHAT_IF_UNIFIED_ASSET_TIMELINE_V4_20260814";
 
   private final DefaultMilitaryPayPolicy militaryPayPolicy;
   private final ConservativeMonthlyCashflowEngine cashflowEngine;
@@ -69,7 +69,6 @@ public class SimulationCalculator {
       return emptyResult(input, asset >= input.targetAmount() ? calculationDate : null);
     }
 
-    LocalDate financialDischargeDate = asset >= input.targetAmount() ? calculationDate : null;
     YearMonth enlistmentMonth = YearMonth.from(input.enlistmentDate());
     int totalMonths = (int) ChronoUnit.MONTHS.between(startMonth, dischargeMonth) + 1;
     long expectedSalary = 0L;
@@ -91,42 +90,6 @@ public class SimulationCalculator {
             ? BigDecimal.valueOf(request.getMonthlyInvestmentAmount())
                 .divide(BigDecimal.valueOf(firstMonthSalary), 10, java.math.RoundingMode.HALF_UP)
             : BigDecimal.ZERO;
-    for (int index = 0; index < totalMonths; index++) {
-      YearMonth month = startMonth.plusMonths(index);
-      long salary =
-          militaryPayPolicy.resolve(input.soldierType(), enlistmentMonth, month).monthlySalary();
-      long spending = scale(spendingRatio, salary);
-      long investment = scale(investmentRatio, salary);
-      long assetBeforeMonth = asset;
-
-      ConservativeMonthlyCashflowEngine.MonthProjection projection =
-          cashflowEngine.project(
-              assetBeforeMonth,
-              salary,
-              spending,
-              input.targetAmount(),
-              calculationDate,
-              input.dischargeDate(),
-              month);
-      asset = projection.endingAsset();
-      expectedSalary = Math.addExact(expectedSalary, salary);
-      expectedSpending = Math.addExact(expectedSpending, spending);
-      unallocatedPrincipal =
-          Math.addExact(
-              unallocatedPrincipal,
-              Math.subtractExact(
-                  Math.subtractExact(
-                      Math.subtractExact(salary, spending),
-                      request.getMonthlySavingAmount()),
-                  investment));
-      savingContributions.add(request.getMonthlySavingAmount());
-      savingContributionDates.add(month.atDay(1));
-      investmentContributions.add(investment);
-      if (financialDischargeDate == null && projection.targetReachedDate() != null) {
-        financialDischargeDate = projection.targetReachedDate();
-      }
-    }
-
     BigDecimal finalInvestmentRatio = investmentRatio;
     long existingInvestmentPrincipal =
         investmentPrincipalProvider
@@ -142,16 +105,70 @@ public class SimulationCalculator {
         cashflowEngine.calculateProjectedBenefit(
             input.soldierSavings(),
             calculationDate,
-            savingContributions,
-            savingContributionDates,
-            input.dischargeDate(),
+            List.of(),
+            List.of(),
+            calculationDate,
             existingInvestmentPrincipal,
-            investmentContributions,
+            List.of(),
             request.getExpectedReturnRate());
-    long expectedAsset = Math.addExact(asset, benefit.projectedBenefitAmount());
-    if (financialDischargeDate == null && expectedAsset >= input.targetAmount()) {
-      financialDischargeDate = input.dischargeDate();
+    long openingUnifiedAsset = cashflowEngine.unifiedAsset(asset, benefit);
+    LocalDate financialDischargeDate =
+        openingUnifiedAsset >= input.targetAmount() ? calculationDate : null;
+    for (int index = 0; index < totalMonths; index++) {
+      YearMonth month = startMonth.plusMonths(index);
+      long salary =
+          militaryPayPolicy.resolve(input.soldierType(), enlistmentMonth, month).monthlySalary();
+      long spending = scale(spendingRatio, salary);
+      long investment = scale(investmentRatio, salary);
+      long assetBeforeMonth = asset;
+
+      ConservativeMonthlyCashflowEngine.MonthProjection projection =
+          cashflowEngine.project(
+              assetBeforeMonth,
+              salary,
+              spending);
+      asset = projection.endingAsset();
+      expectedSalary = Math.addExact(expectedSalary, salary);
+      expectedSpending = Math.addExact(expectedSpending, spending);
+      unallocatedPrincipal =
+          Math.addExact(
+              unallocatedPrincipal,
+              Math.subtractExact(
+                  Math.subtractExact(
+                      Math.subtractExact(salary, spending),
+                      request.getMonthlySavingAmount()),
+                  investment));
+      savingContributions.add(request.getMonthlySavingAmount());
+      savingContributionDates.add(
+          month.equals(startMonth) ? calculationDate : month.atDay(1));
+      investmentContributions.add(investment);
+      LocalDate valuationDate =
+          month.equals(dischargeMonth) ? input.dischargeDate() : month.atEndOfMonth();
+      benefit =
+          cashflowEngine.calculateProjectedBenefit(
+              input.soldierSavings(),
+              calculationDate,
+              savingContributions,
+              savingContributionDates,
+              valuationDate,
+              existingInvestmentPrincipal,
+              investmentContributions,
+              request.getExpectedReturnRate());
+      long endingUnifiedAsset = cashflowEngine.unifiedAsset(asset, benefit);
+      if (financialDischargeDate == null) {
+        financialDischargeDate =
+            cashflowEngine.estimateTargetReachedDate(
+                openingUnifiedAsset,
+                endingUnifiedAsset,
+                input.targetAmount(),
+                calculationDate,
+                input.dischargeDate(),
+                month);
+      }
+      openingUnifiedAsset = endingUnifiedAsset;
     }
+
+    long expectedAsset = openingUnifiedAsset;
 
     return new SimulationCalculationResult(
         expectedAsset,

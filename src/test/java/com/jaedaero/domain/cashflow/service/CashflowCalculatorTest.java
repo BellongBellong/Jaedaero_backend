@@ -100,7 +100,7 @@ class CashflowCalculatorTest {
 
     assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(750_000L, result.expectedSavingAmount());
-    assertEquals(2_502_500L, result.expectedAsset());
+    assertEquals(2_510_833L, result.expectedAsset());
     assertEquals(1_750_000L, result.soldierSavingPrincipal());
   }
 
@@ -123,7 +123,7 @@ class CashflowCalculatorTest {
             input(0L, 100_000L, 0L, LocalDate.of(2026, 1, 31)),
             LocalDate.of(2026, 1, 10));
 
-    assertEquals(LocalDate.of(2026, 1, 20), result.financialDischargeDate());
+    assertEquals(LocalDate.of(2026, 1, 15), result.financialDischargeDate());
   }
 
   @Test
@@ -169,7 +169,7 @@ class CashflowCalculatorTest {
             LocalDate.of(2026, 1, 10));
 
     assertEquals(0L, result.monthlySpendingLimit());
-    assertEquals(-800_000L, result.months().get(0).expectedEndingAsset());
+    assertEquals(-600_000L, result.months().get(0).expectedEndingAsset());
   }
 
   @Test
@@ -204,7 +204,7 @@ class CashflowCalculatorTest {
 
     assertEquals(0L, result.monthlySpendingLimit());
     assertEquals(200_000L, result.expectedSavingAmount());
-    assertEquals(500_625L, result.expectedAsset());
+    assertEquals(500_208L, result.expectedAsset());
     assertEquals(50_000L, result.months().get(0).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(50_000L, result.months().get(0).expectedInvestmentAmount());

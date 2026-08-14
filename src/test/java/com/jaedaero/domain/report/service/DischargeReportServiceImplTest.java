@@ -44,6 +44,8 @@ class DischargeReportServiceImplTest {
       throw new UnsupportedOperationException();
     }
 
+    @Override public long getCurrentAsset(long userId) { return 0L; }
+
     private long userId;
 
     @Override public CashflowForecastResponse generate(long userId) { throw new UnsupportedOperationException(); }

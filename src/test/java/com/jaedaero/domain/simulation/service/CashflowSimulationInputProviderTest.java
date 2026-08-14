@@ -61,6 +61,11 @@ class CashflowSimulationInputProviderTest {
       }
 
       @Override
+      public long getCurrentAsset(long userId) {
+        return source.getBaseAsset();
+      }
+
+      @Override
       public com.jaedaero.domain.cashflow.dto.CashflowForecastResponse generate(long userId) {
         throw new UnsupportedOperationException();
       }
@@ -82,6 +87,11 @@ class CashflowSimulationInputProviderTest {
       @Override
       public CashflowCalculationInputResponse getCalculationInput(long userId) {
         throw new CashflowException(CashflowErrorCode.INPUT_NOT_READY, "input not ready");
+      }
+
+      @Override
+      public long getCurrentAsset(long userId) {
+        throw new UnsupportedOperationException();
       }
 
       @Override
