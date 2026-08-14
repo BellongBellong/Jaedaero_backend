@@ -1,5 +1,6 @@
 package com.jaedaero.domain.cashflow.service;
 
+import com.jaedaero.domain.codef.exception.CodefApiException;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,9 +30,15 @@ public class EnvironmentAwareAggregateInvestmentPrincipalProvider
 
   @Override
   public Optional<Long> resolveLinkedPrincipal(long userId) {
-    return isLocal()
-        ? localProvider.resolveLinkedPrincipal(userId)
-        : codefProvider.resolveLinkedPrincipal(userId);
+    if (isLocal()) {
+      return localProvider.resolveLinkedPrincipal(userId);
+    }
+    try {
+      return codefProvider.resolveLinkedPrincipal(userId);
+    } catch (CodefApiException exception) {
+      // What-if·캐시플로우는 CODEF 실시간 조회 실패로 중단되지 않도록 동기화된 잔액을 사용한다.
+      return localProvider.resolveLinkedPrincipal(userId);
+    }
   }
 
   private boolean isLocal() {
