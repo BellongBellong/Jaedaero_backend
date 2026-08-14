@@ -3,6 +3,7 @@ package com.jaedaero.domain.cashflow.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jaedaero.domain.auth.common.enums.SoldierType;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
@@ -38,7 +39,7 @@ class CashflowCalculatorTest {
     assertEquals("병장", result.months().get(14).expectedRank());
     assertEquals(10_200_000L, result.expectedSalary());
     assertEquals(
-        0L,
+        2_200_000L,
         result.months().stream().mapToLong(CashflowForecastMonthCalculation::expectedInvestmentAmount).sum());
   }
 
@@ -77,7 +78,7 @@ class CashflowCalculatorTest {
   }
 
   @Test
-  void addsSavingInterestAndOneHundredPercentGovernmentSupportAtMaturity() {
+  void includesProjectedSavingBenefitsInUnifiedExpectedAsset() {
     CashflowForecastCalculation result =
         calculator.calculate(
             new CashflowInput(
@@ -93,12 +94,14 @@ class CashflowCalculatorTest {
                         500_000L,
                         BigDecimal.valueOf(12),
                         300_000L,
+                        LocalDate.of(2026, 1, 1),
                         LocalDate.of(2026, 3, 31)))),
             LocalDate.of(2026, 1, 1));
 
-    assertEquals(500_000L, result.months().get(0).expectedSavingAmount());
-    assertEquals(5_045_000L, result.expectedSavingAmount());
-    assertEquals(3_295_000L, result.expectedAsset());
+    assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(750_000L, result.expectedSavingAmount());
+    assertEquals(2_502_500L, result.expectedAsset());
+    assertEquals(1_750_000L, result.soldierSavingPrincipal());
   }
 
   @Test
@@ -109,8 +112,8 @@ class CashflowCalculatorTest {
             LocalDate.of(2026, 1, 10));
 
     assertEquals(LocalDate.of(2026, 1, 10), result.financialDischargeDate());
-    assertEquals(550_000L, result.months().get(0).expectedSavingAmount());
-    assertEquals(0L, result.monthlySpendingLimit());
+    assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(200_000L, result.monthlySpendingLimit());
   }
 
   @Test
@@ -127,10 +130,10 @@ class CashflowCalculatorTest {
   void zeroTarget_hasFullAchievementRateWithoutDivisionByZero() {
     CashflowForecastCalculation result =
         calculator.calculate(
-            input(0L, 0L, 0L, LocalDate.of(2026, 1, 1)), LocalDate.of(2026, 1, 10));
+            input(0L, 0L, 0L, LocalDate.of(2026, 1, 31)), LocalDate.of(2026, 1, 10));
 
     assertEquals(100D, result.achievementRate());
-    assertEquals(550_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(0L, result.months().get(0).expectedSpendingAmount());
   }
 
@@ -147,14 +150,26 @@ class CashflowCalculatorTest {
   }
 
   @Test
-  void ignoresHistoricalSpendingWhenNoPlanHasBeenApplied() {
+  void pastDischargeDayInTheSameMonth_doesNotCreateForecastMonths() {
     CashflowForecastCalculation result =
         calculator.calculate(
-            input(0L, 10_000_000L, 1_000_000L, LocalDate.of(2026, 1, 1)),
+            input(1_000_000L, 2_000_000L, 0L, LocalDate.of(2026, 1, 1)),
+            LocalDate.of(2026, 1, 10));
+
+    assertEquals(0, result.months().size());
+    assertEquals(1_000_000L, result.expectedAsset());
+    assertNull(result.financialDischargeDate());
+  }
+
+  @Test
+  void usesRecentSpendingAverageWhenNoPlanHasBeenApplied() {
+    CashflowForecastCalculation result =
+        calculator.calculate(
+            input(0L, 10_000_000L, 1_000_000L, LocalDate.of(2026, 1, 31)),
             LocalDate.of(2026, 1, 10));
 
     assertEquals(0L, result.monthlySpendingLimit());
-    assertEquals(200_000L, result.months().get(0).expectedEndingAsset());
+    assertEquals(-800_000L, result.months().get(0).expectedEndingAsset());
   }
 
   @Test
@@ -163,8 +178,8 @@ class CashflowCalculatorTest {
         calculator.calculate(
             input(0L, 1_400_000L, 0L, LocalDate.of(2026, 2, 1)), LocalDate.of(2026, 1, 10));
 
-    assertEquals(700_000L, result.months().get(0).expectedSavingAmount());
-    assertEquals(1_200_000L, result.months().get(1).expectedSavingAmount());
+    assertEquals(200_000L, result.months().get(0).expectedSavingAmount());
+    assertEquals(200_000L, result.months().get(1).expectedSavingAmount());
     assertNull(result.financialDischargeDate());
   }
 
@@ -187,9 +202,9 @@ class CashflowCalculatorTest {
     CashflowForecastCalculation result =
         calculator.calculate(input, LocalDate.of(2026, 1, 10));
 
-    assertEquals(50_000L, result.monthlySpendingLimit());
+    assertEquals(0L, result.monthlySpendingLimit());
     assertEquals(200_000L, result.expectedSavingAmount());
-    assertEquals(300_208L, result.expectedAsset());
+    assertEquals(500_625L, result.expectedAsset());
     assertEquals(50_000L, result.months().get(0).expectedSpendingAmount());
     assertEquals(100_000L, result.months().get(0).expectedSavingAmount());
     assertEquals(50_000L, result.months().get(0).expectedInvestmentAmount());
@@ -199,7 +214,38 @@ class CashflowCalculatorTest {
   }
 
   @Test
-  void appliedSavingGoalChangesSoldierSavingMaturityPrincipalAndBenefits() {
+  void appliedStrategySpendingAndInvestmentScaleWithSalaryButSavingStaysFixed() {
+    AppliedCashflowStrategy strategy =
+        new AppliedCashflowStrategy(
+            9L, 50_000L, 100_000L, 50_000L, BigDecimal.ZERO);
+    CashflowInput input =
+        new CashflowInput(
+            1L,
+            0L,
+            50_000_000L,
+            0L,
+            SoldierType.ARMY,
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2027, 6, 30),
+            List.of(),
+            strategy);
+
+    CashflowForecastCalculation result =
+        calculator.calculate(input, LocalDate.of(2026, 1, 1));
+    CashflowForecastMonthCalculation first = result.months().get(0);
+    CashflowForecastMonthCalculation last = result.months().get(result.months().size() - 1);
+
+    assertEquals(50_000L, first.expectedSpendingAmount());
+    assertEquals(50_000L, first.expectedInvestmentAmount());
+    assertEquals(100_000L, first.expectedSavingAmount());
+    assertEquals(237_500L, last.expectedSpendingAmount());
+    assertEquals(237_500L, last.expectedInvestmentAmount());
+    assertEquals(100_000L, last.expectedSavingAmount());
+    assertTrue(last.expectedSalary() > first.expectedSalary());
+  }
+
+  @Test
+  void appliedSavingGoalReportsOnlyMonthlyContributions() {
     AppliedCashflowStrategy strategy =
         new AppliedCashflowStrategy(9L, 0L, 100_000L, 0L, new BigDecimal("5.00"));
     CashflowInput input =
@@ -216,12 +262,13 @@ class CashflowCalculatorTest {
                     500_000L,
                     BigDecimal.valueOf(12),
                     0L,
+                    LocalDate.of(2026, 1, 1),
                     LocalDate.of(2026, 3, 31))),
             strategy);
 
     CashflowForecastCalculation result = calculator.calculate(input, LocalDate.of(2026, 1, 1));
 
-    assertEquals(2_633_000L, result.expectedSavingAmount());
+    assertEquals(300_000L, result.expectedSavingAmount());
   }
 
   @Test

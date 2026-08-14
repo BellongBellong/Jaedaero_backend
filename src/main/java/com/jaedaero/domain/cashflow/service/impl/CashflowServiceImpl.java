@@ -2,6 +2,7 @@ package com.jaedaero.domain.cashflow.service.impl;
 
 import com.jaedaero.domain.cashflow.dto.CashflowForecastMonthResponse;
 import com.jaedaero.domain.cashflow.dto.CashflowForecastResponse;
+import com.jaedaero.domain.cashflow.dto.CashflowCalculationInputResponse;
 import com.jaedaero.domain.cashflow.exception.CashflowErrorCode;
 import com.jaedaero.domain.cashflow.exception.CashflowException;
 import com.jaedaero.domain.cashflow.mapper.CashflowMapper;
@@ -51,6 +52,12 @@ public class CashflowServiceImpl implements CashflowService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public CashflowCalculationInputResponse getCalculationInput(long userId) {
+    return CashflowCalculationInputResponse.from(cashflowInputProvider.load(userId));
+  }
+
+  @Override
   @Transactional
   public CashflowForecastResponse generate(long userId) {
     CashflowInput input = cashflowInputProvider.load(userId);
@@ -61,8 +68,17 @@ public class CashflowServiceImpl implements CashflowService {
             .userId(userId)
             .baseAsset(input.baseAsset())
             .expectedSalary(calculation.expectedSalary())
+            .expectedSpending(calculation.expectedSpending())
             .expectedSavingAmount(calculation.expectedSavingAmount())
+            .expectedInvestmentAmount(calculation.expectedInvestmentAmount())
             .expectedAsset(calculation.expectedAsset())
+            .soldierSavingPrincipal(calculation.soldierSavingPrincipal())
+            .soldierSavingInterest(calculation.soldierSavingInterest())
+            .governmentMatchingSupport(calculation.governmentMatchingSupport())
+            .investmentPrincipal(calculation.investmentPrincipal())
+            .expectedInvestmentReturn(calculation.expectedInvestmentReturn())
+            .projectedBenefitAmount(calculation.projectedBenefitAmount())
+            .calculationPolicyVersion(calculation.calculationPolicyVersion())
             .monthlySpendingLimit(calculation.monthlySpendingLimit())
             .achievementRate(BigDecimal.valueOf(calculation.achievementRate()).setScale(2, RoundingMode.HALF_UP))
             .financialDischargeDate(calculation.financialDischargeDate())

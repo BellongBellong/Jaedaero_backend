@@ -12,5 +12,6 @@ public class SoldierSavingInputSourceVo {
   private Long monthlyAmount;
   private BigDecimal interestRate;
   private Long governmentSupportExpected;
+  private LocalDate startDate;
   private LocalDate endDate;
 }

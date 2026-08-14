@@ -483,6 +483,11 @@ class MarketReportGenerationServiceTest {
     }
 
     @Override
+    public DailyMarketReportVo findByReportDate(LocalDate reportDate) {
+      return existing.get(reportDate);
+    }
+
+    @Override
     public int markGenerationInProgress(long reportId) {
       for (DailyMarketReportVo report : existing.values()) {
         if (report.getReportId().equals(reportId)) {
@@ -494,6 +499,17 @@ class MarketReportGenerationServiceTest {
           report.setGenerationSource(MarketReportGenerationSource.FALLBACK);
           report.setReportStatus(MarketReportStatus.PARTIAL);
           report.setPromptVersion(MarketReportClaimService.IN_PROGRESS_PROMPT_VERSION);
+          return 1;
+        }
+      }
+      return 0;
+    }
+
+    @Override
+    public int updateReportStatus(long reportId, String reportStatus) {
+      for (DailyMarketReportVo report : existing.values()) {
+        if (report.getReportId().equals(reportId)) {
+          report.setReportStatus(MarketReportStatus.valueOf(reportStatus));
           return 1;
         }
       }

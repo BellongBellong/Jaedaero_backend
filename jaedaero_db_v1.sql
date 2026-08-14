@@ -168,8 +168,17 @@ CREATE TABLE cashflow_forecast (
                                    user_id                  BIGINT NOT NULL COMMENT '사용자 ID',
                                    base_asset               BIGINT NOT NULL DEFAULT 0 COMMENT '계산 기준 현재 자산',
                                    expected_salary          BIGINT NOT NULL DEFAULT 0 COMMENT '전역까지 예상 총급여',
-                                   expected_saving_amount   BIGINT NOT NULL DEFAULT 0 COMMENT '적금 예상 수령액',
-                                   expected_asset           BIGINT NOT NULL DEFAULT 0 COMMENT '전역 예상 자산',
+                                   expected_spending        BIGINT NOT NULL DEFAULT 0 COMMENT '전역까지 예상 총소비',
+                                   expected_saving_amount   BIGINT NOT NULL DEFAULT 0 COMMENT '전역까지 예상 군적금 납입 원금',
+                                   expected_investment_amount BIGINT NOT NULL DEFAULT 0 COMMENT '전역까지 예상 투자 원금',
+                                   soldier_saving_principal BIGINT NOT NULL DEFAULT 0 COMMENT '군적금 총 원금(기존 잔액 + 전역까지 예상 신규 납입)',
+                                   investment_principal     BIGINT NOT NULL DEFAULT 0 COMMENT '투자 총 원금(연동 증권계좌 매입금액 또는 백필 추정치 + 전역까지 예상 신규 납입)',
+                                   expected_asset           BIGINT NOT NULL DEFAULT 0 COMMENT '전역 예상 자산(현재 순자산 + 급여-소비 + 군적금 이자·매칭지원금 + 투자 예상수익)',
+                                   soldier_saving_interest  BIGINT NOT NULL DEFAULT 0 COMMENT '군적금 예상 이자 참고값',
+                                   government_matching_support BIGINT NOT NULL DEFAULT 0 COMMENT '정부 매칭지원금 참고값',
+                                   expected_investment_return BIGINT NOT NULL DEFAULT 0 COMMENT '예상 투자수익 참고값',
+                                   projected_benefit_amount BIGINT NOT NULL DEFAULT 0 COMMENT '미확정 예상 혜택 합계',
+                                   calculation_policy_version VARCHAR(50) NOT NULL DEFAULT 'CONSERVATIVE_CASHFLOW_V3_20260813' COMMENT '캐시플로우 계산 정책 버전',
                                    monthly_spending_limit   BIGINT NOT NULL DEFAULT 0 COMMENT '월 소비 상한선',
                                    achievement_rate         DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '목표 달성률',
                                    financial_discharge_date DATE NULL COMMENT '재정적 전역일',
@@ -483,19 +492,18 @@ CREATE TABLE simulation (
     monthly_investment_amount BIGINT NOT NULL COMMENT '군적금 외 월 투자 배분액(원)',
     expected_return_rate      DECIMAL(5,2) NOT NULL COMMENT '사용자 입력 목표 투자수익률(%, 연 환산 가정)',
     monthly_spending_amount  BIGINT NOT NULL COMMENT '월 소비액(원)',
-    expected_asset            BIGINT NOT NULL COMMENT '전역 예상 자산',
+    expected_asset            BIGINT NOT NULL COMMENT '전역 예상 자산(현재 순자산 + 급여-소비 + 군적금 이자·매칭지원금 + 투자 예상수익)',
     financial_discharge_date DATE NULL COMMENT '이 시나리오 기준 재정적 전역일',
     calculation_months        INT NULL COMMENT '상세 계산에 포함한 개월 수',
     base_asset                BIGINT NULL COMMENT '계산 시점 현재 자산 스냅샷',
     expected_salary           BIGINT NULL COMMENT '계산 기간 예상 급여 합계',
     expected_spending         BIGINT NULL COMMENT '계산 기간 예상 소비 합계',
-    soldier_saving_principal  BIGINT NULL COMMENT '계산 기간 장병내일준비적금 납입 원금',
-    soldier_saving_interest   BIGINT NULL COMMENT '연 5% 월복리 가정 예상 이자',
-    government_matching_support BIGINT NULL COMMENT '군적금 미래 납입원금의 100% 매칭지원금 가정',
-    investment_principal      BIGINT NULL COMMENT '계산 기간 투자 원금',
-    expected_investment_return BIGINT NULL COMMENT '월복리 가정 예상 투자수익',
+    soldier_saving_principal  BIGINT NULL COMMENT '군적금 총 원금(기존 잔액 + 전역까지 예상 신규 납입)',
+    soldier_saving_interest   BIGINT NULL COMMENT '기존 잔액 경과기간 + 미래 회차 잔여기간의 연 5% 단리 예상 이자',
+    government_matching_support BIGINT NULL COMMENT '군적금 총 원금의 100% 매칭지원금 가정',
+    investment_principal      BIGINT NULL COMMENT '투자 총 원금(CODEF 매입원가 또는 백필 + 미래 납입)',
+    expected_investment_return BIGINT NULL COMMENT '기존 원금 + 미래 회차의 목표수익률 월복리 예상 투자수익',
     unallocated_principal     BIGINT NULL COMMENT '급여에서 소비·군적금·투자 후 남는 금액 합계',
-    potential_expected_asset  BIGINT NULL COMMENT '보수적 예상자산에 예상 이자·지원금·투자수익을 더한 참고값',
     calculation_policy_version VARCHAR(50) NULL COMMENT '상세 계산 정책 버전',
     is_saved                 BOOLEAN NOT NULL DEFAULT TRUE COMMENT '사용자 저장 여부',
     created_at               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
@@ -526,7 +534,6 @@ CREATE TABLE simulation (
                 AND investment_principal IS NULL
                 AND expected_investment_return IS NULL
                 AND unallocated_principal IS NULL
-                AND potential_expected_asset IS NULL
                 AND calculation_policy_version IS NULL
             )
             OR
@@ -541,7 +548,6 @@ CREATE TABLE simulation (
                 AND investment_principal IS NOT NULL
                 AND expected_investment_return IS NOT NULL
                 AND unallocated_principal IS NOT NULL
-                AND potential_expected_asset IS NOT NULL
                 AND calculation_policy_version IS NOT NULL
             )
         )

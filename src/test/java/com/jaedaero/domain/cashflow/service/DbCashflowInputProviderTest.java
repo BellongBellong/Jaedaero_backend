@@ -74,6 +74,25 @@ class DbCashflowInputProviderTest {
         () -> new DbCashflowInputProvider(new StubMapper(source)).load(1L));
   }
 
+  @Test
+  void loadCarriesSoldierSavingStartDateIntoTheDomainRecord() {
+    CashflowInputSourceVo source = validSource();
+
+    SoldierSavingInputSourceVo saving = new SoldierSavingInputSourceVo();
+    saving.setCurrentBalance(2_000_000L);
+    saving.setMonthlyAmount(400_000L);
+    saving.setInterestRate(new BigDecimal("5.00"));
+    saving.setGovernmentSupportExpected(0L);
+    saving.setStartDate(LocalDate.of(2026, 1, 10));
+    saving.setEndDate(LocalDate.of(2027, 6, 30));
+
+    CashflowInput input = new DbCashflowInputProvider(new StubMapper(source, List.of(saving))).load(1L);
+
+    assertEquals(1, input.soldierSavings().size());
+    assertEquals(LocalDate.of(2026, 1, 10), input.soldierSavings().get(0).startDate());
+    assertEquals(LocalDate.of(2027, 6, 30), input.soldierSavings().get(0).maturityDate());
+  }
+
   private CashflowInputSourceVo validSource() {
     CashflowInputSourceVo source = new CashflowInputSourceVo();
     source.setBaseAsset(1_000_000L);
@@ -87,9 +106,15 @@ class DbCashflowInputProviderTest {
 
   private static class StubMapper implements CashflowMapper {
     private final CashflowInputSourceVo source;
+    private final List<SoldierSavingInputSourceVo> savings;
 
     private StubMapper(CashflowInputSourceVo source) {
+      this(source, List.of());
+    }
+
+    private StubMapper(CashflowInputSourceVo source, List<SoldierSavingInputSourceVo> savings) {
       this.source = source;
+      this.savings = savings;
     }
 
     @Override
@@ -99,7 +124,7 @@ class DbCashflowInputProviderTest {
 
     @Override
     public List<SoldierSavingInputSourceVo> findSoldierSavingsByUserId(long userId) {
-      return List.of();
+      return savings;
     }
 
     @Override

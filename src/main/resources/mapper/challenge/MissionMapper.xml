@@ -46,11 +46,8 @@
 
     <sql id="supportedActionTypes">
         AND m.action_type IN (
-            'VIEW_FINANCE_REPORT',
-            'VIEW_AI_REPORT',
+            'VIEW_MARKET_REPORT',
             'VIEW_TRANSACTION_HISTORY',
-            'VIEW_SPENDING_ANALYSIS',
-            'VIEW_ASSET_STATUS',
             'VIEW_DEPOSIT_PRODUCT',
             'VIEW_REBALANCING',
             'RUN_WHAT_IF_SIMULATION'
@@ -144,7 +141,8 @@
                           SELECT 1
                           FROM leave_mode lm
                           WHERE lm.user_id = #{userId}
-                            AND lm.start_date = CURDATE()
+                            AND lm.is_leave_mode_enabled = TRUE
+                            AND CURDATE() BETWEEN lm.start_date AND lm.end_date
                       ))
                   OR (m.trigger_type = 'PAYDAY'
                       AND DAY(CURDATE()) = m.trigger_value)

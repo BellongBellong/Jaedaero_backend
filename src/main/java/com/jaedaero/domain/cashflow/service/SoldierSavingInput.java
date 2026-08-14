@@ -9,4 +9,5 @@ public record SoldierSavingInput(
     long monthlyAmount,
     BigDecimal annualInterestRate,
     long governmentSupportExpected,
+    LocalDate startDate,
     LocalDate maturityDate) {}

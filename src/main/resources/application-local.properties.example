@@ -42,5 +42,7 @@ market-index.api.service-key=YOUR_DATA_GO_KR_SERVICE_KEY
 eximbank.api.key=YOUR_EXIMBANK_API_KEY
 # FRED API 인증키
 fred.api.key=YOUR_FRED_API_KEY
+# 운영 배포에서 PARTIAL 시장 리포트의 지표만 재수집할 때 사용하는 별도 토큰
+market-report.admin-refresh-token=YOUR_MARKET_REPORT_ADMIN_REFRESH_TOKEN
 # Finnhub Market News API 인증키
 finnhub.api.key=YOUR_FINNHUB_API_KEY
