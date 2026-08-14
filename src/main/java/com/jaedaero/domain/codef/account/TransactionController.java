@@ -32,17 +32,72 @@ public class TransactionController {
 
   private final CodefPersistenceRepository repository;
   private final CodefTransactionSyncService transactionSyncService;
+  private final CodefSecuritiesCashTransactionSyncService securitiesCashTransactionSyncService;
 
   @Autowired
   public TransactionController(
-      CodefPersistenceRepository repository, CodefTransactionSyncService transactionSyncService) {
+      CodefPersistenceRepository repository,
+      CodefTransactionSyncService transactionSyncService,
+      CodefSecuritiesCashTransactionSyncService securitiesCashTransactionSyncService) {
     this.repository = repository;
     this.transactionSyncService = transactionSyncService;
+    this.securitiesCashTransactionSyncService = securitiesCashTransactionSyncService;
   }
 
   /** Test-only convenience constructor. Production requests always use the sync-enabled constructor. */
   public TransactionController(CodefPersistenceRepository repository) {
-    this(repository, null);
+    this(repository, null, null);
+  }
+
+  @GetMapping("/securities/{accountId}")
+  @ApiImplicitParam(
+      name = "X-User-Id",
+      value = "로컬 개발 환경에서 사용할 사용자 ID. 운영에서는 Bearer JWT를 사용합니다.",
+      required = false,
+      paramType = "header",
+      example = "1")
+  @ApiOperation(
+      value = "증권 계좌 입출금내역 조회",
+      notes =
+          "기본 최근 3개월을 조회합니다. refresh=true면 CODEF 증권 계좌의 입출금내역을 동기화해 공통 거래내역으로 반환합니다. 종목 매수·매도 체결내역은 포함하지 않습니다.")
+  public List<TransactionResponse> getSecuritiesCashTransactions(
+      @ApiIgnore Authentication authentication,
+      @ApiParam(value = "증권 계좌 ID", required = true, example = "10") @PathVariable long accountId,
+      @ApiParam(value = "조회 시작일(yyyy-MM-dd). 생략하면 종료일 기준 3개월 전입니다.", example = "2026-05-14")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate startDate,
+      @ApiParam(value = "조회 종료일(yyyy-MM-dd). 생략하면 오늘입니다.", example = "2026-08-14")
+          @RequestParam(required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate endDate,
+      @ApiParam(value = "CODEF에서 최신 입출금내역을 가져올지 여부", example = "true")
+          @RequestParam(defaultValue = "true")
+          boolean refresh) {
+    long userId = authenticatedUserId(authentication);
+    StoredConnectedAccount account =
+        repository
+            .findAccountByIdAndUserId(accountId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연동 계좌를 찾을 수 없습니다."));
+    if (!"ST".equals(account.businessType())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "증권 계좌에 대해서만 조회할 수 있습니다.");
+    }
+    LocalDate today = LocalDate.now();
+    LocalDate resolvedEndDate = endDate == null ? today : endDate.isAfter(today) ? today : endDate;
+    LocalDate resolvedStartDate = startDate == null ? resolvedEndDate.minusMonths(3) : startDate;
+    if (resolvedStartDate.isAfter(resolvedEndDate)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate는 endDate보다 늦을 수 없습니다.");
+    }
+    if (refresh && securitiesCashTransactionSyncService != null) {
+      securitiesCashTransactionSyncService.sync(
+          userId,
+          accountId,
+          resolvedStartDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE),
+          resolvedEndDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE));
+    }
+    return repository.findTransactions(accountId, resolvedStartDate, resolvedEndDate).stream()
+        .map(TransactionResponse::new)
+        .collect(Collectors.toList());
   }
 
   @GetMapping

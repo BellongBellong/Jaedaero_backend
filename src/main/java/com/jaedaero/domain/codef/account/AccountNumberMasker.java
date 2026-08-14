@@ -9,6 +9,12 @@ public final class AccountNumberMasker {
     if (value == null || value.isBlank()) return null;
     String normalized = value.replaceAll("[^0-9A-Za-z]", "");
     if (value.contains("*")) {
+      String visiblePrefix = value.substring(0, value.indexOf('*')).replaceAll("[^0-9A-Za-z]", "");
+      if (visiblePrefix.length() >= 6) {
+        return visiblePrefix.substring(0, 6)
+            + "-**-****"
+            + normalized.substring(Math.max(0, normalized.length() - 2));
+      }
       return "****-**-****" + normalized.substring(Math.max(0, normalized.length() - 2));
     }
     if (normalized.length() <= 8) return "****-**-****";

@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.jaedaero.domain.codef.persistence.CodefPersistenceRepository;
+import com.jaedaero.domain.codef.persistence.StoredConnectedAccount;
 import com.jaedaero.domain.codef.persistence.StoredTransaction;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -125,6 +127,82 @@ class TransactionControllerTest {
     assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
   }
 
+  @Test
+  void synchronizesSecuritiesCashTransactionsAndClampsAFutureEndDate() {
+    CapturingRepository repository = new CapturingRepository();
+    CapturingSecuritiesCashSyncService syncService = new CapturingSecuritiesCashSyncService();
+    TransactionController controller = new TransactionController(repository, null, syncService);
+    LocalDate today = LocalDate.now();
+
+    controller.getSecuritiesCashTransactions(
+        authentication(7), 10L, today.minusDays(3), today.plusDays(1), true);
+
+    assertEquals(1, syncService.callCount);
+    assertEquals(7L, syncService.userId);
+    assertEquals(10L, syncService.accountId);
+    assertEquals(today.minusDays(3).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE), syncService.startDate);
+    assertEquals(today.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE), syncService.endDate);
+    assertEquals(today, repository.securitiesEndDate);
+  }
+
+  @Test
+  void doesNotSynchronizeSecuritiesCashTransactionsWhenRefreshIsFalse() {
+    CapturingRepository repository = new CapturingRepository();
+    CapturingSecuritiesCashSyncService syncService = new CapturingSecuritiesCashSyncService();
+    TransactionController controller = new TransactionController(repository, null, syncService);
+
+    controller.getSecuritiesCashTransactions(
+        authentication(7), 10L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), false);
+
+    assertEquals(0, syncService.callCount);
+  }
+
+  @Test
+  void rejectsSecuritiesCashTransactionsForAnAccountNotOwnedByTheUser() {
+    CapturingRepository repository = new CapturingRepository();
+    repository.accountExists = false;
+    TransactionController controller = new TransactionController(repository, null, null);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                controller.getSecuritiesCashTransactions(
+                    authentication(7), 10L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), false));
+
+    assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+  }
+
+  @Test
+  void rejectsSecuritiesCashTransactionsForANonSecuritiesAccount() {
+    CapturingRepository repository = new CapturingRepository();
+    repository.businessType = "BK";
+    TransactionController controller = new TransactionController(repository, null, null);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                controller.getSecuritiesCashTransactions(
+                    authentication(7), 10L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), false));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+  }
+
+  @Test
+  void rejectsAReversedSecuritiesCashTransactionPeriod() {
+    TransactionController controller = new TransactionController(new CapturingRepository(), null, null);
+
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () ->
+                controller.getSecuritiesCashTransactions(
+                    authentication(7), 10L, LocalDate.of(2026, 7, 31), LocalDate.of(2026, 7, 1), false));
+
+    assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+  }
+
   private UsernamePasswordAuthenticationToken authentication(long userId) {
     return new UsernamePasswordAuthenticationToken(String.valueOf(userId), null, List.of());
   }
@@ -139,6 +217,9 @@ class TransactionControllerTest {
     private long updatedTransactionId;
     private String updatedCategory;
     private int updateCount = 1;
+    private boolean accountExists = true;
+    private String businessType = "ST";
+    private LocalDate securitiesEndDate;
 
     private CapturingRepository() {
       super(null);
@@ -165,11 +246,63 @@ class TransactionControllerTest {
     }
 
     @Override
+    public Optional<StoredConnectedAccount> findAccountByIdAndUserId(long accountId, long userId) {
+      if (!accountExists) {
+        return Optional.empty();
+      }
+      return Optional.of(
+          new StoredConnectedAccount(
+              accountId,
+              userId,
+              1L,
+              "0238",
+              businessType,
+              "미래에셋증권",
+              "encrypted",
+              "***-1234",
+              "SECURITIES",
+              "위탁 계좌",
+              0L,
+              0L,
+              null));
+    }
+
+    @Override
+    public List<StoredTransaction> findTransactions(
+        long accountId, LocalDate startDate, LocalDate endDate) {
+      this.securitiesEndDate = endDate;
+      return List.of();
+    }
+
+    @Override
     public int updateTransactionCategoryByUser(long transactionId, long userId, String category) {
       this.updatedTransactionId = transactionId;
       this.updatedUserId = userId;
       this.updatedCategory = category;
       return updateCount;
+    }
+  }
+
+  private static class CapturingSecuritiesCashSyncService
+      extends CodefSecuritiesCashTransactionSyncService {
+    private int callCount;
+    private long userId;
+    private long accountId;
+    private String startDate;
+    private String endDate;
+
+    private CapturingSecuritiesCashSyncService() {
+      super(null, null, null, null);
+    }
+
+    @Override
+    public int sync(long userId, long accountId, String startDate, String endDate) {
+      callCount++;
+      this.userId = userId;
+      this.accountId = accountId;
+      this.startDate = startDate;
+      this.endDate = endDate;
+      return 0;
     }
   }
 }

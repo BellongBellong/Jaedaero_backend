@@ -18,7 +18,7 @@ public class ConnectedAccountResponse {
   @ApiModelProperty(value = "금융기관 이름", example = "미래에셋증권")
   private final String institutionName;
 
-  @ApiModelProperty(value = "마스킹된 계좌번호", example = "***-***-1234")
+  @ApiModelProperty(value = "마스킹된 계좌번호", example = "639602-**-****75")
   private final String accountMasked;
 
   @ApiModelProperty(value = "계좌 유형", example = "SECURITIES")

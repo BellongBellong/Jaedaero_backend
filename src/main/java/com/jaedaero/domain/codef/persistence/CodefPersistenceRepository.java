@@ -377,15 +377,15 @@ public class CodefPersistenceRepository {
             new StoredTransaction(
                 rs.getLong("transaction_id"),
                 accountId,
-                rs.getTimestamp("transaction_datetime").toLocalDateTime(),
+                rs.getObject("transaction_datetime", java.time.LocalDateTime.class),
                 rs.getLong("amount"),
                 rs.getObject("balance_after", Long.class),
                 rs.getString("transaction_type"),
                 rs.getString("category"),
-                rs.getString("transaction_description")),
+        rs.getString("transaction_description")),
         accountId,
-        java.sql.Timestamp.valueOf(startDate.atStartOfDay()),
-        java.sql.Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+        startDate.atStartOfDay(),
+        endDate.plusDays(1).atStartOfDay());
   }
 
   /** 계좌와 분류로 선택 범위를 좁힐 수 있는 사용자의 거래내역만 반환합니다. */
@@ -402,8 +402,8 @@ public class CodefPersistenceRepository {
                 + "AND th.transaction_datetime >= ? AND th.transaction_datetime < ?");
     java.util.List<Object> parameters = new java.util.ArrayList<>();
     parameters.add(userId);
-    parameters.add(java.sql.Timestamp.valueOf(startDate.atStartOfDay()));
-    parameters.add(java.sql.Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
+    parameters.add(startDate.atStartOfDay());
+    parameters.add(endDate.plusDays(1).atStartOfDay());
     if (accountId != null) {
       query.append(" AND th.account_id = ?");
       parameters.add(accountId);
@@ -419,7 +419,7 @@ public class CodefPersistenceRepository {
             new StoredTransaction(
                 rs.getLong("transaction_id"),
                 rs.getLong("account_id"),
-                rs.getTimestamp("transaction_datetime").toLocalDateTime(),
+                rs.getObject("transaction_datetime", java.time.LocalDateTime.class),
                 rs.getLong("amount"),
                 rs.getObject("balance_after", Long.class),
                 rs.getString("transaction_type"),
