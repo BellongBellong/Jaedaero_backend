@@ -35,7 +35,7 @@ class OpenAiChatCompletionsNarrativeGeneratorTest {
         .andExpect(content().string(containsString("\"json_schema\"")))
         .andExpect(
             content()
-                .string(containsString("\"name\":\"ai_consumption_narrative_v6\"")))
+                .string(containsString("\"name\":\"ai_consumption_narrative_v7_military\"")))
         .andExpect(content().string(containsString("\"strict\":true")))
         .andExpect(content().string(containsString("\"additionalProperties\":false")))
         .andRespond(

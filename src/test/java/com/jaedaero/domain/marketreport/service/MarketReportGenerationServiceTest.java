@@ -92,7 +92,9 @@ class MarketReportGenerationServiceTest {
     assertEquals("인용으로 확인한 테스트 시장 리포트", reports.upserted.get(0).getTitle());
     assertEquals("확인된 사실을 한 줄로 정리한 테스트 요약", reports.upserted.get(0).getSummary());
     assertEquals("gemini-3.6-flash", reports.upserted.get(0).getModelName());
-    assertEquals(LocalDateTime.of(2026, 8, 6, 18, 0), reports.upserted.get(0).getValidFrom());
+    assertEquals(LocalDateTime.of(2026, 8, 6, 17, 0), reports.upserted.get(0).getValidFrom());
+    assertEquals(
+        LocalDateTime.of(2026, 8, 7, 16, 59, 59), reports.upserted.get(0).getValidUntil());
     assertEquals(4, indicators.inserted.size());
     assertEquals(2, sources.inserted.size());
     assertEquals(1, sources.inserted.get(0).getSourceOrder());

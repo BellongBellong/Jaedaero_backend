@@ -78,8 +78,8 @@ public class MarketReportGenerationService {
 
   private void generateForToday(boolean allowLocalRetry) {
     LocalDate reportDate = LocalDate.now(clock);
-    LocalDateTime validFrom = reportDate.atTime(18, 0);
-    LocalDateTime validUntil = reportDate.plusDays(1).atTime(17, 59, 59);
+    LocalDateTime validFrom = reportDate.atTime(17, 0);
+    LocalDateTime validUntil = reportDate.plusDays(1).atTime(16, 59, 59);
     int claimed =
         allowLocalRetry
             ? claimService.claimForLocalRetry(reportDate, validFrom, validUntil)
