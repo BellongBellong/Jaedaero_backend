@@ -101,10 +101,6 @@ public class AccountConnectionController {
       @ApiParam(value = "사용자 ID. JWT 도입 후 인증 사용자 ID로 대체합니다.", required = true, example = "1")
           @RequestParam
           long userId) {
-    // Refresh before exposing the account as active. A refresh can fail when a value stored
-    // with an old encryption key cannot be decrypted; activating first would leave the UI and
-    // persisted state inconsistent after the request returns an error.
-    accountSyncService.refreshAllAccounts(userId);
     if (repository.activateAccountByIdAndUserId(accountId, userId) == 0) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자의 비활성 연동 계좌를 찾을 수 없습니다.");
     }
