@@ -21,7 +21,7 @@
                 INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
                 WHERE connection.user_id = #{userId}
                   AND history.transaction_type = 'WITHDRAW'
-                  AND (history.category IS NULL OR history.category != 'ASSET')
+                  AND TRIM(COALESCE(history.transaction_description, '')) LIKE '체크카드%'
                   AND history.transaction_datetime >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
             ), 0) AS monthly_spending_average,
             profile.soldier_type,

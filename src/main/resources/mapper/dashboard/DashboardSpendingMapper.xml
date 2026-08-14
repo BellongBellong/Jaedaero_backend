@@ -11,7 +11,7 @@
         WHERE cc.user_id = #{userId}
           AND ca.status = 'ACTIVE'
           AND th.transaction_type = 'WITHDRAW'
-          AND (th.category IS NULL OR th.category != 'ASSET')
+          AND TRIM(COALESCE(th.transaction_description, '')) LIKE '체크카드%'
           AND th.transaction_datetime >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
           AND th.transaction_datetime &lt; DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
     </select>
