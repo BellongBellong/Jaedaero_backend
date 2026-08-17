@@ -21,7 +21,7 @@
                      AND spending_connection.status = 'ACTIVE'
                      AND spending_account.status = 'ACTIVE'
                      AND th.transaction_type = 'WITHDRAW'
-                     AND (th.category IS NULL OR th.category != 'ASSET')
+                     AND TRIM(COALESCE(th.transaction_description, '')) LIKE '체크카드%'
                      AND th.transaction_datetime >= #{snapshotDate}
                      AND th.transaction_datetime &lt; DATE_ADD(#{snapshotDate}, INTERVAL 1 DAY)
                ), 0) AS total_spending,

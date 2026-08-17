@@ -30,6 +30,7 @@
         WHERE connection.user_id = #{userId}
           AND account.status = 'ACTIVE'
           AND th.transaction_type = 'WITHDRAW'
+          AND TRIM(COALESCE(th.transaction_description, '')) LIKE '체크카드%'
           AND (
               (th.transaction_datetime &gt;= #{previousStart}
                AND th.transaction_datetime &lt; #{previousEndExclusive})
@@ -66,7 +67,7 @@
         WHERE connection.user_id = #{userId}
           AND account.status = 'ACTIVE'
           AND th.transaction_type = 'WITHDRAW'
-          AND COALESCE(th.category, 'ETC') NOT IN ('ASSET', '자산', '저축')
+          AND TRIM(COALESCE(th.transaction_description, '')) LIKE '체크카드%'
           AND th.transaction_description IS NOT NULL
           AND TRIM(th.transaction_description) &lt;&gt; ''
           AND (
