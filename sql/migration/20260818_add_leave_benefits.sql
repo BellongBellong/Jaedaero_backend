@@ -2,6 +2,7 @@ CREATE TABLE leave_benefit (
     benefit_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '휴가 혜택 ID',
     category ENUM('TRANSPORT', 'LEISURE', 'SELF_DEVELOPMENT', 'LODGING', 'ETC') NOT NULL COMMENT '휴가 혜택 카테고리',
     title VARCHAR(200) NOT NULL COMMENT '혜택명',
+    discount_summary VARCHAR(500) NOT NULL DEFAULT '' COMMENT '카드 목록용 할인 요약',
     period_start DATE NULL COMMENT '혜택 시작일',
     period_end DATE NULL COMMENT '혜택 종료일',
     target_text VARCHAR(500) NULL COMMENT '대상 안내',

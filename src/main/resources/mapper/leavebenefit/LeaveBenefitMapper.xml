@@ -8,12 +8,13 @@
         SELECT benefit_id AS benefitId,
                category,
                title,
-               period_start AS periodStart,
-               period_end AS periodEnd,
+               discount_summary AS discountSummary,
+               period_start AS validFrom,
+               period_end AS validTo,
                target_text AS target,
                content,
-               usage_method AS usageMethod,
-               remark_text AS remark,
+               usage_method AS method,
+               remark_text AS precautions,
                detail_image_url AS detailImageUrl,
                source_url AS sourceUrl
         FROM leave_benefit

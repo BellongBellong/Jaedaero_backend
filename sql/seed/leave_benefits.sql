@@ -158,4 +158,9 @@ ON DUPLICATE KEY UPDATE
     display_order = VALUES(display_order),
     updated_at = CURRENT_TIMESTAMP;
 
+-- 카드 목록에는 짧은 할인 요약을 사용한다. 상세 조건과 실적·한도는 content와 remark_text에 유지한다.
+UPDATE leave_benefit
+SET discount_summary = content
+WHERE source_url = 'https://www.card-gorilla.com/contents/detail/4126';
+
 COMMIT;
