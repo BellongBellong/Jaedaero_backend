@@ -16,6 +16,7 @@ services:
       - ./sql/seed/badge_policy.sql:/docker-entrypoint-initdb.d/03-badge-policy.sql:ro
       - ./sql/seed/challenge_mission_mock_data.sql:/docker-entrypoint-initdb.d/04-challenge-missions.sql:ro
       - ./sql/migration/20260818_add_leave_benefits.sql:/docker-entrypoint-initdb.d/05-add-leave-benefits.sql:ro
+      - ./sql/seed/leave_benefits.sql:/docker-entrypoint-initdb.d/06-leave-benefits.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s
