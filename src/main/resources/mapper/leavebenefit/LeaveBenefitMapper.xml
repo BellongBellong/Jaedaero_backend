@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.leavebenefit.LeaveBenefitMapper">
+    <select id="findAvailableBenefits" resultType="com.jaedaero.domain.leavebenefit.LeaveBenefitResponse">
+        SELECT benefit_id AS benefitId,
+               category,
+               title,
+               period_start AS periodStart,
+               period_end AS periodEnd,
+               target_text AS target,
+               content,
+               usage_method AS usageMethod,
+               remark_text AS remark,
+               detail_image_url AS detailImageUrl,
+               source_url AS sourceUrl
+        FROM leave_benefit
+        WHERE active_yn = TRUE
+          AND (period_start IS NULL OR period_start &lt;= #{referenceDate})
+          AND (period_end IS NULL OR period_end &gt;= #{referenceDate})
+          <if test="category != null">
+              AND category = #{category}
+          </if>
+        ORDER BY category, display_order, benefit_id
+    </select>
+</mapper>
