@@ -1,0 +1,28 @@
+# Copy this file to /opt/jaedaero/config/application-local.properties on the EC2 server.
+# Values are read from the backend container environment defined in .env.
+app.environment=production
+
+db.driver=com.mysql.cj.jdbc.Driver
+db.url=${DB_URL}
+db.username=${DB_USERNAME}
+db.password=${DB_PASSWORD}
+
+google.client-id=${GOOGLE_CLIENT_ID}
+google.client-secret=${GOOGLE_CLIENT_SECRET}
+kakao.client-id=${KAKAO_CLIENT_ID}
+kakao.client-secret=${KAKAO_CLIENT_SECRET}
+codef.client-id=${CODEF_CLIENT_ID}
+codef.client-secret=${CODEF_CLIENT_SECRET}
+codef.public-key=${CODEF_PUBLIC_KEY}
+codef.api.base-url=https://development.codef.io
+
+# Populate the remaining application and external API credentials required by the deployed features.
+llm.api-key=
+gemini.api-key=
+app.crypto.master-key-base64=
+krx.api.auth-key=
+market-index.api.service-key=
+eximbank.api.key=
+fred.api.key=
+finnhub.api.key=
+market-report.admin-refresh-token=

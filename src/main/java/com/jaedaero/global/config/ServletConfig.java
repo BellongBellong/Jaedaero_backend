@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Controller;
@@ -51,7 +52,9 @@ public class ServletConfig implements WebMvcConfigurer {
         PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
         configurer.setLocations(
                 new ClassPathResource("application.properties"),
-                new ClassPathResource("application-local.properties")
+                new ClassPathResource("application-local.properties"),
+                new FileSystemResource(System.getProperty(
+                        "jaedaero.config", "/run/secrets/application-local.properties"))
         );
         configurer.setIgnoreResourceNotFound(true);
         configurer.setLocalOverride(true);
