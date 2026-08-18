@@ -15,6 +15,7 @@ CREATE TABLE leave_benefit (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_leave_benefit_period CHECK (period_end IS NULL OR period_start IS NULL OR period_start <= period_end),
+    CONSTRAINT uq_leave_benefit_title_category UNIQUE (title, category),
     INDEX idx_leave_benefit_lookup (active_yn, category, period_start, period_end)
 ) COMMENT='휴가 중 이용 가능한 군인 혜택'
   DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
