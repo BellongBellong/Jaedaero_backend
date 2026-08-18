@@ -9,18 +9,19 @@
                category,
                title,
                discount_summary AS discountSummary,
-               period_start AS validFrom,
-               period_end AS validTo,
+               effective_from AS validFrom,
+               effective_to AS validTo,
                target_text AS target,
-               content,
+               description AS content,
                usage_method AS method,
-               remark_text AS precautions,
+               precautions,
                detail_image_url AS detailImageUrl,
                source_url AS sourceUrl
-        FROM leave_benefit
-        WHERE active_yn = TRUE
-          AND (period_start IS NULL OR period_start &lt;= #{referenceDate})
-          AND (period_end IS NULL OR period_end &gt;= #{referenceDate})
+        FROM military_benefit
+        WHERE benefit_context = 'LEAVE'
+          AND active_yn = TRUE
+          AND (effective_from IS NULL OR effective_from &lt;= #{referenceDate})
+          AND (effective_to IS NULL OR effective_to &gt;= #{referenceDate})
           <if test="category != null">
               AND category = #{category}
           </if>
