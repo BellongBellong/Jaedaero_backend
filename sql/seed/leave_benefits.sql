@@ -2,6 +2,9 @@
 -- 출처: https://www.card-gorilla.com/contents/detail/4126
 -- 카드 혜택·한도·전월 실적은 변경될 수 있으므로 앱에서는 공식 카드사 안내를 함께 확인해야 합니다.
 
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET time_zone = '+09:00';
+
 START TRANSACTION;
 
 INSERT INTO military_benefit (
