@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.jaedaero.domain.leavebenefit.LeaveBenefitMapper">
+    <select id="findAvailableBenefits" resultType="com.jaedaero.domain.leavebenefit.LeaveBenefitResponse">
+        SELECT benefit_id AS benefitId,
+               category,
+               title,
+               discount_summary AS discountSummary,
+               effective_from AS validFrom,
+               effective_to AS validTo,
+               target_text AS target,
+               description AS content,
+               usage_method AS method,
+               precautions,
+               detail_image_url AS detailImageUrl,
+               source_url AS sourceUrl
+        FROM military_benefit
+        WHERE benefit_context = 'LEAVE'
+          AND active_yn = TRUE
+          AND (effective_from IS NULL OR effective_from &lt;= #{referenceDate})
+          AND (effective_to IS NULL OR effective_to &gt;= #{referenceDate})
+          <if test="category != null">
+              AND category = #{category}
+          </if>
+        ORDER BY category, display_order, benefit_id
+    </select>
+</mapper>
