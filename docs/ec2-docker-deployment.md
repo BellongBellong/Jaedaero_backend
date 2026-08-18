@@ -33,7 +33,7 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs -f backend
 ```
 
-MySQL 데이터 볼륨이 비어 있을 때만 `jaedaero_db_v1.sql`, 운영 기준 시드, 2026-08-18 마이그레이션이 자동 실행된다. 기존 데이터가 있는 볼륨에서 이 초기화 SQL을 다시 실행하지 않는다.
+MySQL 데이터 볼륨이 비어 있을 때만 `jaedaero_db_v1.sql`, 운영 기준 시드, 휴가 혜택 시드, 2026-08-18 마이그레이션이 자동 실행된다. 기존 데이터가 있는 볼륨에서 이 초기화 SQL을 다시 실행하지 않는다.
 
 ## Nginx 프록시
 
