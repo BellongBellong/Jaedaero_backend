@@ -24,6 +24,7 @@ import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -71,7 +72,9 @@ public class RootConfig {
 
         configurer.setLocations(
                 new ClassPathResource("application.properties"),
-                new ClassPathResource("application-local.properties")
+                new ClassPathResource("application-local.properties"),
+                new FileSystemResource(System.getProperty(
+                        "jaedaero.config", "/run/secrets/application-local.properties"))
         );
         configurer.setIgnoreResourceNotFound(true);
         return configurer;
