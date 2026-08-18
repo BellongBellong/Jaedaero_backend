@@ -80,10 +80,12 @@ public class DashboardServiceImpl implements DashboardService {
   @Override
   public DashboardResponse get(long userId) {
     CashflowForecastResponse cashflow = latestOrGenerate(userId);
-    CurrentAssetEstimate currentAssetEstimate =
-        currentAssetEstimate(cashflowService.getCalculationInput(userId));
+    CashflowCalculationInputResponse calculationInput = cashflowService.getCalculationInput(userId);
+    CurrentAssetEstimate currentAssetEstimate = currentAssetEstimate(calculationInput);
+    SimulationVo latestSimulation = latestSimulation(userId);
     return DashboardResponse.from(
         cashflow,
+        calculationInput.getTargetAmount(),
         currentAssetEstimate.currentAsset(),
         currentAssetEstimate.currentExpectedAsset(),
         currentAssetEstimate.soldierSavingPrincipal(),
@@ -91,9 +93,16 @@ public class DashboardServiceImpl implements DashboardService {
         currentAssetEstimate.governmentMatchingSupport(),
         dashboardMapper.findActualDischargeDateByUserId(userId),
         strategyApplicationMapper.findLatestByUserId(userId),
-        latestSimulation(userId),
+        isCurrentGoalSimulation(latestSimulation, calculationInput.getTargetAmount())
+            ? latestSimulation
+            : null,
         LocalDate.now(clock),
         dashboardSpendingMapper.sumThisMonthSpendingByUserId(userId));
+  }
+
+  /** 목표 금액이 변경된 뒤의 What-if 이력은 이전 목표의 계산 결과이므로 대시보드에 적용하지 않는다. */
+  private boolean isCurrentGoalSimulation(SimulationVo simulation, long targetAmount) {
+    return simulation != null && simulation.getTargetAmount() == targetAmount;
   }
 
   private CurrentAssetEstimate currentAssetEstimate(CashflowCalculationInputResponse input) {
