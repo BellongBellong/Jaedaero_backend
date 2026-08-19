@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.leavemode.mapper.LeaveModeMapper">
+
+    <resultMap id="leaveModeResultMap" type="com.jaedaero.domain.leavemode.vo.LeaveModeVo">
+        <id property="leaveModeId" column="leave_mode_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="eventName" column="event_name"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="leaveModeEnabled" column="is_leave_mode_enabled"/>
+        <result property="budgetAmount" column="budget_amount"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.jaedaero.domain.leavemode.vo.LeaveModeVo"
+            useGeneratedKeys="true" keyProperty="leaveModeId">
+        INSERT INTO leave_mode (
+            user_id,
+            event_name,
+            start_date,
+            end_date,
+            is_leave_mode_enabled,
+            budget_amount
+        ) VALUES (
+            #{userId},
+            #{eventName},
+            #{startDate},
+            #{endDate},
+            #{leaveModeEnabled},
+            #{budgetAmount}
+        )
+    </insert>
+
+    <select id="findCurrentByUserId" resultMap="leaveModeResultMap">
+        SELECT
+            leave_mode_id,
+            user_id,
+            event_name,
+            start_date,
+            end_date,
+            is_leave_mode_enabled,
+            budget_amount
+        FROM leave_mode
+        WHERE user_id = #{userId}
+          AND is_leave_mode_enabled = TRUE
+          AND start_date &lt;= #{referenceDate}
+          AND end_date &gt;= #{referenceDate}
+        ORDER BY start_date DESC, leave_mode_id DESC
+        LIMIT 1
+    </select>
+
+    <update id="updateBudgetAmount">
+        UPDATE leave_mode
+        SET budget_amount = #{budgetAmount}
+        WHERE leave_mode_id = #{leaveModeId}
+          AND user_id = #{userId}
+    </update>
+</mapper>
