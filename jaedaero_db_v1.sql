@@ -632,19 +632,31 @@ CREATE TABLE financial_product (
 CREATE TABLE military_benefit (
                                   benefit_id      BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '혜택 ID',
                                   title           VARCHAR(255) NOT NULL COMMENT '혜택명',
+                                  discount_summary VARCHAR(500) NOT NULL DEFAULT '' COMMENT '카드 목록용 할인 요약',
                                   category        VARCHAR(50) NULL COMMENT '혜택 유형',
                                   description     TEXT NULL COMMENT '혜택 설명',
                                   target_rank     VARCHAR(30) NULL COMMENT '대상 계급',
                                   target_service  VARCHAR(30) NULL COMMENT '대상 군종',
+                                  target_text     VARCHAR(500) NULL COMMENT '대상 안내',
                                   benefit_context ENUM('GENERAL', 'LEAVE') NOT NULL DEFAULT 'GENERAL' COMMENT '혜택 구분',
                                   card_company    VARCHAR(100) NULL COMMENT '카드사명',
                                   source_url      VARCHAR(1000) NULL COMMENT '출처 URL',
                                   effective_from  DATE NULL COMMENT '시행일',
                                   effective_to    DATE NULL COMMENT '종료일',
+                                  usage_method    TEXT NULL COMMENT '이용 방법',
+                                  precautions     TEXT NULL COMMENT '유의사항(전월 실적·월 한도·횟수 제한·급여이체 조건 등)',
+                                  detail_image_url VARCHAR(1000) NULL COMMENT '상세 안내 이미지 URL',
+                                  active_yn       BOOLEAN NOT NULL DEFAULT TRUE COMMENT '노출 여부',
+                                  display_order   INT NOT NULL DEFAULT 0 COMMENT '카테고리 내 노출 순서',
                                   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
                                   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                                      ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시'
-) COMMENT='군인 혜택 및 청년 정책 — CODEF 카탈로그 밖, 병무청/보훈처 등 별도 소스 필요. 휴가모드 카드할인 혜택 포함(2026-07-25)'
+                                      ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                  CONSTRAINT uq_military_benefit_context_title_category
+                                      UNIQUE (benefit_context, title, category),
+                                  INDEX idx_military_benefit_leave_lookup
+                                      (benefit_context, active_yn, category, effective_from, effective_to)
+) COMMENT='군인 혜택 및 청년 정책 — 휴가 혜택은 benefit_context=LEAVE로 관리'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;
 

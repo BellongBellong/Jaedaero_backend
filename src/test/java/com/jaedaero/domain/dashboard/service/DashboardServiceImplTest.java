@@ -74,9 +74,16 @@ class DashboardServiceImplTest {
             .expectedAsset(21_000_000L)
             .financialDischargeDate(LocalDate.of(2027, 3, 15))
             .build();
+    RecordingCashflowService cashflowService = new RecordingCashflowService(cashflow);
+    cashflowService.calculationInput =
+        CashflowCalculationInputResponse.builder()
+            .baseAsset(1_500_000L)
+            .targetAmount(20_000_000L)
+            .soldierSavings(List.of())
+            .build();
     DashboardServiceImpl service =
         new DashboardServiceImpl(
-            new RecordingCashflowService(cashflow),
+            cashflowService,
             userId -> LocalDate.of(2027, 6, 20),
             new EmptyStrategyApplicationMapper(),
             userId -> 0L,
@@ -90,6 +97,46 @@ class DashboardServiceImplTest {
     assertEquals(120_000L, response.getMonthlySpendingGoal());
     assertEquals(180_000L, response.getMonthlyInvestmentGoal());
     assertEquals("SIMULATION", response.getGoalSource());
+    assertEquals(20_000_000L, response.getTargetAmount());
+  }
+
+  @Test
+  void ignoresSavedWhatIfWhenItsTargetDiffersFromCurrentGoal() {
+    CashflowForecastResponse cashflow =
+        CashflowForecastResponse.builder()
+            .calculationPolicyVersion(ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION)
+            .expectedAsset(12_000_000L)
+            .achievementRate(new BigDecimal("60.00"))
+            .months(List.of())
+            .build();
+    RecordingCashflowService cashflowService = new RecordingCashflowService(cashflow);
+    cashflowService.calculationInput =
+        CashflowCalculationInputResponse.builder()
+            .baseAsset(1_500_000L)
+            .targetAmount(25_000_000L)
+            .soldierSavings(List.of())
+            .build();
+    SimulationVo oldSimulation =
+        SimulationVo.builder()
+            .targetAmount(20_000_000L)
+            .expectedAsset(21_000_000L)
+            .monthlySpendingAmount(120_000L)
+            .monthlyInvestmentAmount(180_000L)
+            .build();
+    DashboardServiceImpl service =
+        new DashboardServiceImpl(
+            cashflowService,
+            userId -> LocalDate.of(2027, 6, 20),
+            new EmptyStrategyApplicationMapper(),
+            userId -> 0L,
+            new LatestSimulationMapper(oldSimulation),
+            FIXED_CLOCK);
+
+    DashboardResponse response = service.get(1L);
+
+    assertEquals(12_000_000L, response.getExpectedAsset());
+    assertEquals(25_000_000L, response.getTargetAmount());
+    assertEquals(null, response.getGoalSource());
   }
 
   @Test

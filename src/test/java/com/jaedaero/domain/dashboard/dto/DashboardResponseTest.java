@@ -58,6 +58,26 @@ class DashboardResponseTest {
   }
 
   @Test
+  void returnsConfiguredTargetAmount() {
+    DashboardResponse response =
+        DashboardResponse.from(
+            CashflowForecastResponse.builder().months(List.of()).build(),
+            23_000_000L,
+            0L,
+            0L,
+            0L,
+            0L,
+            0L,
+            null,
+            null,
+            null,
+            LocalDate.of(2026, 8, 4),
+            0L);
+
+    assertEquals(23_000_000L, response.getTargetAmount());
+  }
+
+  @Test
   void returnsZeroGoalsWhenNoStrategyHasBeenApplied() {
     CashflowForecastResponse cashflow =
         CashflowForecastResponse.builder().months(List.of()).build();

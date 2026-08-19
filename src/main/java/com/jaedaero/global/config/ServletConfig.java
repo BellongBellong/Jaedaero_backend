@@ -1,6 +1,7 @@
 package com.jaedaero.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Controller;
@@ -51,7 +53,9 @@ public class ServletConfig implements WebMvcConfigurer {
         PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
         configurer.setLocations(
                 new ClassPathResource("application.properties"),
-                new ClassPathResource("application-local.properties")
+                new ClassPathResource("application-local.properties"),
+                new FileSystemResource(System.getProperty(
+                        "jaedaero.config", "/run/secrets/application-local.properties"))
         );
         configurer.setIgnoreResourceNotFound(true);
         configurer.setLocalOverride(true);
@@ -64,7 +68,10 @@ public class ServletConfig implements WebMvcConfigurer {
         converters.stream()
                 .filter(MappingJackson2HttpMessageConverter.class::isInstance)
                 .map(MappingJackson2HttpMessageConverter.class::cast)
-                .forEach(converter -> converter.setObjectMapper(objectMapper));
+                .forEach(converter -> {
+                    converter.setObjectMapper(objectMapper);
+                    converter.setDefaultCharset(StandardCharsets.UTF_8);
+                });
     }
 
     /**

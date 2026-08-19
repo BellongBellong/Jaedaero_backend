@@ -46,6 +46,9 @@ public class DashboardResponse {
   @ApiModelProperty(value = "실제 전역일까지의 예상 자산", example = "18250000")
   private final Long expectedAsset;
 
+  @ApiModelProperty(value = "마이페이지에 설정된 전역 목표 금액", example = "23000000")
+  private final Long targetAmount;
+
   @ApiModelProperty(value = "목표 금액 대비 예상 자산 달성률(%)", example = "91.25")
   private final BigDecimal achievementRate;
 
@@ -86,6 +89,7 @@ public class DashboardResponse {
       Long actualThisMonthSpending) {
     return from(
         cashflow,
+        0L,
         currentAsset,
         currentAsset,
         0L,
@@ -100,6 +104,7 @@ public class DashboardResponse {
 
   public static DashboardResponse from(
       CashflowForecastResponse cashflow,
+      long targetAmount,
       long currentAsset,
       long currentExpectedAsset,
       long currentSoldierSavingPrincipal,
@@ -141,6 +146,7 @@ public class DashboardResponse {
         .currentExpectedSavingInterest(currentExpectedSavingInterest)
         .currentGovernmentMatchingSupport(currentGovernmentMatchingSupport)
         .expectedAsset(expectedAsset)
+        .targetAmount(targetAmount)
         .achievementRate(
             hasSimulation
                 ? achievementRate(expectedAsset, latestSimulation.getTargetAmount())
@@ -174,7 +180,12 @@ public class DashboardResponse {
       Long actualThisMonthSpending) {
     return from(
         cashflow,
+        0L,
         currentAsset,
+        currentAsset,
+        0L,
+        0L,
+        0L,
         actualDischargeDate,
         latestApplication,
         null,
