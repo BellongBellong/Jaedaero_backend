@@ -146,6 +146,21 @@
         WHERE user_id = #{userId}
     </select>
 
+    <select id="findAdjacentRankersByGroupId" resultMap="rankingMemberResultMap">
+        <include refid="rankedMembersCte"/>
+        SELECT
+            rm.ranking_no,
+            rm.member_count,
+            u.nickname,
+            rm.mission_completion_count
+        FROM ranked_members rm
+        INNER JOIN ranked_members my_ranking ON my_ranking.user_id = #{userId}
+        INNER JOIN users u ON u.user_id = rm.user_id
+        WHERE rm.ranking_no IN (my_ranking.ranking_no - 1, my_ranking.ranking_no + 1)
+          AND u.is_withdrawn = FALSE
+        ORDER BY rm.ranking_no
+    </select>
+
     <select id="findRankingStatisticsByGroupId" resultMap="rankingStatisticsResultMap">
         <include refid="rankedMembersCte"/>
         SELECT

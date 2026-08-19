@@ -28,6 +28,13 @@ public interface ChallengeGroupMapper {
       @Param("rankingPeriod") RankingPeriod rankingPeriod,
       @Param("resultMonth") LocalDate resultMonth);
 
+  /** 요청 기간의 사용자 인접 순위 참여자를 조회합니다. */
+  List<ChallengeRankingMemberVo> findAdjacentRankersByGroupId(
+      @Param("groupId") long groupId,
+      @Param("userId") long userId,
+      @Param("rankingPeriod") RankingPeriod rankingPeriod,
+      @Param("resultMonth") LocalDate resultMonth);
+
   /** 요청 기간의 동기 그룹 랭킹 비교 통계를 조회합니다. */
   ChallengeRankingStatisticsVo findRankingStatisticsByGroupId(
       @Param("groupId") long groupId,
