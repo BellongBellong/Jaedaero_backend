@@ -1041,6 +1041,7 @@ CREATE TABLE leave_mode (
                             start_date      DATE NOT NULL COMMENT '휴가 시작일',
                             end_date        DATE NOT NULL COMMENT '휴가 종료일',
                             is_leave_mode_enabled BOOLEAN NOT NULL DEFAULT TRUE COMMENT '일정 기간 휴가모드 자동 전환 여부',
+                            deleted_at      TIMESTAMP NULL COMMENT '삭제 일시',
                             budget_amount   BIGINT NULL COMMENT '휴가 예산 설정값(선택 입력)',
                             created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
                             updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
@@ -1048,6 +1049,8 @@ CREATE TABLE leave_mode (
                             INDEX idx_leave_mode_user_start_date (user_id, start_date),
                             INDEX idx_leave_mode_user_enabled_period
                                 (user_id, is_leave_mode_enabled, start_date, end_date),
+                            INDEX idx_leave_mode_user_deleted_start_date
+                                (user_id, deleted_at, start_date),
                             CONSTRAINT chk_leave_mode_period
                                 CHECK (start_date <= end_date),
                             CONSTRAINT chk_leave_mode_budget

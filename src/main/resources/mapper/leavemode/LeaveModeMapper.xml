@@ -44,10 +44,26 @@
         FROM leave_mode
         WHERE user_id = #{userId}
           AND is_leave_mode_enabled = TRUE
+          AND deleted_at IS NULL
           AND start_date &lt;= #{referenceDate}
           AND end_date &gt;= #{referenceDate}
         ORDER BY start_date DESC, leave_mode_id DESC
         LIMIT 1
+    </select>
+
+    <select id="findAllByUserId" resultMap="leaveModeResultMap">
+        SELECT
+            leave_mode_id,
+            user_id,
+            event_name,
+            start_date,
+            end_date,
+            is_leave_mode_enabled,
+            budget_amount
+        FROM leave_mode
+        WHERE user_id = #{userId}
+          AND deleted_at IS NULL
+        ORDER BY start_date ASC, leave_mode_id ASC
     </select>
 
     <update id="updateBudgetAmount">
@@ -55,5 +71,14 @@
         SET budget_amount = #{budgetAmount}
         WHERE leave_mode_id = #{leaveModeId}
           AND user_id = #{userId}
+    </update>
+
+    <update id="deleteByUserId">
+        UPDATE leave_mode
+        SET deleted_at = CURRENT_TIMESTAMP,
+            is_leave_mode_enabled = FALSE
+        WHERE leave_mode_id = #{leaveModeId}
+          AND user_id = #{userId}
+          AND deleted_at IS NULL
     </update>
 </mapper>
