@@ -30,6 +30,9 @@ public class ChallengeGroupResponse {
   private final int myRankingNo;
   private final int myPercentile;
   private final int myMissionCompletionCount;
+  private final ChallengeAdjacentRankerResponse rankAbove;
+  private final ChallengeAdjacentRankerResponse rankBelow;
+  private final int missionsToNextRank;
   private final int groupAverageMissionCompletionCount;
   private final int bottomQuarterAverageMissionCompletionCount;
   private final int topTenPercentThreshold;

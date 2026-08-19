@@ -1,6 +1,7 @@
 package com.jaedaero.domain.challenge.service.impl;
 
 import com.jaedaero.domain.challenge.dto.ChallengeGroupResponse;
+import com.jaedaero.domain.challenge.dto.ChallengeAdjacentRankerResponse;
 import com.jaedaero.domain.challenge.dto.ChallengeTopRankerResponse;
 import com.jaedaero.domain.challenge.common.enums.RankingPeriod;
 import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
@@ -13,6 +14,7 @@ import com.jaedaero.domain.challenge.vo.ChallengeRankingStatisticsVo;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,12 @@ public class ChallengeGroupServiceImpl implements ChallengeGroupService {
           ChallengeErrorCode.CHALLENGE_GROUP_NOT_FOUND, "동기 그룹 랭킹 정보를 찾을 수 없습니다.");
     }
 
+    List<ChallengeRankingMemberVo> adjacentRankers =
+        challengeGroupMapper.findAdjacentRankersByGroupId(
+            group.getGroupId(), userId, rankingPeriod, resultMonth);
+    ChallengeRankingMemberVo rankAbove = findRankerByRankingNo(adjacentRankers, myRanking.getRankingNo() - 1);
+    ChallengeRankingMemberVo rankBelow = findRankerByRankingNo(adjacentRankers, myRanking.getRankingNo() + 1);
+
     return ChallengeGroupResponse.builder()
         .groupId(group.getGroupId())
         .rankingPeriod(rankingPeriod)
@@ -62,6 +70,9 @@ public class ChallengeGroupServiceImpl implements ChallengeGroupService {
         .myRankingNo(myRanking.getRankingNo())
         .myPercentile(calculatePercentile(myRanking.getRankingNo(), statistics.getMemberCount()))
         .myMissionCompletionCount(myRanking.getMissionCompletionCount())
+        .rankAbove(ChallengeAdjacentRankerResponse.from(rankAbove))
+        .rankBelow(ChallengeAdjacentRankerResponse.from(rankBelow))
+        .missionsToNextRank(calculateMissionsToNextRank(myRanking, rankAbove))
         .groupAverageMissionCompletionCount(statistics.getAverageMissionCompletionCount())
         .bottomQuarterAverageMissionCompletionCount(
             statistics.getBottomQuarterAverageMissionCompletionCount())
@@ -70,6 +81,21 @@ public class ChallengeGroupServiceImpl implements ChallengeGroupService {
             myRanking.getMissionCompletionCount() - statistics.getAverageMissionCompletionCount())
         .lastUpdatedAt(statistics.getLastUpdatedAt())
         .build();
+  }
+
+  /** 요청 순위에 해당하는 인접 참여자를 반환합니다. */
+  private ChallengeRankingMemberVo findRankerByRankingNo(
+      List<ChallengeRankingMemberVo> rankers, int rankingNo) {
+    return rankers.stream().filter(ranker -> ranker.getRankingNo() == rankingNo).findFirst().orElse(null);
+  }
+
+  /** 바로 위 순위와의 미션 완료 수 차이를 계산합니다. */
+  private int calculateMissionsToNextRank(
+      ChallengeRankingMemberVo myRanking, ChallengeRankingMemberVo rankAbove) {
+    if (rankAbove == null) {
+      return 0;
+    }
+    return Math.max(0, rankAbove.getMissionCompletionCount() - myRanking.getMissionCompletionCount());
   }
 
   /** 사용자가 속한 입대월 동기 그룹을 조회합니다. */
