@@ -59,6 +59,15 @@ public class LeaveModeServiceImpl implements LeaveModeService {
     return toResponse(leaveMode);
   }
 
+  /** 사용자의 휴가모드 일정을 비활성화합니다. */
+  @Override
+  @Transactional
+  public void deleteLeaveMode(long userId, long leaveModeId) {
+    if (leaveModeMapper.deactivateByUserId(userId, leaveModeId) == 0) {
+      throw new LeaveModeException(LeaveModeErrorCode.LEAVE_MODE_NOT_FOUND, "활성 휴가 일정을 찾을 수 없습니다.");
+    }
+  }
+
   private LeaveModeResponse toResponse(LeaveModeVo leaveMode) {
     return new LeaveModeResponse(
         leaveMode.getLeaveModeId(),
