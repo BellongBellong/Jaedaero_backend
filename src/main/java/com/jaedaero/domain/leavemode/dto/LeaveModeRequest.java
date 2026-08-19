@@ -1,5 +1,6 @@
 package com.jaedaero.domain.leavemode.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import java.time.LocalDate;
 import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.NotBlank;
@@ -25,7 +26,8 @@ public class LeaveModeRequest {
   @NotNull(message = "휴가 종료일은 필수입니다.")
   private LocalDate endDate;
 
-  private boolean isLeaveModeEnabled = true;
+  @JsonAlias("isLeaveModeEnabled")
+  private boolean leaveModeEnabled = true;
 
   @PositiveOrZero(message = "휴가 예산은 0 이상이어야 합니다.")
   private Long budgetAmount;
