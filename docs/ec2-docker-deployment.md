@@ -67,3 +67,5 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 데이터를 포함해 삭제하려는 경우가 아니라면 `docker compose down -v`를 실행하지 않는다. `-v`는 MySQL 데이터 볼륨까지 삭제한다.
+
+공개 레포에서 GitHub Actions 자동 배포가 필요하면 EC2에 self-hosted runner를 설치하지 않고 AWS Systems Manager를 사용한다. 설정 및 워크플로는 [GitHub Actions + AWS SSM 자동 배포](github-actions-ssm-deployment.md)를 참고한다.
