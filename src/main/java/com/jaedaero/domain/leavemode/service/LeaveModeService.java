@@ -14,4 +14,7 @@ public interface LeaveModeService {
 
   /** 사용자의 휴가 예산을 변경합니다. */
   LeaveModeResponse updateBudget(long userId, long leaveModeId, LeaveModeBudgetRequest request);
+
+  /** 사용자의 휴가모드 일정을 비활성화합니다. */
+  void deleteLeaveMode(long userId, long leaveModeId);
 }

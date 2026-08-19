@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,6 +73,19 @@ public class LeaveModeController {
       @Valid @RequestBody LeaveModeBudgetRequest request) {
     return ResponseEntity.ok(
         leaveModeService.updateBudget(authenticatedUserId(authentication), leaveModeId, request));
+  }
+
+  @ApiOperation(value = "휴가모드 일정 삭제", notes = "휴가 일정을 비활성화하여 휴가모드와 휴가 미션 노출을 중지합니다.")
+  @ApiResponses({
+    @ApiResponse(code = 204, message = "휴가모드 일정 삭제"),
+    @ApiResponse(code = 401, message = "인증 필요"),
+    @ApiResponse(code = 404, message = "활성 휴가 일정을 찾을 수 없음")
+  })
+  @DeleteMapping("/{leaveModeId}")
+  public ResponseEntity<Void> deleteLeaveMode(
+      @ApiIgnore Authentication authentication, @PathVariable long leaveModeId) {
+    leaveModeService.deleteLeaveMode(authenticatedUserId(authentication), leaveModeId);
+    return ResponseEntity.noContent().build();
   }
 
   private long authenticatedUserId(Authentication authentication) {

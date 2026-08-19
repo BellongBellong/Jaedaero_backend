@@ -56,4 +56,12 @@
         WHERE leave_mode_id = #{leaveModeId}
           AND user_id = #{userId}
     </update>
+
+    <update id="deactivateByUserId">
+        UPDATE leave_mode
+        SET is_leave_mode_enabled = FALSE
+        WHERE leave_mode_id = #{leaveModeId}
+          AND user_id = #{userId}
+          AND is_leave_mode_enabled = TRUE
+    </update>
 </mapper>

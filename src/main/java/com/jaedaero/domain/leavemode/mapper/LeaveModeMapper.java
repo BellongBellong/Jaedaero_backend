@@ -20,4 +20,7 @@ public interface LeaveModeMapper {
       @Param("userId") long userId,
       @Param("leaveModeId") long leaveModeId,
       @Param("budgetAmount") Long budgetAmount);
+
+  /** 사용자의 휴가모드 일정을 비활성화합니다. */
+  int deactivateByUserId(@Param("userId") long userId, @Param("leaveModeId") long leaveModeId);
 }
