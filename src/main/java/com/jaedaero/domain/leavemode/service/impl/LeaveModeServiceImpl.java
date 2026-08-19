@@ -10,6 +10,7 @@ import com.jaedaero.domain.leavemode.service.LeaveModeService;
 import com.jaedaero.domain.leavemode.vo.LeaveModeVo;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,13 @@ public class LeaveModeServiceImpl implements LeaveModeService {
     return leaveMode == null ? null : toResponse(leaveMode);
   }
 
+  /** 사용자의 이벤트 목록을 조회합니다. */
+  @Override
+  @Transactional(readOnly = true)
+  public List<LeaveModeResponse> getLeaveModes(long userId) {
+    return leaveModeMapper.findAllByUserId(userId).stream().map(this::toResponse).toList();
+  }
+
   /** 사용자의 휴가 예산을 변경합니다. */
   @Override
   @Transactional
@@ -59,12 +67,12 @@ public class LeaveModeServiceImpl implements LeaveModeService {
     return toResponse(leaveMode);
   }
 
-  /** 사용자의 휴가모드 일정을 비활성화합니다. */
+  /** 사용자의 이벤트를 삭제합니다. */
   @Override
   @Transactional
   public void deleteLeaveMode(long userId, long leaveModeId) {
-    if (leaveModeMapper.deactivateByUserId(userId, leaveModeId) == 0) {
-      throw new LeaveModeException(LeaveModeErrorCode.LEAVE_MODE_NOT_FOUND, "활성 휴가 일정을 찾을 수 없습니다.");
+    if (leaveModeMapper.deleteByUserId(userId, leaveModeId) == 0) {
+      throw new LeaveModeException(LeaveModeErrorCode.LEAVE_MODE_NOT_FOUND, "이벤트를 찾을 수 없습니다.");
     }
   }
 

@@ -12,6 +12,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import springfox.documentation.annotations.ApiIgnore;
 import javax.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -59,6 +60,17 @@ public class LeaveModeController {
     return response == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(response);
   }
 
+  @ApiOperation(value = "휴가모드 일정 목록 조회", notes = "삭제되지 않은 사용자의 이벤트 목록을 조회합니다.")
+  @ApiResponses({
+    @ApiResponse(code = 200, message = "이벤트 목록 조회", response = LeaveModeResponse.class),
+    @ApiResponse(code = 401, message = "인증 필요")
+  })
+  @GetMapping
+  public ResponseEntity<List<LeaveModeResponse>> getLeaveModes(
+      @ApiIgnore Authentication authentication) {
+    return ResponseEntity.ok(leaveModeService.getLeaveModes(authenticatedUserId(authentication)));
+  }
+
   @ApiOperation(value = "휴가 예산 변경", notes = "현재 사용자의 휴가 일정에 설정한 예산을 변경하거나 삭제합니다.")
   @ApiResponses({
     @ApiResponse(code = 200, message = "휴가 예산 변경", response = LeaveModeResponse.class),
@@ -75,11 +87,11 @@ public class LeaveModeController {
         leaveModeService.updateBudget(authenticatedUserId(authentication), leaveModeId, request));
   }
 
-  @ApiOperation(value = "휴가모드 일정 삭제", notes = "휴가 일정을 비활성화하여 휴가모드와 휴가 미션 노출을 중지합니다.")
+  @ApiOperation(value = "휴가모드 일정 삭제", notes = "사용자의 이벤트를 삭제 처리합니다.")
   @ApiResponses({
-    @ApiResponse(code = 204, message = "휴가모드 일정 삭제"),
+    @ApiResponse(code = 204, message = "이벤트 삭제"),
     @ApiResponse(code = 401, message = "인증 필요"),
-    @ApiResponse(code = 404, message = "활성 휴가 일정을 찾을 수 없음")
+    @ApiResponse(code = 404, message = "이벤트를 찾을 수 없음")
   })
   @DeleteMapping("/{leaveModeId}")
   public ResponseEntity<Void> deleteLeaveMode(
