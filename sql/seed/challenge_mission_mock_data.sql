@@ -42,7 +42,8 @@ VALUES
     ('SAFE_DEPOSIT_PRODUCT', 'SAFE', 'RECOMMENDED', '예금상품 살펴보기', '나에게 맞는 예금 상품을 확인해보세요.', 'VIEW_DEPOSIT_PRODUCT', 1, 'NONE', NULL, 0),
     ('AGGRESSIVE_REBALANCING', 'AGGRESSIVE', 'RECOMMENDED', '투자 추천 확인하기', 'AI가 제안한 투자 추천 내용을 확인해보세요.', 'VIEW_REBALANCING', 1, 'NONE', NULL, 0),
     ('SAFE_WHAT_IF_SIMULATION', 'SAFE', 'ONE_TIME', 'What-if 시뮬레이션 하기', '시뮬레이션으로 자산 변화 목표를 설정해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'NONE', NULL, 0),
-    ('EVENT_PAYDAY_ASSET_ALLOCATION', NULL, 'EVENT', '월급날 자산 배분 해보기', '월급을 저축·투자·소비 목표에 맞춰 배분해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'PAYDAY', 10, 1);
+    ('EVENT_PAYDAY_ASSET_ALLOCATION', NULL, 'EVENT', '월급날 자산 배분 해보기', '월급을 저축·투자·소비 목표에 맞춰 배분해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'PAYDAY', 10, 1),
+    ('EVENT_LEAVE_BENEFIT_CHECK', NULL, 'EVENT', '휴가 혜택 챙기기', '휴가 혜택을 열어 나에게 맞는 혜택을 하나 이상 확인해보세요.', 'VIEW_LEAVE_BENEFIT', 2, 'LEAVE_SCHEDULED', NULL, 2);
 
 -- 코드를 기준으로 수정하여 노출 순서 변경이 기존 미션 ID의 의미를 바꾸지 않게 합니다.
 UPDATE mission m
