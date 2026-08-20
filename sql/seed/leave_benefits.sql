@@ -12,11 +12,25 @@ INSERT INTO military_benefit (
     description, usage_method, precautions, source_url, active_yn, display_order
 ) VALUES
     (
-        'LEAVE', 'TRANSPORT', '신한 나라사랑카드 - 대중교통·카카오T 캐시백', NULL, NULL, '신한 나라사랑카드 체크 보유자',
-        '대중교통 20%, 광역교통 10%, 카카오T 택시 10% 캐시백',
-        '대상 교통수단 또는 카카오T 택시를 나라사랑카드로 결제',
+        'LEAVE', 'TRANSPORT', '신한 나라사랑카드', NULL, NULL, '신한 나라사랑카드 체크 보유자',
+        '대중교통 20% 캐시백',
+        '대상 대중교통을 나라사랑카드로 결제',
         'Life 서비스 전월 이용실적에 따른 월 통합 캐시백 한도 5천원~5만원 적용',
         'https://www.card-gorilla.com/contents/detail/4126', TRUE, 10
+    ),
+    (
+        'LEAVE', 'TRANSPORT', '신한 나라사랑카드', NULL, NULL, '신한 나라사랑카드 체크 보유자',
+        '광역교통 10% 캐시백',
+        '대상 광역교통을 나라사랑카드로 결제',
+        'Life 서비스 전월 이용실적에 따른 월 통합 캐시백 한도 5천원~5만원 적용',
+        'https://www.card-gorilla.com/contents/detail/4126', TRUE, 11
+    ),
+    (
+        'LEAVE', 'TRANSPORT', '신한 나라사랑카드', NULL, NULL, '신한 나라사랑카드 체크 보유자',
+        '카카오T 택시 10% 캐시백',
+        '카카오T 택시를 나라사랑카드로 결제',
+        'Life 서비스 전월 이용실적에 따른 월 통합 캐시백 한도 5천원~5만원 적용',
+        'https://www.card-gorilla.com/contents/detail/4126', TRUE, 12
     ),
     (
         'LEAVE', 'TRANSPORT', 'IBK 나라사랑카드 - 대중교통·택시 할인', NULL, NULL, 'IBK나라사랑카드 체크 보유자',
