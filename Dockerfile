@@ -1,8 +1,10 @@
 FROM gradle:8.10.2-jdk17 AS build
 
 WORKDIR /app
+COPY build.gradle settings.gradle ./
+RUN gradle dependencies --no-daemon || true
 COPY . .
-RUN gradle clean war --no-daemon
+RUN gradle war --no-daemon
 
 FROM tomcat:9.0-jdk17-temurin
 

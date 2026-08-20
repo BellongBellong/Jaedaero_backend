@@ -28,7 +28,7 @@ services:
   backend:
     build:
       context: .
-    image: jaedaero-backend:latest
+    image: ${BACKEND_IMAGE:-jaedaero-backend:latest}
     container_name: jaedaero-backend
     restart: unless-stopped
     depends_on:
