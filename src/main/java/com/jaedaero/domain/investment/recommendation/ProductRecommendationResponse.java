@@ -19,4 +19,5 @@ public record ProductRecommendationResponse(
     @ApiModelProperty(value = "추천에 사용한 AI 분석 ID") Long analysisId,
     @ApiModelProperty(value = "추천에 사용한 What-if 시뮬레이션 ID") Long simulationId,
     @ApiModelProperty(value = "분석/시뮬레이션에서 전달된 목표 기대수익률. ETF의 실제 수익률이 아닙니다.") BigDecimal expectedReturnRate,
-    @ApiModelProperty(value = "분석/시뮬레이션 기준 재정적 전역일") LocalDate financialDischargeDate) {}
+    @ApiModelProperty(value = "분석/시뮬레이션 기준 재정적 전역일") LocalDate financialDischargeDate,
+    @ApiModelProperty(value = "목표 기대수익률, 투자성향, 전역일을 반영한 권장 자산 배분") RecommendationAllocation recommendedAllocation) {}

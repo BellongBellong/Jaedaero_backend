@@ -124,6 +124,47 @@ class ProductRecommendationServiceTest {
     assertEquals(30_000L, response.personalizedRecommendations().get(0).recommendedMonthlyAmount());
   }
 
+  @Test
+  void usesWhatIfExpectedReturnRateToSetRecommendationAllocation() {
+    EtfMarketOverviewService overviewService =
+        new EtfMarketOverviewService(null) {
+          @Override
+          public EtfMarketOverviewResponse getOverview(LocalDate date) {
+            return new EtfMarketOverviewResponse(
+                "20260807",
+                "20260807",
+                List.of(
+                    item("100001", "단기국채 ETF", "10000", "10000", "1000", "10000", "국고채"),
+                    item("100002", "코스피 200", "10000", "10000", "1000", "10000", "코스피 200"),
+                    item("100003", "미국 S&P 500", "10000", "10000", "1000", "9000", "S&P 500"),
+                    item("100004", "글로벌 주식", "10000", "10000", "1000", "8000", "MSCI World"),
+                    item("100005", "반도체 주식", "10000", "10000", "1000", "7000", "반도체")));
+          }
+        };
+    ProductRecommendationService service =
+        new ProductRecommendationService(
+            overviewService,
+            new EtfRiskClassifier(),
+            preferenceMapper(InvestmentPreference.AGGRESSIVE),
+            planMapper(null),
+            userId -> LocalDate.of(2028, 1, 1));
+
+    ProductRecommendationResponse response =
+        service.getEtfRecommendations(
+            1L,
+            LocalDate.of(2026, 8, 7),
+            new ProductRecommendationContext(
+                null, 7L, 100_000L, new BigDecimal("9.00"), LocalDate.of(2028, 1, 1)));
+
+    assertEquals(30, response.recommendedAllocation().safePercentage());
+    assertEquals(70, response.recommendedAllocation().riskPercentage());
+    assertEquals(
+        4,
+        response.personalizedRecommendations().stream()
+            .filter(item -> item.assetBucket() == AssetBucket.RISK)
+            .count());
+  }
+
   private static EtfMarketOverviewService overviewService(String marketDate) {
     return new EtfMarketOverviewService(null) {
       @Override
