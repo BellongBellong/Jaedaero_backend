@@ -20,7 +20,8 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # SSM이 전달을 재시도하는 시간과 Docker 이미지 빌드 시간을 고려한다.
+    timeout-minutes: 40
 
     steps:
       - name: Debug OIDC claims
@@ -81,14 +82,44 @@ jobs:
             --instance-ids "$INSTANCE_ID" \
             --parameters file://ssm-commands.json \
             --comment "Deploy Jaedaero backend from dev" \
+            --timeout-seconds 1800 \
             --query 'Command.CommandId' \
             --output text)"
 
           echo "command_id=$command_id" >> "$GITHUB_OUTPUT"
 
-          aws ssm wait command-executed \
-            --command-id "$command_id" \
-            --instance-id "$INSTANCE_ID"
+          # `aws ssm wait command-executed`는 약 100초만 기다린다.
+          # SSM Agent가 일시적으로 명령 수신을 지연하면 실제 배포 전에도
+          # GitHub Actions가 실패할 수 있으므로 최대 30분까지 상태를 직접 확인한다.
+          for attempt in $(seq 1 180); do
+            if ! invocation="$(aws ssm get-command-invocation \
+              --command-id "$command_id" \
+              --instance-id "$INSTANCE_ID" \
+              --output json 2>&1)"; then
+              echo "[$attempt/180] SSM 실행 상태를 아직 조회할 수 없습니다. 10초 후 재시도합니다."
+              sleep 10
+              continue
+            fi
+
+            status="$(jq -r '.Status' <<< "$invocation")"
+            details="$(jq -r '.StatusDetails' <<< "$invocation")"
+            echo "[$attempt/180] SSM command status: $status ($details)"
+
+            case "$status" in
+              Success)
+                exit 0
+                ;;
+              Failed|Cancelled|TimedOut|Cancelling|Undeliverable|Terminated)
+                echo "$invocation"
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "SSM 명령이 30분 안에 완료되지 않았습니다."
+          exit 1
 
       - name: Print deployment output
         if: always()
