@@ -1,6 +1,8 @@
 # GitHub Actions + AWS SSM 자동 배포
 
-공개 레포에서 EC2에 self-hosted runner를 설치하지 않고 자동 배포하는 방법이다. GitHub-hosted runner가 GitHub OIDC로 짧은 수명의 AWS 자격 증명을 발급받고, Systems Manager Run Command로 EC2에 배포 명령을 전달한다. AWS 액세스 키, EC2 SSH 개인 키, 22번 포트 공개가 필요 없다.
+공개 레포에서 EC2에 self-hosted runner를 설치하지 않고 자동 배포하는 방법이다. GitHub-hosted runner가 GitHub OIDC로 짧은 수명의 AWS 자격 증명을 발급받아 Docker 이미지를 빌드해 ECR에 푸시하고, Systems Manager Run Command로 EC2에 배포 명령(이미지 pull + 컨테이너 재시작)을 전달한다. AWS 액세스 키, EC2 SSH 개인 키, 22번 포트 공개가 필요 없다.
+
+이미지 빌드(Gradle 컴파일 등 무거운 작업)는 GitHub-hosted runner에서 수행하고, t3.small EC2는 완성된 이미지를 받아 pull만 하므로 EC2에서 직접 빌드하는 것보다 훨씬 빠르고 안정적이다.
 
 워크플로는 `dev` 브랜치에 push된 경우와 수동 실행에서만 배포된다. PR에는 실행되지 않는다.
 
@@ -17,7 +19,44 @@ Ubuntu 이미지에는 SSM Agent가 포함될 수 있다. 다음으로 서비스
 sudo snap services amazon-ssm-agent
 ```
 
-## 2. GitHub OIDC 공급자와 배포 역할 생성
+## 2. ECR 리포지토리 생성 및 EC2 pull 권한 부여
+
+1. ECR에 리포지토리를 하나 만든다 (이름은 워크플로의 `ECR_REPOSITORY`와 동일해야 한다).
+
+   ```bash
+   aws ecr create-repository \
+     --repository-name jaedaero-backend \
+     --region ap-northeast-2 \
+     --image-scanning-configuration scanOnPush=true
+   ```
+
+2. `JaedaeroEc2SsmRole`(1단계에서 EC2에 연결한 역할)에 ECR pull 권한을 인라인 정책으로 추가한다.
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "ecr:GetAuthorizationToken",
+         "Resource": "*"
+       },
+       {
+         "Effect": "Allow",
+         "Action": [
+           "ecr:BatchCheckLayerAvailability",
+           "ecr:GetDownloadUrlForLayer",
+           "ecr:BatchGetImage"
+         ],
+         "Resource": "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/jaedaero-backend"
+       }
+     ]
+   }
+   ```
+
+   EC2에 `aws` CLI가 없다면 설치한다 (`sudo snap install aws-cli --classic` 또는 배포판 패키지).
+
+## 3. GitHub OIDC 공급자와 배포 역할 생성
 
 IAM → Identity providers에서 공급자가 없다면 다음 값으로 만든다.
 
@@ -72,6 +111,24 @@ IAM → Identity providers에서 공급자가 없다면 다음 값으로 만든�
       "Effect": "Allow",
       "Action": "ssm:GetCommandInvocation",
       "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage"
+      ],
+      "Resource": "arn:aws:ecr:ap-northeast-2:<AWS_ACCOUNT_ID>:repository/jaedaero-backend"
     }
   ]
 }
@@ -79,7 +136,7 @@ IAM → Identity providers에서 공급자가 없다면 다음 값으로 만든�
 
 `AWS-RunShellScript` 권한은 EC2에서 관리자 권한 명령을 실행할 수 있다. 따라서 subject를 `dev` 브랜치로 정확히 제한하고, `dev`에는 PR 리뷰 후에만 머지되도록 보호 규칙을 설정한다.
 
-## 3. GitHub Actions 변수 등록
+## 4. GitHub Actions 변수 등록
 
 GitHub 레포 → Settings → Secrets and variables → Actions → **Variables**에 아래 두 값을 추가한다.
 
@@ -88,10 +145,15 @@ GitHub 레포 → Settings → Secrets and variables → Actions → **Variables
 | `AWS_DEPLOY_ROLE_ARN` | `JaedaeroGitHubDeployRole`의 ARN |
 | `EC2_INSTANCE_ID` | 대상 EC2의 `i-...` 인스턴스 ID |
 
-AWS 액세스 키나 SSH 개인 키는 등록하지 않는다.
+AWS 액세스 키나 SSH 개인 키는 등록하지 않는다. ECR 레지스트리 주소는 워크플로가 `aws-actions/amazon-ecr-login`으로 매 실행마다 동적으로 조회하므로 별도로 등록할 필요가 없다.
 
-## 4. 동작 확인
+## 5. 동작 확인
 
 이 문서와 `.github/workflows/deploy-ssm.yml`을 `dev`에 머지하면 Actions 탭에서 **Deploy to EC2 via SSM**을 수동 실행할 수 있다. 성공한 뒤부터는 `dev` push마다 자동 실행된다.
 
-배포 명령은 `/opt/jaedaero/app`에서 `origin/dev`를 받아 Docker Compose를 다시 빌드하고, `/swagger-ui.html` 응답까지 확인한다. MySQL Docker 볼륨과 `/opt/jaedaero/config`의 비밀 설정 파일은 삭제하거나 Git에 올리지 않는다.
+배포는 두 단계로 진행된다.
+
+1. GitHub-hosted runner가 Docker 이미지를 빌드해 ECR에 `<sha>`와 `latest` 두 태그로 푸시한다 (Gradle 컴파일이 여기서 끝난다).
+2. SSM 명령이 `/opt/jaedaero/app`에서 `origin/dev`를 받아 `docker-compose.prod.yml` 등 설정 파일을 갱신하고, EC2가 자신의 IAM 역할로 ECR에서 `latest` 이미지를 pull한 뒤 컨테이너를 재시작하고 `/swagger-ui.html` 응답까지 확인한다. 헬스체크에 성공하면 더 이상 참조되지 않는 이미지를 정리해 디스크 공간을 확보한다.
+
+MySQL Docker 볼륨과 `/opt/jaedaero/config`의 비밀 설정 파일은 삭제하거나 Git에 올리지 않는다.
