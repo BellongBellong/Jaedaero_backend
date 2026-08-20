@@ -6,8 +6,27 @@
 <mapper namespace="com.jaedaero.domain.aianalysis.mapper.AiAnalysisMapper">
 
     <sql id="analysisColumns">
-        analysis_id, user_id, snapshot_id, simulation_id, analysis_type, result_json,
-        input_data_hash, model_name, prompt_version, generation_source, created_at
+        a.analysis_id, a.user_id, a.snapshot_id, a.simulation_id, a.analysis_type, a.result_json,
+        a.input_data_hash, a.model_name, a.prompt_version, a.generation_source, a.created_at,
+        EXISTS (
+            SELECT 1
+            FROM strategy_application sa
+            WHERE sa.user_id = a.user_id
+              AND sa.analysis_id = a.analysis_id
+              AND sa.application_id = (
+                  SELECT active.application_id
+                  FROM strategy_application active
+                  WHERE active.user_id = a.user_id
+                    AND active.source_type = 'AI_RECOMMENDATION'
+                    AND active.analysis_id IS NOT NULL
+                    AND active.applied_monthly_spending_amount IS NOT NULL
+                    AND active.applied_monthly_saving_amount IS NOT NULL
+                    AND active.applied_monthly_investment_amount IS NOT NULL
+                    AND active.applied_expected_return_rate IS NOT NULL
+                  ORDER BY active.applied_at DESC, active.application_id DESC
+                  LIMIT 1
+              )
+        ) AS applied
     </sql>
 
     <sql id="recommendedScenarioColumns">
@@ -29,18 +48,18 @@
 
     <select id="findAnalysisByIdAndUserId" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
         SELECT <include refid="analysisColumns"/>
-        FROM ai_analysis
-        WHERE analysis_id = #{analysisId}
-          AND user_id = #{userId}
+        FROM ai_analysis a
+        WHERE a.analysis_id = #{analysisId}
+          AND a.user_id = #{userId}
     </select>
 
     <select id="findLatestSuccessfulByUserIdAndInputDataHash" resultType="com.jaedaero.domain.aianalysis.vo.AiAnalysisVo">
         SELECT <include refid="analysisColumns"/>
-        FROM ai_analysis
-        WHERE user_id = #{userId}
-          AND input_data_hash = #{inputDataHash}
-          AND generation_source = 'OPENAI'
-        ORDER BY created_at DESC, analysis_id DESC
+        FROM ai_analysis a
+        WHERE a.user_id = #{userId}
+          AND a.input_data_hash = #{inputDataHash}
+          AND a.generation_source = 'OPENAI'
+        ORDER BY a.created_at DESC, a.analysis_id DESC
         LIMIT 1
     </select>
 

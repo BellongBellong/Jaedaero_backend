@@ -25,4 +25,5 @@ public class AiAnalysisVo {
   private String promptVersion;
   private AiGenerationSource generationSource;
   private LocalDateTime createdAt;
+  private Boolean applied;
 }

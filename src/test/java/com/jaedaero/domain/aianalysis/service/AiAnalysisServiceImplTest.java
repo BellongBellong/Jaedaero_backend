@@ -99,6 +99,7 @@ class AiAnalysisServiceImplTest {
     assertEquals(AiGenerationSource.OPENAI, mapper.analyses.get(0).getGenerationSource());
     assertEquals(AiGenerationSource.OPENAI, first.getGenerationSource());
     assertEquals(AiGenerationSource.CACHE, second.getGenerationSource());
+    assertFalse(first.getIsApplied());
     assertEquals(117_700L, first.getSpendingPattern().getTotalSpendingAmount());
     assertEquals(20_000L, first.getSpendingImprovement().getSuggestedMonthlyReductionAmount());
     assertEquals(160_000L, first.getRecommendedScenario().getMonthlySpendingAmount());
@@ -113,9 +114,11 @@ class AiAnalysisServiceImplTest {
     assertEquals(
         first.getRecommendedScenario().getMonthlyInvestmentAmount(),
         mapper.recommendations.get(0).getMonthlyInvestmentAmount());
+    mapper.analyses.get(0).setApplied(true);
     AiAnalysisResponse detail = service.getDetail(1L, first.getAnalysisId());
     assertEquals(first.getAnalysisId(), detail.getAnalysisId());
     assertEquals(AiGenerationSource.OPENAI, detail.getGenerationSource());
+    assertTrue(detail.getIsApplied());
     assertEquals(
         first.getRecommendedScenario().getMonthlyInvestmentAmount(),
         detail.getRecommendedScenario().getMonthlyInvestmentAmount());

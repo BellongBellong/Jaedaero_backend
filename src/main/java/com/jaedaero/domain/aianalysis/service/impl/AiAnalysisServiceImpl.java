@@ -198,12 +198,28 @@ public class AiAnalysisServiceImpl implements AiAnalysisService {
 
   private AiAnalysisResponse response(
       AiAnalysisVo a, AiAnalysisResult r, AiGenerationSource generationSource) {
-    return AiAnalysisResponse.builder().analysisId(a.getAnalysisId()).simulationId(a.getSimulationId()).snapshotId(a.getSnapshotId())
-        .analysisType(a.getAnalysisType()).generationSource(generationSource).expectedAsset(r.getExpectedAsset()).financialDischargeDate(r.getFinancialDischargeDate()).deltaDaysVsActual(r.getDeltaDaysVsActual())
-        .achievementRate(r.getAchievementRate()).comment(r.getComment()).recommendedScenario(r.getRecommendedScenario())
-        .baselineDischargeDate(r.getBaselineDischargeDate()).deltaDaysVsBaseline(r.getDeltaDaysVsBaseline()).pros(r.getPros()).cons(r.getCons())
-        .spendingPattern(r.getSpendingPattern()).spendingInsights(r.getSpendingInsights())
-        .spendingImprovement(r.getSpendingImprovement()).spendingExpectedEffect(r.getSpendingExpectedEffect()).build();
+    return AiAnalysisResponse.builder()
+        .analysisId(a.getAnalysisId())
+        .simulationId(a.getSimulationId())
+        .snapshotId(a.getSnapshotId())
+        .analysisType(a.getAnalysisType())
+        .generationSource(generationSource)
+        .isApplied(Boolean.TRUE.equals(a.getApplied()))
+        .expectedAsset(r.getExpectedAsset())
+        .financialDischargeDate(r.getFinancialDischargeDate())
+        .deltaDaysVsActual(r.getDeltaDaysVsActual())
+        .achievementRate(r.getAchievementRate())
+        .comment(r.getComment())
+        .recommendedScenario(r.getRecommendedScenario())
+        .baselineDischargeDate(r.getBaselineDischargeDate())
+        .deltaDaysVsBaseline(r.getDeltaDaysVsBaseline())
+        .pros(r.getPros())
+        .cons(r.getCons())
+        .spendingPattern(r.getSpendingPattern())
+        .spendingInsights(r.getSpendingInsights())
+        .spendingImprovement(r.getSpendingImprovement())
+        .spendingExpectedEffect(r.getSpendingExpectedEffect())
+        .build();
   }
 
   private String comment(long expected, long targetAmount) {
