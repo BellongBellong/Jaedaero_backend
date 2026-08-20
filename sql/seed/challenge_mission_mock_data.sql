@@ -39,8 +39,8 @@ INSERT INTO expected_mission (
 VALUES
     ('DAILY_MARKET_REPORT', NULL, 'DAILY', '오늘의 시장 리포트 보기', '오늘의 AI 시장 리포트를 확인해보세요.', 'VIEW_MARKET_REPORT', 1, 'NONE', NULL, 0),
     ('DAILY_TRANSACTION_HISTORY', NULL, 'DAILY', '오늘의 거래 내역 확인하기', '오늘 발생한 거래 내역을 확인해보세요.', 'VIEW_TRANSACTION_HISTORY', 2, 'NONE', NULL, 0),
-    ('SAFE_DEPOSIT_PRODUCT', 'SAFE', 'RECOMMENDED', '예금상품 살펴보기', '나에게 맞는 예금 상품을 확인해보세요.', 'VIEW_DEPOSIT_PRODUCT', 1, 'NONE', NULL, 0),
-    ('AGGRESSIVE_REBALANCING', 'AGGRESSIVE', 'RECOMMENDED', '투자 추천 확인하기', 'AI가 제안한 투자 추천 내용을 확인해보세요.', 'VIEW_REBALANCING', 1, 'NONE', NULL, 0),
+    ('SAFE_INVESTMENT_GUIDANCE', 'SAFE', 'RECOMMENDED', '적립식 투자 가이드 확인하기', '나에게 맞는 적립식 투자 가이드를 확인해보세요.', 'VIEW_REBALANCING', 1, 'NONE', NULL, 0),
+    ('AGGRESSIVE_REBALANCING', 'AGGRESSIVE', 'RECOMMENDED', '투자 추천 확인하기', 'AI가 제안한 투자 추천 내용을 확인해보세요.', 'VIEW_DEPOSIT_PRODUCT', 1, 'NONE', NULL, 0),
     ('SAFE_WHAT_IF_SIMULATION', 'SAFE', 'ONE_TIME', 'What-if 시뮬레이션 하기', '시뮬레이션으로 자산 변화 목표를 설정해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'NONE', NULL, 0),
     ('EVENT_PAYDAY_ASSET_ALLOCATION', NULL, 'EVENT', '월급날 자산 배분 해보기', '월급을 저축·투자·소비 목표에 맞춰 배분해보세요.', 'RUN_WHAT_IF_SIMULATION', 1, 'PAYDAY', 10, 1),
     ('EVENT_LEAVE_BENEFIT_CHECK', NULL, 'EVENT', '휴가 혜택 챙기기', '휴가 혜택을 열어 나에게 맞는 혜택을 하나 이상 확인해보세요.', 'VIEW_LEAVE_BENEFIT', 2, 'LEAVE_SCHEDULED', NULL, 2);
