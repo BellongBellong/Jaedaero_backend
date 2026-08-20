@@ -652,8 +652,8 @@ CREATE TABLE military_benefit (
                                   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                                       ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
-                                  CONSTRAINT uq_military_benefit_context_title_category
-                                      UNIQUE (benefit_context, title, category),
+                                  CONSTRAINT uq_military_benefit_context_category_title_order
+                                      UNIQUE (benefit_context, category, title, display_order),
                                   INDEX idx_military_benefit_leave_lookup
                                       (benefit_context, active_yn, category, effective_from, effective_to)
 ) COMMENT='군인 혜택 및 청년 정책 — 휴가 혜택은 benefit_context=LEAVE로 관리'
