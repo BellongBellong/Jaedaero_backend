@@ -32,6 +32,15 @@
             #{appliedExpectedReturnRate}, #{appliedMonthlySpendingAmount},
             #{beforeExpectedAsset}, #{afterExpectedAsset}
         )
+        ON DUPLICATE KEY UPDATE
+            application_id = LAST_INSERT_ID(application_id),
+            ai_scenario_id = #{aiScenarioId},
+            applied_monthly_saving_amount = #{appliedMonthlySavingAmount},
+            applied_monthly_investment_amount = #{appliedMonthlyInvestmentAmount},
+            applied_expected_return_rate = #{appliedExpectedReturnRate},
+            applied_monthly_spending_amount = #{appliedMonthlySpendingAmount},
+            before_expected_asset = #{beforeExpectedAsset},
+            applied_at = CURRENT_TIMESTAMP
     </insert>
 
     <update id="updateAfterExpectedAsset">

@@ -43,7 +43,13 @@ class StrategyApplicationServiceImplTest {
     SequencedCashflowService cashflowService =
         new SequencedCashflowService(
             currentExpectedAsset,
-            List.of(15_000_000L, 16_500_000L, 16_500_000L, 17_200_000L));
+            List.of(
+                15_000_000L,
+                16_500_000L,
+                16_500_000L,
+                17_200_000L,
+                17_200_000L,
+                16_500_000L));
     StrategyApplicationService service =
         new StrategyApplicationServiceImpl(
             applicationMapper,
@@ -52,10 +58,12 @@ class StrategyApplicationServiceImplTest {
             objectMapper);
 
     StrategyApplicationResponse first = service.applyAiRecommendation(1L, 3L);
-    StrategyApplicationResponse duplicate = service.applyAiRecommendation(1L, 3L);
     aiAnalysisMapper.recommendation = recommendation(8L, 1L, 17_200_000L);
     aiAnalysisMapper.analysis = analysis(4L, 1L, 8L, objectMapper);
     StrategyApplicationResponse second = service.applyAiRecommendation(1L, 4L);
+    aiAnalysisMapper.recommendation = recommendation(7L, 1L, 16_500_000L);
+    aiAnalysisMapper.analysis = analysis(3L, 1L, 7L, objectMapper);
+    StrategyApplicationResponse reapplied = service.applyAiRecommendation(1L, 3L);
 
     assertEquals(StrategyApplicationSourceType.AI_RECOMMENDATION, first.getSourceType());
     assertEquals(3L, first.getAnalysisId());
@@ -67,14 +75,16 @@ class StrategyApplicationServiceImplTest {
     assertEquals(180_000L, first.getAppliedMonthlySpendingAmount());
     assertEquals(15_000_000L, first.getBeforeExpectedAsset());
     assertEquals(16_500_000L, first.getAfterExpectedAsset());
-    assertEquals(first.getApplicationId(), duplicate.getApplicationId());
     assertEquals(16_500_000L, second.getBeforeExpectedAsset());
     assertEquals(17_200_000L, second.getAfterExpectedAsset());
-    assertEquals(4, cashflowService.generateCount);
+    assertEquals(first.getApplicationId(), reapplied.getApplicationId());
+    assertEquals(17_200_000L, reapplied.getBeforeExpectedAsset());
+    assertEquals(16_500_000L, reapplied.getAfterExpectedAsset());
+    assertEquals(6, cashflowService.generateCount);
 
     List<StrategyApplicationResponse> history = service.getHistory(1L, 0, 1);
     assertEquals(1, history.size());
-    assertEquals(second.getApplicationId(), history.get(0).getApplicationId());
+    assertEquals(first.getApplicationId(), history.get(0).getApplicationId());
   }
 
   @Test
@@ -208,11 +218,25 @@ class StrategyApplicationServiceImplTest {
       implements StrategyApplicationMapper {
 
     private final List<StrategyApplicationVo> applications = new ArrayList<>();
+    private int appliedSequence;
 
     @Override
     public int insert(StrategyApplicationVo application) {
+      StrategyApplicationVo existing =
+          findByAnalysisIdAndUserId(application.getAnalysisId(), application.getUserId());
+      if (existing != null) {
+        application.setApplicationId(existing.getApplicationId());
+        existing.setAiScenarioId(application.getAiScenarioId());
+        existing.setAppliedMonthlySavingAmount(application.getAppliedMonthlySavingAmount());
+        existing.setAppliedMonthlyInvestmentAmount(application.getAppliedMonthlyInvestmentAmount());
+        existing.setAppliedExpectedReturnRate(application.getAppliedExpectedReturnRate());
+        existing.setAppliedMonthlySpendingAmount(application.getAppliedMonthlySpendingAmount());
+        existing.setBeforeExpectedAsset(application.getBeforeExpectedAsset());
+        existing.setAppliedAt(LocalDateTime.of(2026, 8, 3, 12, appliedSequence++));
+        return 1;
+      }
       application.setApplicationId((long) applications.size() + 1);
-      application.setAppliedAt(LocalDateTime.of(2026, 8, 3, 12, applications.size()));
+      application.setAppliedAt(LocalDateTime.of(2026, 8, 3, 12, appliedSequence++));
       applications.add(application);
       return 1;
     }
@@ -254,7 +278,9 @@ class StrategyApplicationServiceImplTest {
     public StrategyApplicationVo findLatestByUserId(long userId) {
       return applications.stream()
           .filter(application -> application.getUserId() == userId)
-          .max(Comparator.comparing(StrategyApplicationVo::getApplicationId))
+          .max(
+              Comparator.comparing(StrategyApplicationVo::getAppliedAt)
+                  .thenComparing(StrategyApplicationVo::getApplicationId))
           .orElse(null);
     }
 
@@ -294,7 +320,10 @@ class StrategyApplicationServiceImplTest {
         long userId, long offset, int limit) {
       return applications.stream()
           .filter(application -> application.getUserId() == userId)
-          .sorted(Comparator.comparing(StrategyApplicationVo::getApplicationId).reversed())
+          .sorted(
+              Comparator.comparing(StrategyApplicationVo::getAppliedAt)
+                  .thenComparing(StrategyApplicationVo::getApplicationId)
+                  .reversed())
           .skip(offset)
           .limit(limit)
           .toList();
