@@ -68,8 +68,13 @@ public class ProductRecommendationService {
         context == null
             ? dashboardMapper.findActualDischargeDateByUserId(userId)
             : context.financialDischargeDate();
+    RecommendationAllocation allocation =
+        context == null
+            ? null
+            : recommendationAllocation(
+                context.expectedReturnRate(), preference, dischargeDate, overviewDate(overview, asOfDate));
     List<PersonalizedEtfRecommendation> personalized =
-        preference == null || plan == null || monthlyInvestmentBudget == null
+        preference == null || monthlyInvestmentBudget == null
             ? List.of()
             : personalized(
                 overview.items(),
@@ -77,7 +82,8 @@ public class ProductRecommendationService {
                 plan,
                 monthlyInvestmentBudget,
                 dischargeDate,
-                overviewDate(overview, asOfDate));
+                overviewDate(overview, asOfDate),
+                allocation);
     return new ProductRecommendationResponse(
         overview.requestedAsOfDate(),
         overview.asOfDate(),
@@ -89,7 +95,8 @@ public class ProductRecommendationService {
         context == null ? null : context.analysisId(),
         context == null ? null : context.simulationId(),
         context == null ? null : context.expectedReturnRate(),
-        context == null ? null : context.financialDischargeDate());
+        context == null ? null : context.financialDischargeDate(),
+        allocation);
   }
 
   private List<PersonalizedEtfRecommendation> personalized(
@@ -98,25 +105,28 @@ public class ProductRecommendationService {
       RecurringInvestmentPlanVo plan,
       long monthlyInvestmentBudget,
       LocalDate dischargeDate,
-      LocalDate dataReferenceDate) {
+      LocalDate dataReferenceDate,
+      RecommendationAllocation allocation) {
     RecommendationScoreReference reference = RecommendationScoreReference.from(items, riskClassifier);
     String heldIndex =
-        items.stream()
+        plan == null
+            ? null
+            : items.stream()
             .map(EtfMarketOverviewItem::etf)
             .filter(etf -> sameCode(etf.isuCd(), plan.getInvestmentProductCode()))
             .map(com.jaedaero.domain.investment.etf.EtfDailyTradingInfo::idxIndNm)
             .filter(Objects::nonNull)
             .findFirst()
             .orElse(null);
-    return items.stream()
+    List<PersonalizedEtfRecommendation> candidates = items.stream()
         .map(
             item ->
-                personalized(
-                    item.etf(), preference, plan, monthlyInvestmentBudget, heldIndex, dischargeDate, dataReferenceDate, reference))
+                personalized(item.etf(), preference, plan, monthlyInvestmentBudget, heldIndex, dischargeDate,
+                    dataReferenceDate, reference, allocation))
         .filter(java.util.Objects::nonNull)
         .sorted(Comparator.comparingInt(PersonalizedEtfRecommendation::suitabilityScore).reversed())
-        .limit(5)
         .toList();
+    return allocation == null ? candidates.stream().limit(5).toList() : selectByAllocation(candidates, allocation);
   }
 
   private PersonalizedEtfRecommendation personalized(
@@ -127,22 +137,32 @@ public class ProductRecommendationService {
       String heldIndex,
       LocalDate dischargeDate,
       LocalDate dataReferenceDate,
-      RecommendationScoreReference reference) {
+      RecommendationScoreReference reference,
+      RecommendationAllocation allocation) {
     EtfRiskClassification classification = riskClassifier.classify(etf);
     if (!classification.eligibleForRecommendation()) return null;
     List<String> reasons = new ArrayList<>(classification.classificationReasons());
     List<String> warnings = new ArrayList<>();
-    int assetAllocationScore = assetAllocationScore(preference, classification.assetBucket());
+    int assetAllocationScore = assetAllocationScore(preference, classification.assetBucket(), allocation);
     int riskLevelScore = riskLevelScore(preference, classification.riskLevel());
     int liquidityScore = reference.liquidityScore(etf);
     int navGapScore = navGapScore(etf);
     int sizeScore = reference.sizeScore(etf);
     int adjustmentScore = 0;
     reasons.add("목표 자산군 적합도 " + assetAllocationScore + "/40점, 위험등급 적합도 " + riskLevelScore + "/25점입니다.");
+    if (allocation != null) {
+      reasons.add(
+          "What-if 목표 수익률을 반영해 안전 "
+              + allocation.safePercentage()
+              + "% / 위험 "
+              + allocation.riskPercentage()
+              + "% 비중으로 추천합니다.");
+    }
     reasons.add("거래대금 기준 유동성 " + liquidityScore + "/15점, 시가총액 기준 규모 " + sizeScore + "/10점입니다.");
     reasons.add(navGapReason(etf, navGapScore));
-    if (sameCode(etf.isuCd(), plan.getInvestmentProductCode())
-        || sameIndex(etf.idxIndNm(), heldIndex)) {
+    if (plan != null
+        && (sameCode(etf.isuCd(), plan.getInvestmentProductCode())
+            || sameIndex(etf.idxIndNm(), heldIndex))) {
       adjustmentScore -= 40;
       warnings.add("현재 적립 계획과 동일한 ETF입니다. 분산투자 관점에서 우선순위를 낮췄습니다.");
     }
@@ -176,6 +196,8 @@ public class ProductRecommendationService {
     return new PersonalizedEtfRecommendation(
         etf.isuCd(),
         etf.isuNm(),
+        classification.assetBucket(),
+        classification.riskLevel(),
         Math.max(0, breakdown.totalBeforeAdjustment() + adjustmentScore),
         breakdown,
         budget,
@@ -183,12 +205,57 @@ public class ProductRecommendationService {
         List.copyOf(warnings));
   }
 
-  private int assetAllocationScore(InvestmentPreference preference, AssetBucket assetBucket) {
+  private int assetAllocationScore(
+      InvestmentPreference preference,
+      AssetBucket assetBucket,
+      RecommendationAllocation allocation) {
+    if (allocation != null) {
+      int percentage = assetBucket == AssetBucket.SAFE
+          ? allocation.safePercentage()
+          : assetBucket == AssetBucket.RISK ? allocation.riskPercentage() : 0;
+      return Math.round(40 * percentage / 100.0f);
+    }
     return switch (preference) {
       case SAFE -> assetBucket == AssetBucket.SAFE ? 40 : 5;
       case BALANCED -> assetBucket == AssetBucket.SAFE ? 30 : 35;
       case AGGRESSIVE -> assetBucket == AssetBucket.RISK ? 40 : 15;
     };
+  }
+
+  private RecommendationAllocation recommendationAllocation(
+      BigDecimal expectedReturnRate,
+      InvestmentPreference preference,
+      LocalDate dischargeDate,
+      LocalDate dataReferenceDate) {
+    double expectedReturn = expectedReturnRate == null ? 5.0 : expectedReturnRate.doubleValue();
+    int riskPercentage = expectedReturn <= 5 ? 20 : expectedReturn <= 8 ? 50 : expectedReturn <= 10 ? 70 : 90;
+    int preferenceRiskCap =
+        preference == null
+            ? 100
+            : switch (preference) {
+              case SAFE -> 30;
+              case BALANCED -> 60;
+              case AGGRESSIVE -> 100;
+            };
+    int dischargeRiskCap = 100;
+    if (dischargeDate != null) {
+      long daysUntilDischarge = ChronoUnit.DAYS.between(dataReferenceDate, dischargeDate);
+      if (daysUntilDischarge <= 180) dischargeRiskCap = 30;
+      else if (daysUntilDischarge <= 365) dischargeRiskCap = 60;
+    }
+    riskPercentage = Math.min(riskPercentage, Math.min(preferenceRiskCap, dischargeRiskCap));
+    return new RecommendationAllocation(100 - riskPercentage, riskPercentage);
+  }
+
+  private List<PersonalizedEtfRecommendation> selectByAllocation(
+      List<PersonalizedEtfRecommendation> candidates, RecommendationAllocation allocation) {
+    int recommendationLimit = 5;
+    int riskCount = Math.round(recommendationLimit * allocation.riskPercentage() / 100.0f);
+    List<PersonalizedEtfRecommendation> selected = new ArrayList<>();
+    candidates.stream().filter(item -> item.assetBucket() == AssetBucket.RISK).limit(riskCount).forEach(selected::add);
+    candidates.stream().filter(item -> item.assetBucket() == AssetBucket.SAFE).limit(recommendationLimit - selected.size()).forEach(selected::add);
+    candidates.stream().filter(item -> !selected.contains(item)).limit(recommendationLimit - selected.size()).forEach(selected::add);
+    return selected.stream().sorted(Comparator.comparingInt(PersonalizedEtfRecommendation::suitabilityScore).reversed()).toList();
   }
 
   private int riskLevelScore(InvestmentPreference preference, RiskLevel riskLevel) {
