@@ -62,3 +62,4 @@ tmp/
 
 ### Subagent-driven-development scratch workspace ###
 .superpowers/
+/graphify-out
