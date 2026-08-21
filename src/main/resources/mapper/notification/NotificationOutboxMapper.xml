@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.notification.mapper.NotificationOutboxMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="outboxId">
+        INSERT INTO notification_outbox (
+            event_id, notification_id, campaign_id, dedupe_key, available_at
+        ) VALUES (
+            #{eventId}, #{notificationId}, #{campaignId}, #{dedupeKey}, #{availableAt}
+        )
+        ON DUPLICATE KEY UPDATE outbox_id = LAST_INSERT_ID(outbox_id)
+    </insert>
+
+    <select id="findById"
+            resultType="com.jaedaero.domain.notification.vo.NotificationOutboxVo">
+        SELECT outbox_id, event_id, notification_id, campaign_id, dedupe_key, status,
+               publish_attempts, available_at, claimed_at, published_at, last_error,
+               created_at, updated_at
+        FROM notification_outbox
+        WHERE outbox_id = #{outboxId}
+    </select>
+
+    <select id="findClaimableForUpdate"
+            resultType="com.jaedaero.domain.notification.vo.NotificationOutboxVo">
+        SELECT outbox_id, event_id, notification_id, campaign_id, dedupe_key, status,
+               publish_attempts, available_at, claimed_at, published_at, last_error,
+               created_at, updated_at
+        FROM notification_outbox
+        WHERE status IN ('PENDING', 'FAILED')
+          AND available_at &lt;= #{now}
+          AND publish_attempts &lt; #{maxAttempts}
+        ORDER BY outbox_id
+        LIMIT #{limit}
+        FOR UPDATE SKIP LOCKED
+    </select>
+
+    <update id="markProcessing">
+        UPDATE notification_outbox
+        SET status = 'PROCESSING',
+            publish_attempts = publish_attempts + 1,
+            claimed_at = #{claimedAt},
+            last_error = NULL
+        WHERE outbox_id = #{outboxId}
+          AND status IN ('PENDING', 'FAILED')
+    </update>
+
+    <update id="markPublished">
+        UPDATE notification_outbox
+        SET status = 'PUBLISHED',
+            published_at = #{publishedAt},
+            last_error = NULL
+        WHERE outbox_id = #{outboxId}
+    </update>
+
+    <update id="markRetry">
+        UPDATE notification_outbox
+        SET status = <choose><when test="terminal">'FAILED'</when><otherwise>'PENDING'</otherwise></choose>,
+            available_at = #{availableAt},
+            last_error = #{lastError}
+        WHERE outbox_id = #{outboxId}
+    </update>
+
+    <update id="resetStaleProcessing">
+        UPDATE notification_outbox
+        SET status = 'PENDING',
+            available_at = #{availableAt},
+            last_error = 'stale publisher claim recovered'
+        WHERE status = 'PROCESSING'
+          AND claimed_at &lt; #{staleBefore}
+    </update>
+</mapper>

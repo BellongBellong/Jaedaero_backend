@@ -15,6 +15,9 @@ SET time_zone = '+09:00';
 -- Drop existing tables in reverse dependency order
 -- ---------------------------------------------
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `notification_outbox`;
+DROP TABLE IF EXISTS `notification_campaign_receipt`;
+DROP TABLE IF EXISTS `notification_campaign`;
 DROP TABLE IF EXISTS `notification_history`;
 DROP TABLE IF EXISTS `device_token`;
 DROP TABLE IF EXISTS `daily_market_report_source`;
@@ -1143,6 +1146,8 @@ CREATE TABLE device_token (
                               created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
                               updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
 
+                              INDEX idx_device_token_user_active (user_id, is_active),
+
                               CONSTRAINT uq_device_token_fcm
                                   UNIQUE (fcm_token),
                               CONSTRAINT fk_device_token_user
@@ -1153,21 +1158,108 @@ CREATE TABLE device_token (
     COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------
--- 33. notification_history : 알림 발송 이력
+-- 33. notification_history : 사용자별 알림 및 Push 발송 상태
 -- ---------------------------------------------
 CREATE TABLE notification_history (
                                       notification_id    BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '알림 ID',
                                       user_id             BIGINT NOT NULL COMMENT '사용자 ID',
-                                      notification_type   VARCHAR(50) NOT NULL COMMENT '알림 유형(DAILY_MARKET_REPORT, LEAVE_REMINDER, MISSION, SYNC_DONE 등)',
+                                      notification_type   VARCHAR(50) NOT NULL COMMENT '알림 유형',
                                       title                VARCHAR(255) NOT NULL COMMENT '알림 제목',
                                       body                 VARCHAR(500) NULL COMMENT '알림 본문',
+                                      deep_link            VARCHAR(500) NULL COMMENT '클라이언트 이동 경로',
+                                      dedupe_key           VARCHAR(200) NOT NULL COMMENT '알림 중복 방지 키',
                                       is_read              BOOLEAN NOT NULL DEFAULT FALSE COMMENT '읽음 여부',
-                                      sent_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '발송 일시',
+                                      push_status          ENUM('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'SKIPPED') NOT NULL DEFAULT 'PENDING' COMMENT 'Push 발송 상태',
+                                      push_attempts        INT NOT NULL DEFAULT 0 COMMENT 'Push 발송 시도 횟수',
+                                      sent_at              TIMESTAMP NULL COMMENT 'FCM 발송 완료 일시',
                                       read_at              TIMESTAMP NULL COMMENT '읽은 일시',
+                                      created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                                      updated_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                      CONSTRAINT uq_notification_history_dedupe UNIQUE (dedupe_key),
+                                      INDEX idx_notification_history_user_created (user_id, created_at DESC, notification_id DESC),
+                                      INDEX idx_notification_history_user_unread (user_id, is_read),
 
                                       CONSTRAINT fk_notification_history_user
                                           FOREIGN KEY (user_id) REFERENCES users(user_id)
                                               ON DELETE CASCADE
-) COMMENT='알림 발송 이력 — FCM + Redis Streams 기반 발송'
+) COMMENT='개인 알림함과 FCM 발송 상태'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 34. notification_campaign : 전체 사용자 공통 알림
+-- ---------------------------------------------
+CREATE TABLE notification_campaign (
+                                       campaign_id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '전체 알림 ID',
+                                       notification_type   VARCHAR(50) NOT NULL COMMENT '알림 유형',
+                                       title               VARCHAR(255) NOT NULL COMMENT '알림 제목',
+                                       body                VARCHAR(500) NULL COMMENT '알림 본문',
+                                       deep_link           VARCHAR(500) NULL COMMENT '클라이언트 이동 경로',
+                                       topic               VARCHAR(200) NOT NULL COMMENT 'FCM Topic',
+                                       dedupe_key          VARCHAR(200) NOT NULL COMMENT '중복 방지 키',
+                                       push_status         ENUM('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'SKIPPED') NOT NULL DEFAULT 'PENDING' COMMENT 'Push 발송 상태',
+                                       push_attempts       INT NOT NULL DEFAULT 0 COMMENT 'Push 발송 시도 횟수',
+                                       visible_from        TIMESTAMP NOT NULL COMMENT '알림함 노출 시작',
+                                       visible_until       TIMESTAMP NULL COMMENT '알림함 노출 종료',
+                                       sent_at             TIMESTAMP NULL COMMENT 'FCM 발송 완료 일시',
+                                       created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                                       updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                       CONSTRAINT uq_notification_campaign_dedupe UNIQUE (dedupe_key),
+                                       INDEX idx_notification_campaign_visible (visible_from, visible_until, created_at)
+) COMMENT='Topic으로 발송하고 사용자별 행을 미리 만들지 않는 공통 알림'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 35. notification_campaign_receipt : 공통 알림 읽음 상태
+-- ---------------------------------------------
+CREATE TABLE notification_campaign_receipt (
+                                                campaign_id BIGINT NOT NULL COMMENT '전체 알림 ID',
+                                                user_id     BIGINT NOT NULL COMMENT '사용자 ID',
+                                                read_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '읽은 일시',
+
+                                                PRIMARY KEY (campaign_id, user_id),
+                                                CONSTRAINT fk_notification_campaign_receipt_campaign
+                                                    FOREIGN KEY (campaign_id) REFERENCES notification_campaign(campaign_id)
+                                                        ON DELETE CASCADE,
+                                                CONSTRAINT fk_notification_campaign_receipt_user
+                                                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                                                        ON DELETE CASCADE
+) COMMENT='전체 공통 알림의 사용자별 읽음 상태'
+    DEFAULT CHARSET=utf8mb4
+    COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------
+-- 36. notification_outbox : Redis Stream 발행 원본
+-- ---------------------------------------------
+CREATE TABLE notification_outbox (
+                                     outbox_id        BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'Outbox ID',
+                                     event_id         CHAR(36) NOT NULL COMMENT '이벤트 UUID',
+                                     notification_id  BIGINT NULL COMMENT '개인 알림 ID',
+                                     campaign_id      BIGINT NULL COMMENT '전체 알림 ID',
+                                     dedupe_key       VARCHAR(200) NOT NULL COMMENT 'Outbox 중복 방지 키',
+                                     status           ENUM('PENDING', 'PROCESSING', 'PUBLISHED', 'FAILED') NOT NULL DEFAULT 'PENDING' COMMENT 'Stream 발행 상태',
+                                     publish_attempts INT NOT NULL DEFAULT 0 COMMENT 'Stream 발행 시도 횟수',
+                                     available_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '다음 발행 가능 시각',
+                                     claimed_at       TIMESTAMP NULL COMMENT 'Publisher claim 시각',
+                                     published_at     TIMESTAMP NULL COMMENT 'Stream 발행 완료 시각',
+                                     last_error       VARCHAR(500) NULL COMMENT '최근 발행 실패 원인',
+                                     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+                                     updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 일시',
+
+                                     CONSTRAINT uq_notification_outbox_event UNIQUE (event_id),
+                                     CONSTRAINT uq_notification_outbox_dedupe UNIQUE (dedupe_key),
+                                     INDEX idx_notification_outbox_publish (status, available_at, outbox_id),
+                                     CONSTRAINT chk_notification_outbox_target
+                                         CHECK ((notification_id IS NOT NULL) <> (campaign_id IS NOT NULL)),
+                                     CONSTRAINT fk_notification_outbox_notification
+                                         FOREIGN KEY (notification_id) REFERENCES notification_history(notification_id)
+                                             ON DELETE CASCADE,
+                                     CONSTRAINT fk_notification_outbox_campaign
+                                         FOREIGN KEY (campaign_id) REFERENCES notification_campaign(campaign_id)
+                                             ON DELETE CASCADE
+) COMMENT='DB 트랜잭션과 Redis XADD 사이의 유실을 막는 Transactional Outbox'
     DEFAULT CHARSET=utf8mb4
     COLLATE=utf8mb4_unicode_ci;

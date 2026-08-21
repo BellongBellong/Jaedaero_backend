@@ -40,4 +40,7 @@ public interface ChallengeGroupMapper {
       @Param("groupId") long groupId,
       @Param("rankingPeriod") RankingPeriod rankingPeriod,
       @Param("resultMonth") LocalDate resultMonth);
+
+  /** 현재 누적 미션 완료 수 기준 사용자의 동기 그룹 순위를 조회합니다. */
+  Integer findCurrentOverallRankByUserId(@Param("userId") long userId);
 }

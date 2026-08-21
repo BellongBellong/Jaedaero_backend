@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.notification.mapper.DeviceTokenMapper">
+    <resultMap id="deviceTokenResultMap" type="com.jaedaero.domain.notification.vo.DeviceTokenVo">
+        <id property="deviceTokenId" column="device_token_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="fcmToken" column="fcm_token"/>
+        <result property="deviceType" column="device_type"
+                javaType="com.jaedaero.domain.notification.common.DeviceType"/>
+        <result property="active" column="is_active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <insert id="upsert" useGeneratedKeys="true" keyProperty="deviceTokenId">
+        INSERT INTO device_token (user_id, fcm_token, device_type, is_active)
+        VALUES (#{userId}, #{fcmToken}, #{deviceType}, TRUE)
+        ON DUPLICATE KEY UPDATE
+            device_token_id = LAST_INSERT_ID(device_token_id),
+            user_id = VALUES(user_id),
+            device_type = VALUES(device_type),
+            is_active = TRUE
+    </insert>
+
+    <select id="findByFcmToken" resultMap="deviceTokenResultMap">
+        SELECT device_token_id, user_id, fcm_token, device_type, is_active, created_at, updated_at
+        FROM device_token
+        WHERE fcm_token = #{fcmToken}
+    </select>
+
+    <select id="findActiveByUserId" resultMap="deviceTokenResultMap">
+        SELECT device_token_id, user_id, fcm_token, device_type, is_active, created_at, updated_at
+        FROM device_token
+        WHERE user_id = #{userId}
+          AND is_active = TRUE
+        ORDER BY device_token_id
+    </select>
+
+    <update id="deactivateByIdAndUserId">
+        UPDATE device_token
+        SET is_active = FALSE
+        WHERE device_token_id = #{deviceTokenId}
+          AND user_id = #{userId}
+          AND is_active = TRUE
+    </update>
+
+    <update id="deactivateByFcmToken">
+        UPDATE device_token
+        SET is_active = FALSE
+        WHERE fcm_token = #{fcmToken}
+          AND is_active = TRUE
+    </update>
+</mapper>

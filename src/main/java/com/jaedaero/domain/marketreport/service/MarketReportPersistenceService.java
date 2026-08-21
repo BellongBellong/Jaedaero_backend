@@ -11,6 +11,7 @@ import com.jaedaero.domain.marketreport.vo.DailyMarketReportVo;
 import java.util.List;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 외부 수집·생성 결과를 짧은 원자적 저장 구간에서 리포트와 함께 반영한다. */
@@ -20,14 +21,26 @@ public class MarketReportPersistenceService {
   private final DailyMarketReportMapper reportMapper;
   private final DailyMarketIndicatorMapper indicatorMapper;
   private final DailyMarketReportSourceMapper sourceMapper;
+  private final MarketReportPublishedNotifier publishedNotifier;
 
+  @Autowired
+  public MarketReportPersistenceService(
+      DailyMarketReportMapper reportMapper,
+      DailyMarketIndicatorMapper indicatorMapper,
+      DailyMarketReportSourceMapper sourceMapper,
+      MarketReportPublishedNotifier publishedNotifier) {
+    this.reportMapper = reportMapper;
+    this.indicatorMapper = indicatorMapper;
+    this.sourceMapper = sourceMapper;
+    this.publishedNotifier = publishedNotifier;
+  }
+
+  /** 알림과 무관한 단위 테스트를 위한 생성자입니다. */
   public MarketReportPersistenceService(
       DailyMarketReportMapper reportMapper,
       DailyMarketIndicatorMapper indicatorMapper,
       DailyMarketReportSourceMapper sourceMapper) {
-    this.reportMapper = reportMapper;
-    this.indicatorMapper = indicatorMapper;
-    this.sourceMapper = sourceMapper;
+    this(reportMapper, indicatorMapper, sourceMapper, MarketReportPublishedNotifier.noop());
   }
 
   @Transactional
@@ -49,6 +62,7 @@ public class MarketReportPersistenceService {
     for (int index = 0; index < sources.size(); index++) {
       sourceMapper.insert(toSourceVo(reportId, index + 1, sources.get(index)));
     }
+    publishedNotifier.notifyPublished(report);
   }
 
   /** 기존 본문·출처는 유지하고, 해당 날짜의 지표 스냅샷과 전체 상태만 갱신합니다. */
