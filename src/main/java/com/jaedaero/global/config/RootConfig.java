@@ -55,6 +55,7 @@ import org.springframework.web.client.RestTemplate;
 )
 @Import(DotenvConfig.class)
 public class RootConfig {
+    private static final String KST_DB_SESSION_SQL = "SET time_zone = '+09:00'";
 
     @Bean
     public Clock applicationClock() {
@@ -107,6 +108,7 @@ public class RootConfig {
         config.setJdbcUrl(url);                    // 데이터베이스 URL
         config.setUsername(username);              // 사용자명
         config.setPassword(password);              // 비밀번호
+        config.setConnectionInitSql(KST_DB_SESSION_SQL); // 모든 DB 세션을 한국시간으로 고정
 
         // 커넥션 풀 추가 설정 (선택사항)
         config.setMaximumPoolSize(10);             // 최대 커넥션 수
