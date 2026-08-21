@@ -6,10 +6,13 @@ import com.jaedaero.domain.challenge.dto.MissionResponse;
 import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.MissionMapper;
+import com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper;
 import com.jaedaero.domain.challenge.service.MissionService;
 import com.jaedaero.domain.challenge.vo.BadgeVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
+import com.jaedaero.domain.notification.common.NotificationType;
+import com.jaedaero.domain.notification.service.NotificationCommandService;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class MissionServiceImpl implements MissionService {
 
   private final MissionMapper missionMapper;
+  private final ChallengeGroupMapper challengeGroupMapper;
+  private final NotificationCommandService notificationCommandService;
   private final Clock applicationClock;
 
   /** 오늘 사용자에게 노출할 미션 목록을 조회합니다. */
@@ -54,11 +59,21 @@ public class MissionServiceImpl implements MissionService {
     }
 
     LocalDate completionDate = LocalDate.now(applicationClock);
+    Integer previousRank = challengeGroupMapper.findCurrentOverallRankByUserId(userId);
     missionMapper.insertCompletion(userId, missionId, completionDate);
 
     InvestmentBadgeStatusVo badgeStatus = updateInvestmentBadge(userId, mission.getMissionType());
     missionMapper.incrementMonthlyChallengeMissionCount(userId);
     missionMapper.incrementTotalChallengeMissionCount(userId);
+
+    notificationCommandService.createUserNotification(
+        userId,
+        NotificationType.MISSION_COMPLETED,
+        "미션을 달성했어요",
+        mission.getTitle() + " 미션을 완료했습니다.",
+        "/missions/today",
+        "mission-completed:" + userId + ":" + missionId + ":" + completionDate);
+    notifyRankingRise(userId, missionId, completionDate, previousRank);
 
     return MissionCompletionResponse.builder()
         .missionId(missionId)
@@ -69,6 +84,28 @@ public class MissionServiceImpl implements MissionService {
         .aggressiveMissionCount(badgeStatus.getAggressiveCount())
         .aggressiveGrade(badgeStatus.getAggressiveGrade())
         .build();
+  }
+
+  private void notifyRankingRise(
+      long userId, long missionId, LocalDate completionDate, Integer previousRank) {
+    Integer currentRank = challengeGroupMapper.findCurrentOverallRankByUserId(userId);
+    if (previousRank == null || currentRank == null || currentRank >= previousRank) {
+      return;
+    }
+    notificationCommandService.createUserNotification(
+        userId,
+        NotificationType.RANKING_RISEN,
+        "동기 랭킹이 올랐어요",
+        previousRank + "위에서 " + currentRank + "위로 상승했습니다.",
+        "/challenges/ranking",
+        "ranking-risen:"
+            + userId
+            + ":"
+            + missionId
+            + ":"
+            + completionDate
+            + ":"
+            + currentRank);
   }
 
   /** 오늘 노출할 지원 화면 연결 미션을 한 번의 조회로 가져옵니다. */

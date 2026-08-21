@@ -185,4 +185,27 @@
             MAX(updated_at) AS last_updated_at
         FROM ranked_members
     </select>
+
+    <select id="findCurrentOverallRankByUserId" resultType="int">
+        SELECT ranked.ranking_no
+        FROM (
+            SELECT
+                cm.user_id,
+                ROW_NUMBER() OVER (
+                    ORDER BY COALESCE(cms.total_mission_count, 0) DESC, cm.member_id ASC
+                ) AS ranking_no
+            FROM challenge_member cm
+            INNER JOIN users member_user ON member_user.user_id = cm.user_id
+            LEFT JOIN challenge_member_summary cms ON cms.member_id = cm.member_id
+            WHERE cm.group_id = (
+                SELECT current_member.group_id
+                FROM challenge_member current_member
+                WHERE current_member.user_id = #{userId}
+                ORDER BY current_member.joined_at DESC
+                LIMIT 1
+            )
+              AND member_user.is_withdrawn = FALSE
+        ) ranked
+        WHERE ranked.user_id = #{userId}
+    </select>
 </mapper>

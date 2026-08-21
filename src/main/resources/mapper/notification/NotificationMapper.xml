@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jaedaero.domain.notification.mapper.NotificationMapper">
+    <insert id="insertNotification" useGeneratedKeys="true" keyProperty="notificationId">
+        INSERT INTO notification_history (
+            user_id, notification_type, title, body, deep_link, dedupe_key
+        ) VALUES (
+            #{userId}, #{notificationType}, #{title}, #{body}, #{deepLink}, #{dedupeKey}
+        )
+        ON DUPLICATE KEY UPDATE
+            notification_id = LAST_INSERT_ID(notification_id)
+    </insert>
+
+    <insert id="insertCampaign" useGeneratedKeys="true" keyProperty="campaignId">
+        INSERT INTO notification_campaign (
+            notification_type, title, body, deep_link, topic, dedupe_key,
+            visible_from, visible_until
+        ) VALUES (
+            #{notificationType}, #{title}, #{body}, #{deepLink}, #{topic}, #{dedupeKey},
+            #{visibleFrom}, #{visibleUntil}
+        )
+        ON DUPLICATE KEY UPDATE
+            campaign_id = LAST_INSERT_ID(campaign_id),
+            title = VALUES(title),
+            body = VALUES(body),
+            deep_link = VALUES(deep_link),
+            topic = VALUES(topic),
+            visible_from = VALUES(visible_from),
+            visible_until = VALUES(visible_until)
+    </insert>
+
+    <select id="findNotificationById"
+            resultType="com.jaedaero.domain.notification.vo.NotificationVo">
+        SELECT notification_id, user_id, notification_type, title, body, deep_link, dedupe_key,
+               is_read AS `read`, push_status, push_attempts, sent_at, read_at, created_at, updated_at
+        FROM notification_history
+        WHERE notification_id = #{notificationId}
+    </select>
+
+    <select id="findCampaignById"
+            resultType="com.jaedaero.domain.notification.vo.NotificationCampaignVo">
+        SELECT campaign_id, notification_type, title, body, deep_link, topic, dedupe_key,
+               push_status, push_attempts, visible_from, visible_until, sent_at, created_at, updated_at
+        FROM notification_campaign
+        WHERE campaign_id = #{campaignId}
+    </select>
+
+    <sql id="feedUnion">
+        SELECT
+            CONCAT('N', notification.notification_id) AS notification_key,
+            notification.notification_type,
+            notification.title,
+            notification.body,
+            notification.deep_link,
+            notification.is_read AS `read`,
+            notification.created_at
+        FROM notification_history notification
+        WHERE notification.user_id = #{userId}
+
+        UNION ALL
+
+        SELECT
+            CONCAT('C', campaign.campaign_id) AS notification_key,
+            campaign.notification_type,
+            campaign.title,
+            campaign.body,
+            campaign.deep_link,
+            receipt.user_id IS NOT NULL AS `read`,
+            campaign.created_at
+        FROM notification_campaign campaign
+        LEFT JOIN notification_campaign_receipt receipt
+            ON receipt.campaign_id = campaign.campaign_id
+           AND receipt.user_id = #{userId}
+        WHERE campaign.visible_from &lt;= #{now}
+          AND (campaign.visible_until IS NULL OR campaign.visible_until &gt;= #{now})
+    </sql>
+
+    <select id="findFeed" resultType="com.jaedaero.domain.notification.vo.NotificationFeedRow">
+        SELECT notification_key, notification_type, title, body, deep_link, `read`, created_at
+        FROM (
+            <include refid="feedUnion"/>
+        ) feed
+        ORDER BY created_at DESC, notification_key DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countFeed" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="feedUnion"/>
+        ) feed
+    </select>
+
+    <select id="countUnread" resultType="long">
+        SELECT
+            (SELECT COUNT(*)
+             FROM notification_history
+             WHERE user_id = #{userId}
+               AND is_read = FALSE)
+            +
+            (SELECT COUNT(*)
+             FROM notification_campaign campaign
+             WHERE campaign.visible_from &lt;= #{now}
+               AND (campaign.visible_until IS NULL OR campaign.visible_until &gt;= #{now})
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM notification_campaign_receipt receipt
+                   WHERE receipt.campaign_id = campaign.campaign_id
+                     AND receipt.user_id = #{userId}
+               ))
+    </select>
+
+    <update id="markNotificationRead">
+        UPDATE notification_history
+        SET is_read = TRUE,
+            read_at = COALESCE(read_at, #{readAt})
+        WHERE notification_id = #{notificationId}
+          AND user_id = #{userId}
+    </update>
+
+    <insert id="insertCampaignReceipt">
+        INSERT INTO notification_campaign_receipt (campaign_id, user_id, read_at)
+        SELECT campaign_id, #{userId}, #{readAt}
+        FROM notification_campaign
+        WHERE campaign_id = #{campaignId}
+          AND visible_from &lt;= #{readAt}
+          AND (visible_until IS NULL OR visible_until &gt;= #{readAt})
+        ON DUPLICATE KEY UPDATE read_at = VALUES(read_at)
+    </insert>
+
+    <update id="markAllNotificationsRead">
+        UPDATE notification_history
+        SET is_read = TRUE,
+            read_at = COALESCE(read_at, #{readAt})
+        WHERE user_id = #{userId}
+          AND is_read = FALSE
+    </update>
+
+    <insert id="markAllCampaignsRead">
+        INSERT IGNORE INTO notification_campaign_receipt (campaign_id, user_id, read_at)
+        SELECT campaign_id, #{userId}, #{readAt}
+        FROM notification_campaign
+        WHERE visible_from &lt;= #{now}
+          AND (visible_until IS NULL OR visible_until &gt;= #{now})
+    </insert>
+
+    <update id="markNotificationProcessing">
+        UPDATE notification_history
+        SET push_status = 'PROCESSING',
+            push_attempts = push_attempts + 1
+        WHERE notification_id = #{notificationId}
+          AND push_status IN ('PENDING', 'PROCESSING')
+          AND push_attempts = #{expectedAttempts}
+    </update>
+
+    <update id="markCampaignProcessing">
+        UPDATE notification_campaign
+        SET push_status = 'PROCESSING',
+            push_attempts = push_attempts + 1
+        WHERE campaign_id = #{campaignId}
+          AND push_status IN ('PENDING', 'PROCESSING')
+          AND push_attempts = #{expectedAttempts}
+    </update>
+
+    <update id="markNotificationSent">
+        UPDATE notification_history
+        SET push_status = #{status}, sent_at = #{sentAt}
+        WHERE notification_id = #{notificationId}
+    </update>
+
+    <update id="markCampaignSent">
+        UPDATE notification_campaign
+        SET push_status = #{status}, sent_at = #{sentAt}
+        WHERE campaign_id = #{campaignId}
+    </update>
+
+    <update id="markNotificationFailed">
+        UPDATE notification_history
+        SET push_status = 'FAILED'
+        WHERE notification_id = #{notificationId}
+    </update>
+
+    <update id="markCampaignFailed">
+        UPDATE notification_campaign
+        SET push_status = 'FAILED'
+        WHERE campaign_id = #{campaignId}
+    </update>
+
+    <select id="findDailyMissionTargetUserIds" resultType="long">
+        SELECT user.user_id
+        FROM users user
+        WHERE user.user_id &gt; #{lastUserId}
+          AND user.is_withdrawn = FALSE
+          AND EXISTS (
+              SELECT 1 FROM device_token token
+              WHERE token.user_id = user.user_id AND token.is_active = TRUE
+          )
+          AND EXISTS (
+              SELECT 1
+              FROM mission
+              WHERE mission.is_active = TRUE
+                AND (
+                    (
+                        mission.mission_category IN ('DAILY', 'RECOMMENDED')
+                        AND mission.action_type IN (
+                            'VIEW_MARKET_REPORT', 'VIEW_TRANSACTION_HISTORY',
+                            'VIEW_DEPOSIT_PRODUCT', 'VIEW_REBALANCING',
+                            'RUN_WHAT_IF_SIMULATION'
+                        )
+                        AND NOT EXISTS (
+                            SELECT 1 FROM user_mission_completion completion
+                            WHERE completion.user_id = user.user_id
+                              AND completion.mission_id = mission.mission_id
+                              AND completion.completion_date = CURDATE()
+                        )
+                    )
+                    OR (
+                        mission.mission_category = 'ONE_TIME'
+                        AND mission.action_type IN (
+                            'VIEW_MARKET_REPORT', 'VIEW_TRANSACTION_HISTORY',
+                            'VIEW_DEPOSIT_PRODUCT', 'VIEW_REBALANCING',
+                            'RUN_WHAT_IF_SIMULATION'
+                        )
+                        AND NOT EXISTS (
+                            SELECT 1 FROM user_mission_completion completion
+                            WHERE completion.user_id = user.user_id
+                              AND completion.mission_id = mission.mission_id
+                        )
+                    )
+                    OR (
+                        mission.mission_category = 'EVENT'
+                        AND (
+                            (mission.trigger_type = 'DAYS_TO_DISCHARGE'
+                             AND EXISTS (
+                                 SELECT 1 FROM soldier_profile profile
+                                 WHERE profile.user_id = user.user_id
+                                   AND DATEDIFF(profile.discharge_date, CURDATE()) = mission.trigger_value
+                             ))
+                            OR (mission.trigger_type = 'LEAVE_SCHEDULED'
+                                AND EXISTS (
+                                    SELECT 1 FROM leave_mode leave_status
+                                    WHERE leave_status.user_id = user.user_id
+                                      AND leave_status.is_leave_mode_enabled = TRUE
+                                      AND CURDATE() BETWEEN leave_status.start_date AND leave_status.end_date
+                                ))
+                            OR (mission.trigger_type = 'PAYDAY'
+                                AND DAY(CURDATE()) = mission.trigger_value)
+                        )
+                        AND NOT EXISTS (
+                            SELECT 1 FROM user_mission_completion completion
+                            WHERE completion.user_id = user.user_id
+                              AND completion.mission_id = mission.mission_id
+                              AND completion.completion_date = CURDATE()
+                        )
+                    )
+                )
+          )
+        ORDER BY user.user_id
+        LIMIT #{limit}
+    </select>
+
+    <select id="findActiveInvestmentPlanUserIds" resultType="long">
+        SELECT user.user_id
+        FROM users user
+        INNER JOIN recurring_investment_plan plan ON plan.user_id = user.user_id
+        WHERE user.user_id &gt; #{lastUserId}
+          AND user.is_withdrawn = FALSE
+          AND plan.status = 'ACTIVE'
+          AND EXISTS (
+              SELECT 1 FROM device_token token
+              WHERE token.user_id = user.user_id AND token.is_active = TRUE
+          )
+        ORDER BY user.user_id
+        LIMIT #{limit}
+    </select>
+</mapper>

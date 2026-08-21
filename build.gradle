@@ -57,6 +57,13 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.1'
 
+    // Redis Streams 알림 파이프라인
+    implementation 'org.springframework.data:spring-data-redis:2.7.18'
+    implementation 'io.lettuce:lettuce-core:6.2.6.RELEASE'
+
+    // Firebase Cloud Messaging
+    implementation 'com.google.firebase:firebase-admin:9.10.0'
+
     // Logging (SLF4J + Log4j2 console)
     implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
     runtimeOnly 'org.apache.logging.log4j:log4j-core:2.23.1'
