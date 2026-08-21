@@ -243,7 +243,7 @@ tasks.register('dbSeedMock') {
                 'badge_policy.sql',
                 'challenge_mission_mock_data.sql',
                 'ai_coach_mock_data.sql',
-                'cohort_test_users.sql',
+                'monthly_cohort_full_mock_data.sql',
         ]
         mockSeedFiles.each { name ->
             runSqlFile(file("sql/seed/${name}"))
