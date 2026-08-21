@@ -45,8 +45,8 @@ public class NotificationBatchScheduler {
             notificationCommandService.createUserNotification(
                 userId,
                 NotificationType.DAILY_MISSION_AVAILABLE,
-                "오늘의 미션이 도착했어요",
-                "오늘 완료할 수 있는 투자 미션을 확인해 보세요.",
+                "오늘의 미션을 확인해보세요",
+                "미션을 수행하고 뱃지 레벨을 올려보세요\n오늘의 미션 보러가기",
                 "/missions/today",
                 "daily-mission:" + userId + ":" + today));
     log.info("오늘의 미션 알림 생성이 완료되었습니다. date={}, count={}", today, createdCount);
@@ -79,8 +79,8 @@ public class NotificationBatchScheduler {
           notificationCommandService.createUserNotification(
               userId,
               NotificationType.MONTHLY_INVESTMENT_REPORT_ARRIVED,
-              "적립식 투자 리포트가 도착했어요",
-              "이번 달 적립식 투자 가이드와 추천 금액을 확인해 보세요.",
+              "적립식 투자 가이드 도착",
+              "이번달의 새 리포트가 도착했어요\n투자 가이드 보러가기",
               "/investment-guidance/" + guidance.getGuidanceId(),
               "monthly-investment-report:" + userId + ":" + month);
           successCount++;

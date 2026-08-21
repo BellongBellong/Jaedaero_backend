@@ -1,6 +1,7 @@
 package com.jaedaero.domain.challenge.service.impl;
 
 import com.jaedaero.domain.challenge.common.enums.MissionType;
+import com.jaedaero.domain.challenge.common.enums.RankingPeriod;
 import com.jaedaero.domain.challenge.dto.MissionCompletionResponse;
 import com.jaedaero.domain.challenge.dto.MissionResponse;
 import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
@@ -9,6 +10,8 @@ import com.jaedaero.domain.challenge.mapper.MissionMapper;
 import com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper;
 import com.jaedaero.domain.challenge.service.MissionService;
 import com.jaedaero.domain.challenge.vo.BadgeVo;
+import com.jaedaero.domain.challenge.vo.ChallengeGroupVo;
+import com.jaedaero.domain.challenge.vo.ChallengeRankingMemberVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
 import com.jaedaero.domain.notification.common.NotificationType;
@@ -59,21 +62,32 @@ public class MissionServiceImpl implements MissionService {
     }
 
     LocalDate completionDate = LocalDate.now(applicationClock);
-    Integer previousRank = challengeGroupMapper.findCurrentOverallRankByUserId(userId);
+    ChallengeGroupVo challengeGroup = challengeGroupMapper.findGroupByUserId(userId);
+    ChallengeRankingMemberVo previousMonthlyRanking =
+        findCurrentMonthlyRanking(userId, challengeGroup, completionDate);
     missionMapper.insertCompletion(userId, missionId, completionDate);
 
     InvestmentBadgeStatusVo badgeStatus = updateInvestmentBadge(userId, mission.getMissionType());
     missionMapper.incrementMonthlyChallengeMissionCount(userId);
     missionMapper.incrementTotalChallengeMissionCount(userId);
+    ChallengeRankingMemberVo currentMonthlyRanking =
+        findCurrentMonthlyRanking(userId, challengeGroup, completionDate);
+    int monthlyMissionCount =
+        currentMonthlyRanking == null ? 0 : currentMonthlyRanking.getMissionCompletionCount();
 
     notificationCommandService.createUserNotification(
         userId,
         NotificationType.MISSION_COMPLETED,
-        "미션을 달성했어요",
-        mission.getTitle() + " 미션을 완료했습니다.",
+        "미션 달성",
+        "오늘의 "
+            + mission.getTitle()
+            + " 미션을 달성했어요!\n이번달 달성 미션 : "
+            + monthlyMissionCount
+            + "개",
         "/missions/today",
         "mission-completed:" + userId + ":" + missionId + ":" + completionDate);
-    notifyRankingRise(userId, missionId, completionDate, previousRank);
+    notifyTopThreeEntry(
+        userId, missionId, completionDate, previousMonthlyRanking, currentMonthlyRanking);
 
     return MissionCompletionResponse.builder()
         .missionId(missionId)
@@ -86,17 +100,23 @@ public class MissionServiceImpl implements MissionService {
         .build();
   }
 
-  private void notifyRankingRise(
-      long userId, long missionId, LocalDate completionDate, Integer previousRank) {
-    Integer currentRank = challengeGroupMapper.findCurrentOverallRankByUserId(userId);
-    if (previousRank == null || currentRank == null || currentRank >= previousRank) {
+  private void notifyTopThreeEntry(
+      long userId,
+      long missionId,
+      LocalDate completionDate,
+      ChallengeRankingMemberVo previousRanking,
+      ChallengeRankingMemberVo currentRanking) {
+    if (previousRanking == null
+        || currentRanking == null
+        || previousRanking.getRankingNo() <= 3
+        || currentRanking.getRankingNo() > 3) {
       return;
     }
     notificationCommandService.createUserNotification(
         userId,
         NotificationType.RANKING_RISEN,
-        "동기 랭킹이 올랐어요",
-        previousRank + "위에서 " + currentRank + "위로 상승했습니다.",
+        "랭킹 상승",
+        "이번달 동기 랭킹 TOP3 안에 들었어요!\n동기 랭킹 현황 보러 가기",
         "/challenges/ranking",
         "ranking-risen:"
             + userId
@@ -105,7 +125,19 @@ public class MissionServiceImpl implements MissionService {
             + ":"
             + completionDate
             + ":"
-            + currentRank);
+            + currentRanking.getRankingNo());
+  }
+
+  private ChallengeRankingMemberVo findCurrentMonthlyRanking(
+      long userId, ChallengeGroupVo group, LocalDate completionDate) {
+    if (group == null) {
+      return null;
+    }
+    return challengeGroupMapper.findMyRankingByGroupId(
+        group.getGroupId(),
+        userId,
+        RankingPeriod.MONTHLY,
+        completionDate.withDayOfMonth(1));
   }
 
   /** 오늘 노출할 지원 화면 연결 미션을 한 번의 조회로 가져옵니다. */
