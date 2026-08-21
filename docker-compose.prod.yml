@@ -40,6 +40,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - /opt/jaedaero/config/application-local.properties:/run/secrets/application-local.properties:ro
+      - /opt/jaedaero/config/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
 
 volumes:
   mysql_data:
