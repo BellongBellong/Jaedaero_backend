@@ -21,6 +21,12 @@ public interface ChallengeGroupMapper {
       @Param("rankingPeriod") RankingPeriod rankingPeriod,
       @Param("resultMonth") LocalDate resultMonth);
 
+  /** 요청 기간의 동기 그룹 전체 순위를 한 번만 계산해 캐시 스냅샷을 구성합니다. */
+  List<ChallengeRankingMemberVo> findRankedMembersByGroupId(
+      @Param("groupId") long groupId,
+      @Param("rankingPeriod") RankingPeriod rankingPeriod,
+      @Param("resultMonth") LocalDate resultMonth);
+
   /** 요청 기간의 미션 완료 수 기준 사용자 순위와 완료 수를 조회합니다. */
   ChallengeRankingMemberVo findMyRankingByGroupId(
       @Param("groupId") long groupId,

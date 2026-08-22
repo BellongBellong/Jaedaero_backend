@@ -8,13 +8,18 @@ import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper;
 import com.jaedaero.domain.challenge.service.ChallengeGroupService;
+import com.jaedaero.domain.challenge.service.ChallengeRankingCache;
 import com.jaedaero.domain.challenge.vo.ChallengeGroupVo;
 import com.jaedaero.domain.challenge.vo.ChallengeRankingMemberVo;
-import com.jaedaero.domain.challenge.vo.ChallengeRankingStatisticsVo;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChallengeGroupServiceImpl implements ChallengeGroupService {
 
   private final ChallengeGroupMapper challengeGroupMapper;
+  private final ChallengeRankingCache challengeRankingCache;
   private final Clock applicationClock;
 
   /** 사용자의 입대월 동기 기간별 랭킹 정보를 조회합니다. */
@@ -33,23 +39,21 @@ public class ChallengeGroupServiceImpl implements ChallengeGroupService {
       long userId, RankingPeriod rankingPeriod, String yearMonth) {
     ChallengeGroupVo group = findChallengeGroup(userId);
     LocalDate resultMonth = resolveResultMonth(rankingPeriod, yearMonth);
-    ChallengeRankingMemberVo myRanking =
-        challengeGroupMapper.findMyRankingByGroupId(
-            group.getGroupId(), userId, rankingPeriod, resultMonth);
-    ChallengeRankingStatisticsVo statistics =
-        challengeGroupMapper.findRankingStatisticsByGroupId(
-            group.getGroupId(), rankingPeriod, resultMonth);
+    ChallengeRankingCache.Snapshot snapshot =
+        challengeRankingCache.get(
+            group.getGroupId(), rankingPeriod, resultMonth, this::createRankingSnapshot);
+    ChallengeRankingMemberVo myRanking = snapshot.membersByUserId().get(userId);
 
-    if (myRanking == null || statistics == null) {
+    if (myRanking == null || snapshot.rankedMembers().isEmpty()) {
       throw new ChallengeException(
           ChallengeErrorCode.CHALLENGE_GROUP_NOT_FOUND, "동기 그룹 랭킹 정보를 찾을 수 없습니다.");
     }
 
-    List<ChallengeRankingMemberVo> adjacentRankers =
-        challengeGroupMapper.findAdjacentRankersByGroupId(
-            group.getGroupId(), userId, rankingPeriod, resultMonth);
-    ChallengeRankingMemberVo rankAbove = findRankerByRankingNo(adjacentRankers, myRanking.getRankingNo() - 1);
-    ChallengeRankingMemberVo rankBelow = findRankerByRankingNo(adjacentRankers, myRanking.getRankingNo() + 1);
+    ChallengeRankingMemberVo rankAbove =
+        findRankerByRankingNo(snapshot.rankedMembers(), myRanking.getRankingNo() - 1);
+    ChallengeRankingMemberVo rankBelow =
+        findRankerByRankingNo(snapshot.rankedMembers(), myRanking.getRankingNo() + 1);
+    int memberCount = snapshot.rankedMembers().size();
 
     return ChallengeGroupResponse.builder()
         .groupId(group.getGroupId())
@@ -60,33 +64,88 @@ public class ChallengeGroupServiceImpl implements ChallengeGroupService {
         .enlistmentMonth(group.getEnlistmentMonth())
         .periodStartDate(createPeriodStartDate(group, rankingPeriod, resultMonth))
         .periodEndDate(createPeriodEndDate(rankingPeriod, resultMonth))
-        .memberCount(statistics.getMemberCount())
+        .memberCount(memberCount)
         .topRankers(
-            challengeGroupMapper
-                .findTopRankersByGroupId(group.getGroupId(), rankingPeriod, resultMonth)
-                .stream()
+            snapshot.rankedMembers().stream()
+                .limit(3)
                 .map(ChallengeTopRankerResponse::from)
                 .toList())
         .myRankingNo(myRanking.getRankingNo())
-        .myPercentile(calculatePercentile(myRanking.getRankingNo(), statistics.getMemberCount()))
+        .myPercentile(calculatePercentile(myRanking.getRankingNo(), memberCount))
         .myMissionCompletionCount(myRanking.getMissionCompletionCount())
         .rankAbove(ChallengeAdjacentRankerResponse.from(rankAbove))
         .rankBelow(ChallengeAdjacentRankerResponse.from(rankBelow))
         .missionsToNextRank(calculateMissionsToNextRank(myRanking, rankAbove))
-        .groupAverageMissionCompletionCount(statistics.getAverageMissionCompletionCount())
+        .groupAverageMissionCompletionCount(snapshot.averageMissionCompletionCount())
         .bottomQuarterAverageMissionCompletionCount(
-            statistics.getBottomQuarterAverageMissionCompletionCount())
-        .topTenPercentThreshold(statistics.getTopTenPercentThreshold())
+            snapshot.bottomQuarterAverageMissionCompletionCount())
+        .topTenPercentThreshold(snapshot.topTenPercentThreshold())
         .averageDifference(
-            myRanking.getMissionCompletionCount() - statistics.getAverageMissionCompletionCount())
-        .lastUpdatedAt(statistics.getLastUpdatedAt())
+            myRanking.getMissionCompletionCount() - snapshot.averageMissionCompletionCount())
+        .lastUpdatedAt(snapshot.lastUpdatedAt())
         .build();
+  }
+
+  @Override
+  public void invalidateRankingCache(long userId) {
+    ChallengeGroupVo group = challengeGroupMapper.findGroupByUserId(userId);
+    if (group != null) {
+      challengeRankingCache.invalidateGroup(group.getGroupId());
+    }
+  }
+
+  private ChallengeRankingCache.Snapshot createRankingSnapshot(ChallengeRankingCache.Key key) {
+    List<ChallengeRankingMemberVo> rankedMembers =
+        challengeGroupMapper.findRankedMembersByGroupId(
+            key.groupId(), key.rankingPeriod(), key.resultMonth());
+    Map<Long, ChallengeRankingMemberVo> membersByUserId =
+        rankedMembers.stream()
+            .collect(Collectors.toMap(ChallengeRankingMemberVo::getUserId, Function.identity()));
+    if (rankedMembers.isEmpty()) {
+      return new ChallengeRankingCache.Snapshot(rankedMembers, membersByUserId, 0, 0, 0, null);
+    }
+
+    int memberCount = rankedMembers.size();
+    int averageMissionCompletionCount =
+        (int)
+            Math.round(
+                rankedMembers.stream()
+                    .mapToInt(ChallengeRankingMemberVo::getMissionCompletionCount)
+                    .average()
+                    .orElse(0));
+    int bottomQuarterSize = (int) Math.ceil(memberCount * 0.25d);
+    int bottomQuarterAverageMissionCompletionCount =
+        (int)
+            Math.round(
+                rankedMembers.subList(memberCount - bottomQuarterSize, memberCount).stream()
+                    .mapToInt(ChallengeRankingMemberVo::getMissionCompletionCount)
+                    .average()
+                    .orElse(0));
+    int topTenPercentIndex = Math.max(0, (int) Math.ceil(memberCount * 0.10d) - 1);
+    int topTenPercentThreshold =
+        rankedMembers.get(topTenPercentIndex).getMissionCompletionCount();
+    LocalDateTime lastUpdatedAt =
+        rankedMembers.stream()
+            .map(ChallengeRankingMemberVo::getUpdatedAt)
+            .filter(java.util.Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .orElse(null);
+    return new ChallengeRankingCache.Snapshot(
+        rankedMembers,
+        membersByUserId,
+        averageMissionCompletionCount,
+        bottomQuarterAverageMissionCompletionCount,
+        topTenPercentThreshold,
+        lastUpdatedAt);
   }
 
   /** 요청 순위에 해당하는 인접 참여자를 반환합니다. */
   private ChallengeRankingMemberVo findRankerByRankingNo(
       List<ChallengeRankingMemberVo> rankers, int rankingNo) {
-    return rankers.stream().filter(ranker -> ranker.getRankingNo() == rankingNo).findFirst().orElse(null);
+    if (rankingNo <= 0 || rankingNo > rankers.size()) {
+      return null;
+    }
+    return rankers.get(rankingNo - 1);
   }
 
   /** 바로 위 순위와의 미션 완료 수 차이를 계산합니다. */

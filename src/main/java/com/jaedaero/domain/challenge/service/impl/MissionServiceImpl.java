@@ -7,6 +7,7 @@ import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.MissionMapper;
 import com.jaedaero.domain.challenge.service.MissionService;
+import com.jaedaero.domain.challenge.service.ChallengeGroupService;
 import com.jaedaero.domain.challenge.vo.BadgeVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
@@ -19,12 +20,15 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
 public class MissionServiceImpl implements MissionService {
 
   private final MissionMapper missionMapper;
+  private final ChallengeGroupService challengeGroupService;
   private final Clock applicationClock;
 
   /** 오늘 사용자에게 노출할 미션 목록을 조회합니다. */
@@ -59,6 +63,13 @@ public class MissionServiceImpl implements MissionService {
     InvestmentBadgeStatusVo badgeStatus = updateInvestmentBadge(userId, mission.getMissionType());
     missionMapper.incrementMonthlyChallengeMissionCount(userId);
     missionMapper.incrementTotalChallengeMissionCount(userId);
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            challengeGroupService.invalidateRankingCache(userId);
+          }
+        });
 
     return MissionCompletionResponse.builder()
         .missionId(missionId)
