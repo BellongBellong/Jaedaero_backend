@@ -1,0 +1,101 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: jaedaero-performance-mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?set MYSQL_DATABASE in .env.performance}
+      MYSQL_USER: ${MYSQL_USER:?set MYSQL_USER in .env.performance}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env.performance}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env.performance}
+      MYSQL_EXPORTER_PASSWORD: ${MYSQL_EXPORTER_PASSWORD:?set MYSQL_EXPORTER_PASSWORD in .env.performance}
+    ports:
+      # 기존 로컬 MySQL(3306)과 충돌하지 않도록 성능 DB만 13306으로 노출한다.
+      - "127.0.0.1:13306:3306"
+    volumes:
+      - performance_mysql_data:/var/lib/mysql
+      - ./jaedaero_db_v1.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/seed/military_pay_policy.sql:/docker-entrypoint-initdb.d/02-military-pay-policy.sql:ro
+      - ./sql/seed/badge_policy.sql:/docker-entrypoint-initdb.d/03-badge-policy.sql:ro
+      - ./sql/seed/challenge_mission_mock_data.sql:/docker-entrypoint-initdb.d/04-challenge-missions.sql:ro
+      - ./sql/migration/20260818_add_leave_benefits.sql:/docker-entrypoint-initdb.d/05-add-leave-benefits.sql:ro
+      - ./sql/migration/20260820_allow_repeated_leave_benefit_titles.sql:/docker-entrypoint-initdb.d/06-allow-repeated-leave-benefit-titles.sql:ro
+      - ./sql/seed/leave_benefits.sql:/docker-entrypoint-initdb.d/07-leave-benefits.sql:ro
+      - ./monitoring/init-mysql-exporter-user.sh:/docker-entrypoint-initdb.d/08-mysql-exporter-user.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    build:
+      context: .
+    image: jaedaero-backend:performance-local
+    container_name: jaedaero-performance-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - ${PERFORMANCE_ENV_FILE:-.env.performance}
+    environment:
+      CATALINA_OPTS: >-
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=9404:/opt/jmx/config.yml
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./monitoring/application-performance.properties:/run/secrets/application-local.properties:ro
+      - ./monitoring/jmx_prometheus_javaagent.jar:/opt/jmx/jmx_prometheus_javaagent.jar:ro
+      - ./monitoring/jmx-exporter.yml:/opt/jmx/config.yml:ro
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: jaedaero-performance-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-remote-write-receiver
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - performance_prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: jaedaero-performance-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env.performance}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - performance_grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.17.2
+    container_name: jaedaero-performance-mysqld-exporter
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_EXPORTER_PASSWORD: ${MYSQL_EXPORTER_PASSWORD:?set MYSQL_EXPORTER_PASSWORD in .env.performance}
+    entrypoint: ["/bin/sh", "/etc/mysqld-exporter-entrypoint.sh"]
+    volumes:
+      - ./monitoring/mysqld-exporter-entrypoint.sh:/etc/mysqld-exporter-entrypoint.sh:ro
+
+volumes:
+  performance_mysql_data:
+  performance_prometheus_data:
+  performance_grafana_data:

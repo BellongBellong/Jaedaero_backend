@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,17 +26,20 @@ public class DailyDataRefreshScheduler {
   private final CodefDailySyncService codefDailySyncService;
   private final AssetSnapshotService assetSnapshotService;
   private final Clock clock;
+  private final boolean dailyRefreshEnabled;
   private final AtomicBoolean startupCatchUpChecked = new AtomicBoolean();
 
   public DailyDataRefreshScheduler(
       MilitaryRankRefreshService militaryRankRefreshService,
       CodefDailySyncService codefDailySyncService,
       AssetSnapshotService assetSnapshotService,
-      Clock clock) {
+      Clock clock,
+      @Value("${batch.daily-refresh.enabled:true}") boolean dailyRefreshEnabled) {
     this.militaryRankRefreshService = militaryRankRefreshService;
     this.codefDailySyncService = codefDailySyncService;
     this.assetSnapshotService = assetSnapshotService;
     this.clock = clock;
+    this.dailyRefreshEnabled = dailyRefreshEnabled;
   }
 
   /**
@@ -46,7 +50,8 @@ public class DailyDataRefreshScheduler {
    */
   @EventListener(ContextRefreshedEvent.class)
   public void catchUpMissedDailyRefreshOnStartup(ContextRefreshedEvent event) {
-    if (event.getApplicationContext().getParent() != null
+    if (!dailyRefreshEnabled
+        || event.getApplicationContext().getParent() != null
         || !startupCatchUpChecked.compareAndSet(false, true)) {
       return;
     }
@@ -62,6 +67,10 @@ public class DailyDataRefreshScheduler {
 
   @Scheduled(cron = "0 30 16 * * *", zone = "Asia/Seoul")
   public void refreshDailyData() {
+    if (!dailyRefreshEnabled) {
+      log.info("일일 데이터 갱신이 비활성화되어 실행하지 않습니다.");
+      return;
+    }
     log.info("일일 계급·CODEF 데이터·자산 스냅샷 동기화를 시작합니다.");
     try {
       log.info("현재 계급 {}건을 갱신했습니다.", militaryRankRefreshService.refreshCurrentRanks());

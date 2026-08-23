@@ -113,6 +113,8 @@ public class RootConfig {
         config.setMinimumIdle(5);                  // 최소 유지 커넥션 수
         config.setConnectionTimeout(30000);       // 연결 타임아웃 (30초)
         config.setIdleTimeout(600000);            // 유휴 타임아웃 (10분)
+        // JMX exporter가 활성화된 성능 테스트 환경에서 풀 사용량을 수집한다.
+        config.setRegisterMbeans(true);
 
         // Hikari 데이터 소스 생성 및 반환
         HikariDataSource dataSource = new HikariDataSource(config);
