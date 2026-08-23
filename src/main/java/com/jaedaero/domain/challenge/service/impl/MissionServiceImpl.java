@@ -1,16 +1,21 @@
 package com.jaedaero.domain.challenge.service.impl;
-
 import com.jaedaero.domain.challenge.common.enums.MissionType;
+import com.jaedaero.domain.challenge.common.enums.RankingPeriod;
 import com.jaedaero.domain.challenge.dto.MissionCompletionResponse;
 import com.jaedaero.domain.challenge.dto.MissionResponse;
 import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.MissionMapper;
-import com.jaedaero.domain.challenge.service.MissionService;
 import com.jaedaero.domain.challenge.service.ChallengeGroupService;
+import com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper;
+import com.jaedaero.domain.challenge.service.MissionService;
 import com.jaedaero.domain.challenge.vo.BadgeVo;
+import com.jaedaero.domain.challenge.vo.ChallengeGroupVo;
+import com.jaedaero.domain.challenge.vo.ChallengeRankingMemberVo;
 import com.jaedaero.domain.challenge.vo.InvestmentBadgeStatusVo;
 import com.jaedaero.domain.challenge.vo.MissionVo;
+import com.jaedaero.domain.notification.common.NotificationType;
+import com.jaedaero.domain.notification.service.NotificationCommandService;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,10 +26,10 @@ import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MissionServiceImpl implements MissionService {
@@ -33,16 +38,22 @@ public class MissionServiceImpl implements MissionService {
 
   private final MissionMapper missionMapper;
   private final ChallengeGroupService challengeGroupService;
+  private final ChallengeGroupMapper challengeGroupMapper;
+  private final NotificationCommandService notificationCommandService;
   private final Clock applicationClock;
   private final TransactionTemplate missionCompletionTransaction;
 
   public MissionServiceImpl(
       MissionMapper missionMapper,
       ChallengeGroupService challengeGroupService,
+      ChallengeGroupMapper challengeGroupMapper,
+      NotificationCommandService notificationCommandService,
       Clock applicationClock,
       PlatformTransactionManager transactionManager) {
     this.missionMapper = missionMapper;
     this.challengeGroupService = challengeGroupService;
+    this.challengeGroupMapper = challengeGroupMapper;
+    this.notificationCommandService = notificationCommandService;
     this.applicationClock = applicationClock;
     this.missionCompletionTransaction = new TransactionTemplate(transactionManager);
     this.missionCompletionTransaction.setPropagationBehavior(
@@ -75,7 +86,6 @@ public class MissionServiceImpl implements MissionService {
     throw new IllegalStateException("미션 완료 재시도 횟수를 확인할 수 없습니다.");
   }
 
-  /** 하나의 새 트랜잭션에서 미션 완료·뱃지·랭킹 집계를 함께 갱신합니다. */
   private MissionCompletionResponse completeMissionInTransaction(long userId, long missionId) {
     MissionVo mission =
         findTodayMissionVos(userId).stream()
@@ -93,6 +103,9 @@ public class MissionServiceImpl implements MissionService {
     }
 
     LocalDate completionDate = LocalDate.now(applicationClock);
+    ChallengeGroupVo challengeGroup = challengeGroupMapper.findGroupByUserId(userId);
+    ChallengeRankingMemberVo previousMonthlyRanking =
+        findCurrentMonthlyRanking(userId, challengeGroup, completionDate);
     missionMapper.insertCompletion(userId, missionId, completionDate);
 
     InvestmentBadgeStatusVo badgeStatus = updateInvestmentBadge(userId, mission.getMissionType());
@@ -105,6 +118,24 @@ public class MissionServiceImpl implements MissionService {
             challengeGroupService.invalidateRankingCache(userId);
           }
         });
+    ChallengeRankingMemberVo currentMonthlyRanking =
+        findCurrentMonthlyRanking(userId, challengeGroup, completionDate);
+    int monthlyMissionCount =
+        currentMonthlyRanking == null ? 0 : currentMonthlyRanking.getMissionCompletionCount();
+
+    notificationCommandService.createUserNotification(
+        userId,
+        NotificationType.MISSION_COMPLETED,
+        "미션 달성",
+        "오늘의 "
+            + mission.getTitle()
+            + " 미션을 달성했어요!\n이번달 달성 미션 : "
+            + monthlyMissionCount
+            + "개",
+        "/missions/today",
+        "mission-completed:" + userId + ":" + missionId + ":" + completionDate);
+    notifyTopThreeEntry(
+        userId, missionId, completionDate, previousMonthlyRanking, currentMonthlyRanking);
 
     return MissionCompletionResponse.builder()
         .missionId(missionId)
@@ -115,6 +146,46 @@ public class MissionServiceImpl implements MissionService {
         .aggressiveMissionCount(badgeStatus.getAggressiveCount())
         .aggressiveGrade(badgeStatus.getAggressiveGrade())
         .build();
+  }
+
+  private void notifyTopThreeEntry(
+      long userId,
+      long missionId,
+      LocalDate completionDate,
+      ChallengeRankingMemberVo previousRanking,
+      ChallengeRankingMemberVo currentRanking) {
+    if (previousRanking == null
+        || currentRanking == null
+        || previousRanking.getRankingNo() <= 3
+        || currentRanking.getRankingNo() > 3) {
+      return;
+    }
+    notificationCommandService.createUserNotification(
+        userId,
+        NotificationType.RANKING_RISEN,
+        "랭킹 상승",
+        "이번달 동기 랭킹 TOP3 안에 들었어요!\n동기 랭킹 현황 보러 가기",
+        "/challenges/ranking",
+        "ranking-risen:"
+            + userId
+            + ":"
+            + missionId
+            + ":"
+            + completionDate
+            + ":"
+            + currentRanking.getRankingNo());
+  }
+
+  private ChallengeRankingMemberVo findCurrentMonthlyRanking(
+      long userId, ChallengeGroupVo group, LocalDate completionDate) {
+    if (group == null) {
+      return null;
+    }
+    return challengeGroupMapper.findMyRankingByGroupId(
+        group.getGroupId(),
+        userId,
+        RankingPeriod.MONTHLY,
+        completionDate.withDayOfMonth(1));
   }
 
   /** 오늘 노출할 지원 화면 연결 미션을 한 번의 조회로 가져옵니다. */
@@ -172,7 +243,6 @@ public class MissionServiceImpl implements MissionService {
     return completionCount >= badge.getRequiredCompletionCount();
   }
 
-  /** MySQL 데드락이 해소될 시간을 짧게 두고 다음 새 트랜잭션을 실행합니다. */
   private void waitBeforeDeadlockRetry(int failedAttempt) {
     try {
       Thread.sleep(25L * failedAttempt);

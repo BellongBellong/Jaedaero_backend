@@ -48,6 +48,9 @@
         AND m.action_type IN (
             'VIEW_MARKET_REPORT',
             'VIEW_TRANSACTION_HISTORY',
+            'VIEW_SPENDING_ANALYSIS',
+            'VIEW_ASSET_STATUS',
+            'VIEW_ASSET_OVERVIEW',
             'VIEW_DEPOSIT_PRODUCT',
             'VIEW_REBALANCING',
             'RUN_WHAT_IF_SIMULATION'
@@ -86,7 +89,10 @@
                 m.mission_id AS sort_id,
                 ROW_NUMBER() OVER (
                     PARTITION BY m.mission_type
-                    ORDER BY m.display_order, m.mission_id
+                    ORDER BY
+                        CRC32(CONCAT(CURDATE(), ':', m.mission_code)),
+                        m.display_order,
+                        m.mission_id
                 ) AS candidate_no
             FROM mission m
             WHERE m.is_active = TRUE
