@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,9 +29,11 @@ class EximbankExchangeRateClientTest {
 
   @BeforeEach
   void setUp() throws IOException {
-    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server =
+        HttpServer.create(
+            new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0);
     server.start();
-    baseUri = URI.create("http://localhost:" + server.getAddress().getPort());
+    baseUri = URI.create("http://127.0.0.1:" + server.getAddress().getPort());
   }
 
   @AfterEach
@@ -204,8 +208,13 @@ class EximbankExchangeRateClientTest {
   private static void respond(HttpExchange exchange, int statusCode, String body)
       throws IOException {
     byte[] responseBody = body.getBytes(StandardCharsets.UTF_8);
+    exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+    exchange.getResponseHeaders().set("Connection", "close");
     exchange.sendResponseHeaders(statusCode, responseBody.length);
-    exchange.getResponseBody().write(responseBody);
-    exchange.close();
+    try (OutputStream output = exchange.getResponseBody()) {
+      output.write(responseBody);
+    } finally {
+      exchange.close();
+    }
   }
 }

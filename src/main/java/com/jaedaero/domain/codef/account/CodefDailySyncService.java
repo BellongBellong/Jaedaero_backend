@@ -21,6 +21,7 @@ public class CodefDailySyncService {
   private final CodefTransactionSyncService transactionSyncService;
   private final CodefSavingsTransactionSyncService savingsTransactionSyncService;
   private final CodefSecuritiesCashTransactionSyncService securitiesCashTransactionSyncService;
+  private final TransactionCategoryAiClassificationService categoryClassificationService;
   private final Clock clock;
 
   public CodefDailySyncService(
@@ -29,18 +30,25 @@ public class CodefDailySyncService {
       CodefTransactionSyncService transactionSyncService,
       CodefSavingsTransactionSyncService savingsTransactionSyncService,
       CodefSecuritiesCashTransactionSyncService securitiesCashTransactionSyncService,
+      TransactionCategoryAiClassificationService categoryClassificationService,
       Clock clock) {
     this.repository = repository;
     this.accountSyncService = accountSyncService;
     this.transactionSyncService = transactionSyncService;
     this.savingsTransactionSyncService = savingsTransactionSyncService;
     this.securitiesCashTransactionSyncService = securitiesCashTransactionSyncService;
+    this.categoryClassificationService = categoryClassificationService;
     this.clock = clock;
   }
 
   public void syncAllActiveConnections() {
     for (long userId : repository.findActiveConnectionUserIds()) {
       syncUser(userId);
+    }
+    try {
+      categoryClassificationService.classifyPending();
+    } catch (RuntimeException exception) {
+      log.warn("CODEF 일일 동기화 후 거래 카테고리 AI 분류에 실패했습니다.", exception);
     }
   }
 

@@ -21,6 +21,10 @@ codef.debug.account-create-enabled=true
 llm.chat-completions-url=https://port-0-llm-proxy-node-mrlu0vim5f938376.sel3.cloudtype.app/v1/chat/completions
 # 모델은 서버 작업 정책이 지정하며 클라이언트는 선택하지 않습니다.
 llm.api-key=your_llm_api_key
+# 거래 카테고리 AI 후처리 안전 한도입니다. 로컬에서 호출하지 않으려면 enabled=false로 설정하세요.
+transaction-category.ai.enabled=true
+transaction-category.ai.batch-size=20
+transaction-category.ai.max-items-per-run=200
 
 # Gemini Developer API generateContent. 실제 키는 커밋하지 않는다.
 gemini.api-key=your_gemini_api_key

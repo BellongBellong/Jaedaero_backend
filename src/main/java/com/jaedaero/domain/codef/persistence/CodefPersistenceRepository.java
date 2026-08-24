@@ -360,6 +360,29 @@ public class CodefPersistenceRepository {
         externalTransactionKey);
   }
 
+  /** RULE에서 ETC로 남은 출금 거래만 AI 후처리 후보로 제한해 조회합니다. */
+  public List<StoredTransactionCategoryCandidate> findRuleUnclassifiedWithdrawals(int limit) {
+    return jdbcTemplate.query(
+        "SELECT transaction_id, transaction_description FROM transaction_history "
+            + "WHERE transaction_type = 'WITHDRAW' AND category = 'ETC' "
+            + "AND category_source = 'RULE' "
+            + "ORDER BY transaction_datetime DESC, transaction_id DESC LIMIT ?",
+        (rs, rowNum) ->
+            new StoredTransactionCategoryCandidate(
+                rs.getLong("transaction_id"), rs.getString("transaction_description")),
+        limit);
+  }
+
+  /** AI 요청 중 사용자가 수정한 거래를 덮어쓰지 않도록 RULE+ETC 상태일 때만 반영합니다. */
+  public int updateTransactionCategoryFromAiIfUnclassified(
+      long transactionId, String category) {
+    return jdbcTemplate.update(
+        "UPDATE transaction_history SET category = ?, category_source = 'AI' "
+            + "WHERE transaction_id = ? AND category = 'ETC' AND category_source = 'RULE'",
+        category,
+        transactionId);
+  }
+
   public void upsertSoldierSaving(
       long userId,
       long accountId,
