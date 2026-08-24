@@ -1,7 +1,9 @@
 package com.jaedaero.domain.marketreport.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorStatus;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
@@ -48,6 +50,47 @@ class MarketReportIndicatorRefreshServiceTest {
         assertThrows(MarketReportException.class, service::refreshToday);
 
     assertEquals(MarketReportErrorCode.INDICATOR_REFRESH_NOT_AVAILABLE, exception.getErrorCode());
+  }
+
+  @Test
+  void scheduledRefreshSkipsAlreadyNormalReportWithoutCollectingIndicators() {
+    RecordingPersistence persistence = new RecordingPersistence();
+    MarketReportIndicatorRefreshService service =
+        new MarketReportIndicatorRefreshService(
+            new StubReportMapper(
+                report(MarketReportStatus.NORMAL), report(MarketReportStatus.NORMAL)),
+            ignored -> {
+              throw new AssertionError("정상 리포트에서는 지표를 수집하면 안 됩니다.");
+            },
+            persistence,
+            CLOCK);
+
+    assertFalse(service.refreshTodayIfPartial());
+  }
+
+  @Test
+  void scheduledRefreshCollectsIndicatorsForPartialReport() {
+    RecordingPersistence persistence = new RecordingPersistence();
+    MarketReportIndicatorRefreshService service =
+        service(report(MarketReportStatus.PARTIAL), persistence);
+
+    assertTrue(service.refreshTodayIfPartial());
+    assertEquals(MarketReportStatus.NORMAL, persistence.reportStatus);
+  }
+
+  @Test
+  void scheduledRefreshDoesNotUseLatestReportOutsideActiveWindow() {
+    DailyMarketReportVo latest = report(MarketReportStatus.PARTIAL);
+    MarketReportIndicatorRefreshService service =
+        new MarketReportIndicatorRefreshService(
+            new StubReportMapper(null, latest),
+            ignored -> {
+              throw new AssertionError("활성 리포트가 없으면 지표를 수집하면 안 됩니다.");
+            },
+            new RecordingPersistence(),
+            CLOCK);
+
+    assertFalse(service.refreshTodayIfPartial());
   }
 
   @Test
