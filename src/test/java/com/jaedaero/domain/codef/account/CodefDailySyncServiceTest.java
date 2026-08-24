@@ -19,6 +19,8 @@ class CodefDailySyncServiceTest {
     RecordingTransactionSyncService transactionSync = new RecordingTransactionSyncService();
     RecordingSavingsSyncService savingsSync = new RecordingSavingsSyncService();
     RecordingSecuritiesSyncService securitiesSync = new RecordingSecuritiesSyncService();
+    RecordingCategoryClassificationService categoryClassification =
+        new RecordingCategoryClassificationService();
     CodefDailySyncService service =
         new CodefDailySyncService(
             repository,
@@ -26,6 +28,7 @@ class CodefDailySyncServiceTest {
             transactionSync,
             savingsSync,
             securitiesSync,
+            categoryClassification,
             Clock.fixed(Instant.parse("2026-08-14T00:00:00Z"), ZoneId.of("Asia/Seoul")));
 
     service.syncAllActiveConnections();
@@ -35,6 +38,7 @@ class CodefDailySyncServiceTest {
     assertEquals(List.of(11L), savingsSync.accountIds);
     assertEquals(List.of(12L), securitiesSync.accountIds);
     assertEquals(3, repository.recordedPeriods);
+    assertEquals(1, categoryClassification.calls);
   }
 
   private static class RecordingRepository extends CodefPersistenceRepository {
@@ -137,6 +141,21 @@ class CodefDailySyncServiceTest {
     @Override
     public int sync(long userId, long accountId, String startDate, String endDate) {
       accountIds.add(accountId);
+      return 0;
+    }
+  }
+
+  private static class RecordingCategoryClassificationService
+      extends TransactionCategoryAiClassificationService {
+    private int calls;
+
+    private RecordingCategoryClassificationService() {
+      super(null, null, true, 1, 1);
+    }
+
+    @Override
+    public int classifyPending() {
+      calls++;
       return 0;
     }
   }
