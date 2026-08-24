@@ -15,7 +15,8 @@ class MarketReportBatchSchedulerTest {
   void scheduledMethodDelegatesToGenerationService() {
     RecordingGenerationService service = new RecordingGenerationService();
 
-    new MarketReportBatchScheduler(service).generateDailyMarketReport();
+    new MarketReportBatchScheduler(service, new RecordingRefreshService())
+        .generateDailyMarketReport();
 
     assertEquals(1, service.calls);
   }
@@ -31,6 +32,27 @@ class MarketReportBatchSchedulerTest {
     assertEquals("Asia/Seoul", scheduled.zone());
   }
 
+  @Test
+  void scheduledIndicatorRefreshDelegatesToRefreshService() {
+    RecordingRefreshService refreshService = new RecordingRefreshService();
+
+    new MarketReportBatchScheduler(new RecordingGenerationService(), refreshService)
+        .refreshPartialMarketReportIndicators();
+
+    assertEquals(1, refreshService.calls);
+  }
+
+  @Test
+  void partialIndicatorRefreshIsScheduledAt1710And1730Kst() throws NoSuchMethodException {
+    Method method =
+        MarketReportBatchScheduler.class.getMethod("refreshPartialMarketReportIndicators");
+    Scheduled scheduled = method.getAnnotation(Scheduled.class);
+
+    assertNotNull(scheduled);
+    assertEquals("0 10,30 17 * * *", scheduled.cron());
+    assertEquals("Asia/Seoul", scheduled.zone());
+  }
+
   private static class RecordingGenerationService
       extends MarketReportGenerationService {
     private int calls;
@@ -42,6 +64,20 @@ class MarketReportBatchSchedulerTest {
     @Override
     public void generateForToday() {
       calls++;
+    }
+  }
+
+  private static class RecordingRefreshService extends MarketReportIndicatorRefreshService {
+    private int calls;
+
+    RecordingRefreshService() {
+      super(null, null, null, Clock.systemUTC());
+    }
+
+    @Override
+    public boolean refreshTodayIfPartial() {
+      calls++;
+      return true;
     }
   }
 }

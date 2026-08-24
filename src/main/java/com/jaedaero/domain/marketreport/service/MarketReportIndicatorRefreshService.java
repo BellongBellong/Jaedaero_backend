@@ -34,10 +34,7 @@ public class MarketReportIndicatorRefreshService {
   }
 
   public void refreshToday() {
-    DailyMarketReportVo report = reportMapper.findActiveAt(LocalDateTime.now(clock));
-    if (report == null) {
-      report = reportMapper.findLatest();
-    }
+    DailyMarketReportVo report = findRefreshCandidate();
     if (report == null) {
       throw new MarketReportException(
           MarketReportErrorCode.NOT_FOUND, "재수집할 시장 리포트가 없습니다.");
@@ -47,6 +44,25 @@ public class MarketReportIndicatorRefreshService {
           MarketReportErrorCode.INDICATOR_REFRESH_NOT_AVAILABLE,
           "지표 재수집은 PARTIAL 상태의 현재 또는 최신 시장 리포트에서만 실행할 수 있습니다.");
     }
+    refresh(report);
+  }
+
+  /** 배치 재시도용 진입점입니다. 재수집 대상이 없거나 이미 정상화된 경우 외부 API를 호출하지 않습니다. */
+  public boolean refreshTodayIfPartial() {
+    DailyMarketReportVo report = reportMapper.findActiveAt(LocalDateTime.now(clock));
+    if (report == null || report.getReportStatus() != MarketReportStatus.PARTIAL) {
+      return false;
+    }
+    refresh(report);
+    return true;
+  }
+
+  private DailyMarketReportVo findRefreshCandidate() {
+    DailyMarketReportVo report = reportMapper.findActiveAt(LocalDateTime.now(clock));
+    return report != null ? report : reportMapper.findLatest();
+  }
+
+  private void refresh(DailyMarketReportVo report) {
     List<MarketIndicatorResult> indicators = indicatorProvider.collect(report.getReportDate());
     persistenceService.refreshIndicators(
         report.getReportDate(), indicators, status(report, indicators));

@@ -57,7 +57,8 @@ public class MarketIndicatorCollector implements MarketIndicatorProvider {
       log.warn(
           "지표 수집 실패, MISSING으로 기록합니다. type={}, reason={}",
           source.type(),
-          exception.getMessage());
+          exception.getMessage(),
+          exception);
       return MarketIndicatorResult.missing(source.type());
     }
   }
