@@ -1,0 +1,1177 @@
+Project JAEDAERO {
+  database_type: 'MySQL'
+  Note: 'jaedaero_db_final.sql schema through 2026-08-21'
+}
+
+Enum users_social_type_enum {
+  KAKAO
+  GOOGLE
+}
+
+Enum users_profile_image_enum {
+  ARMY
+  NAVY
+  AIRFORCE
+  MARINE
+}
+
+Enum users_profile_source_enum {
+  GREEN
+  OLIVE
+  YELLOW
+  ORANGE
+  GRAY
+  BLACK
+}
+
+Enum soldier_profile_soldier_type_enum {
+  ARMY
+  NAVY
+  AIRFORCE
+  MARINE
+}
+
+Enum goal_status_enum {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+Enum military_pay_policy_soldier_type_enum {
+  ARMY
+  NAVY
+  AIRFORCE
+  MARINE
+}
+
+Enum codef_connection_status_enum {
+  ACTIVE
+  DISCONNECTED
+  ERROR
+}
+
+Enum codef_institution_connection_business_type_enum {
+  BK
+  ST
+}
+
+Enum codef_institution_connection_status_enum {
+  ACTIVE
+  DISCONNECTED
+  ERROR
+}
+
+Enum connected_account_business_type_enum {
+  BK
+  ST
+}
+
+Enum connected_account_account_role_enum {
+  SOLDIER_SAVING
+  NARASARANG
+  GENERAL
+}
+
+Enum connected_account_status_enum {
+  ACTIVE
+  DISCONNECTED
+}
+
+Enum transaction_history_transaction_type_enum {
+  DEPOSIT
+  WITHDRAW
+}
+
+Enum transaction_history_category_source_enum {
+  RULE
+  AI
+  USER
+}
+
+Enum account_transaction_sync_inquiry_type_enum {
+  DEMAND_DEPOSIT
+  INSTALLMENT_SAVINGS
+}
+
+Enum challenge_group_soldier_type_enum {
+  ARMY
+  NAVY
+  AIRFORCE
+  MARINE
+}
+
+Enum ai_analysis_analysis_type_enum {
+  CONSUMPTION
+  SAVING
+  INVESTMENT
+  POLICY
+  DIAGNOSIS
+  SCENARIO_COMPARISON
+}
+
+Enum ai_analysis_generation_source_enum {
+  OPENAI
+  FALLBACK
+}
+
+Enum financial_product_risk_category_enum {
+  SAFE
+  AGGRESSIVE
+}
+
+Enum financial_product_status_enum {
+  ACTIVE
+  EXPIRED
+}
+
+Enum military_benefit_benefit_context_enum {
+  GENERAL
+  LEAVE
+}
+
+Enum recurring_investment_plan_frequency_enum {
+  WEEKLY
+  MONTHLY
+}
+
+Enum recurring_investment_plan_status_enum {
+  ACTIVE
+  PAUSED
+  SAFE_FOCUS
+}
+
+Enum investment_guidance_service_stage_enum {
+  PRIVATE_BASE
+  PRIVATE_FIRST_CLASS_GROWTH
+  CORPORAL_CHECK
+  SERGEANT_PREPARE
+}
+
+Enum investment_guidance_action_type_enum {
+  START
+  CONTINUE
+  REDUCE
+  PAUSE
+  SAFE_FOCUS
+  REVIEW
+}
+
+Enum strategy_application_source_type_enum {
+  SIMULATION
+  AI_RECOMMENDATION
+  INVESTMENT_GUIDANCE
+  MANUAL
+}
+
+Enum strategy_application_applied_guidance_action_enum {
+  START
+  CONTINUE
+  REDUCE
+  PAUSE
+  SAFE_FOCUS
+}
+
+Enum strategy_application_applied_investment_frequency_enum {
+  WEEKLY
+  MONTHLY
+}
+
+Enum mission_mission_type_enum {
+  SAFE
+  AGGRESSIVE
+}
+
+Enum mission_mission_category_enum {
+  DAILY
+  RECOMMENDED
+  ONE_TIME
+  EVENT
+}
+
+Enum mission_trigger_type_enum {
+  NONE
+  DAYS_TO_DISCHARGE
+  LEAVE_SCHEDULED
+  PAYDAY
+}
+
+Enum badge_mission_type_enum {
+  SAFE
+  AGGRESSIVE
+}
+
+Enum badge_grade_enum {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+Enum investment_badge_initial_preference_enum {
+  SAFE
+  BALANCED
+  AGGRESSIVE
+}
+
+Enum investment_badge_badge_tier_enum {
+  SAFE
+  BALANCED
+  AGGRESSIVE
+}
+
+Enum investment_badge_safe_grade_enum {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+Enum investment_badge_aggressive_grade_enum {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+Enum daily_market_report_report_status_enum {
+  NORMAL
+  PARTIAL
+  STALE
+}
+
+Enum daily_market_report_generation_source_enum {
+  GEMINI
+  FALLBACK
+}
+
+Enum daily_market_indicator_indicator_type_enum {
+  KOSPI
+  KOSDAQ
+  US_TREASURY_10Y
+  USD_KRW
+}
+
+Enum daily_market_indicator_status_enum {
+  NORMAL
+  DELAYED
+  MISSING
+}
+
+Enum device_token_device_type_enum {
+  IOS
+  ANDROID
+  WEB
+}
+
+Enum notification_history_push_status_enum {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+Enum notification_campaign_push_status_enum {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+Enum notification_outbox_status_enum {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+Table users [note: '사용자'] {
+  user_id bigint [pk, increment, note: '사용자 ID']
+  social_type users_social_type_enum [not null, note: '소셜 로그인 유형']
+  social_id varchar(255) [not null, note: '소셜 제공자 내 사용자 식별자']
+  nickname varchar(50) [note: '닉네임']
+  profile_image users_profile_image_enum [not null, default: 'ARMY', note: '프로필 아이콘. soldier_type과 같은 4종 값을 재사용하는 군종 스타일 아이콘']
+  profile_source users_profile_source_enum [not null, default: 'GREEN', note: '프로필 배경색. 6종 중 선택']
+  is_withdrawn boolean [not null, default: false, note: '탈퇴 여부']
+  withdrawn_at timestamp [note: '탈퇴 일시']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (social_type, social_id) [unique, name: 'uq_users_social_identity']
+    nickname [unique, name: 'uq_users_nickname']
+  }
+}
+
+Table soldier_profile [note: '군 복무 프로필'] {
+  profile_id bigint [pk, increment, note: '군 복무 프로필 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  soldier_type soldier_profile_soldier_type_enum [not null, note: '군종']
+  rank_name varchar(20) [not null, note: '현재 계급']
+  enlistment_date date [not null, note: '입대일']
+  discharge_date date [not null, note: '전역 예정일']
+  saving_join_yn boolean [not null, default: false, note: '장병내일준비적금 가입 여부']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    user_id [unique, name: 'uq_soldier_profile_user']
+  }
+
+  checks {
+    `discharge_date >= enlistment_date` [name: 'chk_soldier_profile_date']
+  }
+}
+
+Table user_agreement [note: '사용자 약관 동의'] {
+  agreement_id bigint [pk, increment, note: '약관 동의 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  agreement_type varchar(50) [not null, note: '약관 유형']
+  agreement_version varchar(20) [not null, note: '약관 버전']
+  is_required boolean [not null, default: true, note: '필수 약관 여부']
+  agreed_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '동의 일시']
+
+  indexes {
+    (user_id, agreement_type, agreement_version) [unique, name: 'uq_user_agreement']
+  }
+}
+
+Table goal [note: '전역 자산 목표'] {
+  goal_id bigint [pk, increment, note: '목표 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  target_amount bigint [not null, default: 0, note: '전역 자산 목표. 0은 목표 미설정 sentinel']
+  target_date date [note: '목표 달성 목표일']
+  status goal_status_enum [not null, default: 'ACTIVE', note: '목표 상태']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    user_id [unique, name: 'uq_goal_user']
+  }
+
+  checks {
+    `target_amount >= 0` [name: 'chk_goal_target_amount']
+  }
+}
+
+Table military_pay_policy [note: '계급별 봉급 정책 — cashflow_forecast.expected_salary 계산의 근거 데이터. 국방부 등 별도 소스 필요(CODEF 카탈로그 밖)'] {
+  pay_policy_id bigint [pk, increment, note: '봉급 정책 ID']
+  soldier_type military_pay_policy_soldier_type_enum [not null, note: '군종']
+  rank_name varchar(20) [not null, note: '계급']
+  effective_year smallint [not null, note: '적용 연도']
+  monthly_salary bigint [not null, note: '월 봉급']
+  effective_from date [not null, note: '정책 시작일']
+  effective_to date [note: '정책 종료일']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (soldier_type, rank_name, effective_year) [unique, name: 'uq_military_pay_policy']
+  }
+
+  checks {
+    `monthly_salary >= 0` [name: 'chk_military_pay_policy_salary']
+  }
+}
+
+Table cashflow_forecast [note: '캐시플로우 예측 요약'] {
+  forecast_id bigint [pk, increment, note: '예측 결과 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  base_asset bigint [not null, default: 0, note: '계산 기준 현재 자산']
+  expected_salary bigint [not null, default: 0, note: '전역까지 예상 총급여']
+  expected_spending bigint [not null, default: 0, note: '전역까지 예상 총소비']
+  expected_saving_amount bigint [not null, default: 0, note: '전역까지 예상 군적금 납입 원금']
+  expected_investment_amount bigint [not null, default: 0, note: '전역까지 예상 투자 원금']
+  soldier_saving_principal bigint [not null, default: 0, note: '군적금 총 원금(기존 잔액 + 전역까지 예상 신규 납입)']
+  investment_principal bigint [not null, default: 0, note: '투자 총 원금(연동 증권계좌 매입금액 또는 백필 추정치 + 전역까지 예상 신규 납입)']
+  expected_asset bigint [not null, default: 0, note: '전역 예상 자산(현재 순자산 + 급여-소비 + 군적금 이자·매칭지원금 + 투자 예상수익)']
+  soldier_saving_interest bigint [not null, default: 0, note: '군적금 예상 이자 참고값']
+  government_matching_support bigint [not null, default: 0, note: '정부 매칭지원금 참고값']
+  expected_investment_return bigint [not null, default: 0, note: '예상 투자수익 참고값']
+  projected_benefit_amount bigint [not null, default: 0, note: '미확정 예상 혜택 합계']
+  calculation_policy_version varchar(50) [not null, default: 'CONSERVATIVE_CASHFLOW_V3_20260813', note: '캐시플로우 계산 정책 버전']
+  monthly_spending_limit bigint [not null, default: 0, note: '월 소비 상한선']
+  achievement_rate decimal(5,2) [not null, default: 0, note: '목표 달성률']
+  financial_discharge_date date [note: '재정적 전역일']
+  policy_version varchar(30) [note: '적용 봉급 정책 버전']
+  generated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '계산 일시']
+
+  checks {
+    `achievement_rate BETWEEN 0 AND 999.99` [name: 'chk_cashflow_forecast_achievement_rate']
+  }
+}
+
+Table cashflow_forecast_month [note: '월별 캐시플로우 예측 — 홈 탭 "월별 자산 흐름 그래프"의 데이터 소스'] {
+  forecast_month_id bigint [pk, increment, note: '월별 예측 ID']
+  forecast_id bigint [not null, note: '예측 결과 ID']
+  forecast_month date [not null, note: '예측 월의 첫날']
+  expected_rank varchar(20) [note: '예상 계급']
+  expected_salary bigint [not null, default: 0, note: '예상 급여']
+  expected_saving_amount bigint [not null, default: 0, note: '예상 저축액']
+  expected_investment_amount bigint [not null, default: 0, note: '예상 투자액']
+  expected_spending_amount bigint [not null, default: 0, note: '예상 소비액']
+  expected_ending_asset bigint [not null, default: 0, note: '월말 예상 자산']
+
+  indexes {
+    (forecast_id, forecast_month) [unique, name: 'uq_cashflow_forecast_month']
+  }
+}
+
+Table codef_connection [note: 'CODEF 금융기관 연동'] {
+  connection_id bigint [pk, increment, note: '금융 연동 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  connected_id_encrypted varchar(1024) [not null, note: '암호화된 CODEF Connected ID']
+  connected_id_hash char(64) [not null, note: 'Connected ID SHA-256 해시']
+  status codef_connection_status_enum [not null, default: 'ACTIVE', note: '연동 상태']
+  last_sync_at timestamp [note: '전체 계좌 마지막 동기화 시각(연동 단위)']
+  last_sync_error_message varchar(500) [note: '최근 동기화 실패 사유']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    user_id [unique, name: 'uq_codef_connection_user']
+    connected_id_hash [unique, name: 'uq_codef_connection_connected_hash']
+  }
+}
+
+Table codef_institution_connection [note: 'CODEF 기관별 로그인 정보 및 동기화 상태. 로그인 식별자와 비밀번호는 평문 저장 금지'] {
+  institution_connection_id bigint [pk, increment, note: '기관별 연동 ID']
+  connection_id bigint [not null, note: 'CODEF 금융 연동 ID']
+  institution_code varchar(20) [not null, note: 'CODEF organization 코드']
+  business_type codef_institution_connection_business_type_enum [not null, note: 'CODEF 업무 구분(BK 은행, ST 증권)']
+  login_type varchar(10) [not null, note: 'CODEF 로그인 방식(아이디/비밀번호는 1)']
+  login_id_encrypted varchar(1024) [note: '암호화된 기관 로그인 ID']
+  login_password_encrypted varchar(1024) [not null, note: '암호화된 기관 로그인 비밀번호']
+  birth_date_encrypted varchar(1024) [note: '암호화된 생년월일']
+  status codef_institution_connection_status_enum [not null, default: 'ACTIVE', note: '기관 연동 상태']
+  last_sync_at timestamp [note: '기관별 마지막 동기화 시각']
+  last_sync_error_message varchar(500) [note: '기관별 최근 동기화 실패 사유']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (connection_id, institution_code, business_type) [unique, name: 'uq_codef_institution_connection']
+    (connection_id, status) [name: 'idx_codef_institution_connection_status']
+  }
+}
+
+Table connected_account [note: 'CODEF 연동 계좌 — MVP는 수시입출·정기적금·증권 계좌만 후속 동기화 대상(신탁·외화·펀드·대출은 저장은 하되 거래내역 미수집)'] {
+  account_id bigint [pk, increment, note: '연동 계좌 ID']
+  connection_id bigint [not null, note: 'CODEF 연동 ID']
+  institution_code varchar(20) [not null, note: 'CODEF organization 코드']
+  institution_name varchar(100) [not null, note: '금융기관명']
+  account_number_encrypted varchar(1024) [not null, note: '암호화된 실제 계좌번호']
+  account_number_hash char(64) [not null, note: '계좌번호 SHA-256 해시']
+  account_masked varchar(50) [not null, note: '화면 표시용 마스킹 계좌번호']
+  business_type connected_account_business_type_enum [not null, default: 'BK', note: 'CODEF 업무 구분(BK 은행, ST 증권)']
+  account_type varchar(50) [note: '계좌유형']
+  account_role connected_account_account_role_enum [not null, default: 'GENERAL', note: '계좌 분류']
+  product_name varchar(255) [note: '상품명']
+  current_balance bigint [not null, default: 0, note: '조회 시점 잔액']
+  available_balance bigint [note: '출금 가능 금액']
+  account_opened_date date [note: '계좌 개설일']
+  maturity_date date [note: '만기일']
+  last_synced_at timestamp [note: '계좌별 최근 조회일']
+  last_processed_transaction_id bigint [note: '배치 diff 커서']
+  status connected_account_status_enum [not null, default: 'ACTIVE', note: '계좌 상태']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (connection_id, institution_code, account_number_hash) [unique, name: 'uq_connected_account_source']
+  }
+}
+
+Table soldier_saving [note: '장병내일준비적금 상세'] {
+  saving_id bigint [pk, increment, note: '장병 적금 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  account_id bigint [not null, note: '연동 적금 계좌 ID']
+  bank_name varchar(100) [note: '은행명']
+  monthly_amount bigint [note: '월 납입액']
+  interest_rate decimal(5,2) [note: '적용 금리']
+  government_support_expected bigint [note: '예상 정부 매칭지원금']
+  start_date date [note: '가입일']
+  end_date date [note: '만기일']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    account_id [unique, name: 'uq_soldier_saving_account']
+  }
+}
+
+Table transaction_history [note: '거래 내역'] {
+  transaction_id bigint [pk, increment, note: '거래 내역 ID']
+  account_id bigint [not null, note: '연동 계좌 ID']
+  transaction_datetime datetime [not null, note: '거래 일시']
+  amount bigint [not null, note: '거래 금액(항상 0 이상)']
+  balance_after bigint [note: '거래 후 잔액']
+  transaction_type transaction_history_transaction_type_enum [not null, note: '입금 또는 출금']
+  category varchar(50) [note: 'AI 소비 카테고리']
+  category_source transaction_history_category_source_enum [note: '카테고리 생성 주체']
+  transaction_description varchar(255) [note: '거래 적요 또는 거래처']
+  external_transaction_key char(64) [not null, note: '거래 중복 방지 SHA-256 해시']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (account_id, external_transaction_key) [unique, name: 'uq_transaction_history_external_key']
+  }
+
+  checks {
+    `amount >= 0` [name: 'chk_transaction_history_amount']
+  }
+}
+
+Table account_transaction_sync [note: '계좌별 CODEF 거래내역 동기화 범위'] {
+  transaction_sync_id bigint [pk, increment, note: '거래내역 동기화 ID']
+  account_id bigint [not null, note: '연동 계좌 ID']
+  inquiry_type account_transaction_sync_inquiry_type_enum [not null, note: '거래 조회 유형']
+  requested_start_date date [not null, note: 'CODEF 조회 시작일']
+  requested_end_date date [not null, note: 'CODEF 조회 종료일']
+  synced_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '동기화 일시']
+
+  indexes {
+    (account_id, inquiry_type, requested_start_date, requested_end_date) [unique, name: 'uq_account_transaction_sync_period']
+  }
+
+  checks {
+    `requested_start_date <= requested_end_date` [name: 'chk_account_transaction_sync_period']
+  }
+}
+
+Table asset_snapshot [note: '일별 자산 스냅샷 — connected_account.current_balance 합계 + transaction_history 집계로 계산하는 파생 데이터(CODEF 직접 매핑 아님)'] {
+  snapshot_id bigint [pk, increment, note: '자산 스냅샷 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  total_asset bigint [not null, default: 0, note: '총 자산']
+  total_saving bigint [not null, default: 0, note: '총 저축']
+  total_spending bigint [not null, default: 0, note: '총 소비']
+  snapshot_date date [not null, note: '기준일']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (user_id, snapshot_date) [unique, name: 'uq_asset_snapshot_user_date']
+  }
+}
+
+Table challenge_group [note: '입대 동기 챌린지 그룹'] {
+  group_id bigint [pk, increment, note: '동기 그룹 ID']
+  soldier_type challenge_group_soldier_type_enum [not null, note: '군종']
+  enlistment_year int [not null, note: '입대 연도']
+  enlistment_month int [not null, note: '입대 월']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (soldier_type, enlistment_year, enlistment_month) [unique, name: 'uq_challenge_group_cohort']
+  }
+
+  checks {
+    `enlistment_month BETWEEN 1 AND 12` [name: 'chk_challenge_group_month']
+  }
+}
+
+Table challenge_member [note: '챌린지 참여자 — 미션 완료 수와 순위는 챌린지 결과 테이블로 이력화(현재값 캐시 아님)'] {
+  member_id bigint [pk, increment, note: '챌린지 참여 ID']
+  group_id bigint [not null, note: '동기 그룹 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  joined_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '참여 일시']
+
+  indexes {
+    (user_id, joined_at) [name: 'idx_challenge_member_user_joined_at', note: 'MySQL order: joined_at DESC']
+    (group_id, user_id) [unique, name: 'uq_challenge_member_group_user']
+  }
+}
+
+Table challenge_monthly_result [note: '월별 챌린지 결과 — 월별 미션 완료 수 집계'] {
+  challenge_result_id bigint [pk, increment, note: '월별 챌린지 결과 ID']
+  member_id bigint [not null, note: '챌린지 참여 ID']
+  result_month date [not null, note: '결과 월의 첫날']
+  mission_completion_count int [not null, default: 0, note: '해당 월 미션 완료 수']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (member_id, result_month) [unique, name: 'uq_challenge_monthly_result']
+  }
+
+  checks {
+    `mission_completion_count >= 0` [name: 'chk_challenge_monthly_result_completion_count']
+  }
+}
+
+Table challenge_member_summary [note: '챌린지 참여자의 누적 미션 완료 수 집계값'] {
+  member_id bigint [pk, note: '챌린지 참여 ID']
+  total_mission_count int [not null, default: 0, note: '누적 미션 완료 수']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '집계 갱신 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  checks {
+    `total_mission_count >= 0` [name: 'chk_challenge_member_summary_mission_count']
+  }
+}
+
+Table simulation [note: '사용자 What-if 시뮬레이션 — 누적 저장(강사 피드백 반영), GET /simulations(목록)·GET /simulations/{id}(상세)로 재조회'] {
+  simulation_id bigint [pk, increment, note: '시뮬레이션 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  scenario_name varchar(100) [not null, note: '시나리오명']
+  target_amount bigint [not null, note: '시나리오 평가 목표금액 스냅샷']
+  monthly_saving_amount bigint [not null, note: '장병내일준비적금 월 납입액(원, 0~550000)']
+  monthly_investment_amount bigint [not null, note: '군적금 외 월 투자 배분액(원)']
+  expected_return_rate decimal(5,2) [not null, note: '사용자 입력 목표 투자수익률(%, 연 환산 가정)']
+  monthly_spending_amount bigint [not null, note: '월 소비액(원)']
+  expected_asset bigint [not null, note: '전역 예상 자산(현재 순자산 + 급여-소비 + 군적금 이자·매칭지원금 + 투자 예상수익)']
+  financial_discharge_date date [note: '이 시나리오 기준 재정적 전역일']
+  calculation_months int [note: '상세 계산에 포함한 개월 수']
+  base_asset bigint [note: '계산 시점 현재 자산 스냅샷']
+  expected_salary bigint [note: '계산 기간 예상 급여 합계']
+  expected_spending bigint [note: '계산 기간 예상 소비 합계']
+  soldier_saving_principal bigint [note: '군적금 총 원금(기존 잔액 + 전역까지 예상 신규 납입)']
+  soldier_saving_interest bigint [note: '기존 잔액 경과기간 + 미래 회차 잔여기간의 연 5% 단리 예상 이자']
+  government_matching_support bigint [note: '군적금 총 원금의 100% 매칭지원금 가정']
+  investment_principal bigint [note: '투자 총 원금(CODEF 매입원가 또는 백필 + 미래 납입)']
+  expected_investment_return bigint [note: '기존 원금 + 미래 회차의 목표수익률 월복리 예상 투자수익']
+  unallocated_principal bigint [note: '급여에서 소비·군적금·투자 후 남는 금액 합계']
+  calculation_policy_version varchar(50) [note: '상세 계산 정책 버전']
+  is_saved boolean [not null, default: true, note: '사용자 저장 여부']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  checks {
+    `monthly_spending_amount >= 0 AND monthly_saving_amount BETWEEN 0 AND 550000 AND monthly_investment_amount >= 0` [name: 'chk_simulation_monthly_amounts']
+    `target_amount > 0` [name: 'chk_simulation_target_amount']
+    `( calculation_months IS NULL AND base_asset IS NULL AND expected_salary IS NULL AND expected_spending IS NULL AND soldier_saving_principal IS NULL AND soldier_saving_interest IS NULL AND government_matching_support IS NULL AND investment_principal IS NULL AND expected_investment_return IS NULL AND unallocated_principal IS NULL AND calculation_policy_version IS NULL ) OR ( calculation_months IS NOT NULL AND base_asset IS NOT NULL AND expected_salary IS NOT NULL AND expected_spending IS NOT NULL AND soldier_saving_principal IS NOT NULL AND soldier_saving_interest IS NOT NULL AND government_matching_support IS NOT NULL AND investment_principal IS NOT NULL AND expected_investment_return IS NOT NULL AND unallocated_principal IS NOT NULL AND calculation_policy_version IS NOT NULL )` [name: 'chk_simulation_detail_snapshot_complete']
+  }
+}
+
+Table ai_analysis [note: 'AI 분석 이력'] {
+  analysis_id bigint [pk, increment, note: 'AI 분석 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  snapshot_id bigint [note: '분석 기준 자산 스냅샷 ID']
+  simulation_id bigint [note: '참조한 시뮬레이션 FK']
+  analysis_type ai_analysis_analysis_type_enum [not null, note: '분석 유형']
+  result_json json [not null, note: 'AI 분석 결과']
+  input_data_hash char(64) [note: '분석 입력값 SHA-256 해시']
+  model_name varchar(100) [note: 'AI 모델명']
+  prompt_version varchar(50) [note: '프롬프트 버전']
+  generation_source ai_analysis_generation_source_enum [not null, note: '원본 문구 생성 경로 — OpenAI 성공 또는 템플릿 대체; CACHE는 응답 시점 상태라 저장하지 않음']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    input_data_hash [name: 'idx_ai_analysis_input_hash']
+  }
+}
+
+Table financial_product [note: '금융 상품 — 적금·예금·ETF 등 투자상품 통합 관리(2026-07-24, 상품추천을 다시 MVP로 재격상하며 확장). CODEF 카탈로그에 대응 API 없음, 금융감독원·ETF CHECK류 외부 소스 필요'] {
+  product_id bigint [pk, increment, note: '금융 상품 ID']
+  product_name varchar(255) [not null, note: '상품명']
+  company_name varchar(100) [note: '금융회사명']
+  product_type varchar(50) [note: '상품 유형']
+  base_interest_rate decimal(5,2) [note: '기본 금리']
+  max_interest_rate decimal(5,2) [note: '최고 금리']
+  return_rate_1y decimal(6,2) [note: '최근 1년 수익률']
+  risk_category financial_product_risk_category_enum [note: '위험 분류']
+  eligibility text [note: '가입 조건']
+  description text [note: '상품 설명']
+  source_url varchar(1000) [note: '출처 URL']
+  as_of_date date [note: '정보 기준일']
+  status financial_product_status_enum [not null, default: 'ACTIVE', note: '상품 상태']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (product_name, company_name) [unique, name: 'uq_financial_product']
+  }
+}
+
+Table military_benefit [note: '군인 혜택 및 청년 정책 — 휴가 혜택은 benefit_context=LEAVE로 관리'] {
+  benefit_id bigint [pk, increment, note: '혜택 ID']
+  title varchar(255) [not null, note: '혜택명']
+  discount_summary varchar(500) [not null, default: '', note: '카드 목록용 할인 요약']
+  category varchar(50) [note: '혜택 유형']
+  description text [note: '혜택 설명']
+  target_rank varchar(30) [note: '대상 계급']
+  target_service varchar(30) [note: '대상 군종']
+  target_text varchar(500) [note: '대상 안내']
+  benefit_context military_benefit_benefit_context_enum [not null, default: 'GENERAL', note: '혜택 구분']
+  card_company varchar(100) [note: '카드사명']
+  source_url varchar(1000) [note: '출처 URL']
+  effective_from date [note: '시행일']
+  effective_to date [note: '종료일']
+  usage_method text [note: '이용 방법']
+  precautions text [note: '유의사항(전월 실적·월 한도·횟수 제한·급여이체 조건 등)']
+  detail_image_url varchar(1000) [note: '상세 안내 이미지 URL']
+  active_yn boolean [not null, default: true, note: '노출 여부']
+  display_order int [not null, default: 0, note: '카테고리 내 노출 순서']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (benefit_context, category, title, display_order) [unique, name: 'uq_military_benefit_context_category_title_order']
+    (benefit_context, active_yn, category, effective_from, effective_to) [name: 'idx_military_benefit_leave_lookup']
+  }
+}
+
+Table product_recommendation [note: '금융 상품 추천 — 규칙 기반 매칭(자격조건 필터+금리 정렬), AI 아님(2026-07-24 확정). recommend_reason은 템플릿 문자열. 2026-07-24 재확장: simulation.expected_return_rate 입력이 있으면 financial_product.return_rate_1y >= expected_return_rate 조건도 필터에 추가(ETF 등 투자상품 추천, MVP 재격상) — 이것도 단순 WHERE 필터라 규칙 기반 원칙 그대로 유지'] {
+  recommendation_id bigint [pk, increment, note: '상품 추천 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  product_id bigint [not null, note: '금융 상품 ID']
+  recommend_reason text [note: '추천 사유']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '추천 일시']
+
+  indexes {
+    (user_id, product_id) [unique, name: 'uq_product_recommendation_user_product']
+  }
+}
+
+Table ai_recommended_scenario [note: 'AI 추천 시나리오 — 숫자 필드는 Spring 계산(결정론적), GPT는 recommend_reason 서술에만 선택적으로 관여(2026-07-24 확정)'] {
+  scenario_id bigint [pk, increment, note: 'AI 추천 시나리오 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  monthly_saving_amount bigint [not null, note: '추천 장병내일준비적금 월 납입액(원, 0~550000)']
+  monthly_investment_amount bigint [not null, note: '추천 월 투자 배분액(원)']
+  expected_return_rate decimal(5,2) [not null, note: '목표 투자수익률(%, 연 환산)']
+  monthly_spending_amount bigint [not null, note: '추천 월 소비액']
+  expected_asset bigint [not null, note: '추천 전역 예상 자산']
+  financial_discharge_date date [note: '추천 재정적 전역일']
+  recommend_reason text [note: '추천 사유']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  checks {
+    `monthly_spending_amount >= 0 AND monthly_saving_amount BETWEEN 0 AND 550000 AND monthly_investment_amount >= 0` [name: 'chk_ai_recommended_scenario_monthly_amounts']
+  }
+}
+
+Table recurring_investment_plan [note: '사용자가 직접 설정한 정기 위험자산 적립 계획. 실제 증권 주문은 수행하지 않음'] {
+  plan_id bigint [pk, increment, note: '적립식 투자 계획 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  brokerage_account_id bigint [not null, note: '사용자가 선택한 증권 계좌 ID']
+  frequency recurring_investment_plan_frequency_enum [not null, note: '적립 주기']
+  contribution_day "tinyint unsigned" [not null, note: '주간 1(월)~7(일), 월간 1~28']
+  contribution_amount bigint [not null, note: '회차당 현재 적립 예정 금액']
+  maximum_monthly_amount bigint [not null, note: '사용자가 설정한 월 최대 투자한도']
+  investment_product_code varchar(100) [not null, note: '사용자가 선택한 투자 대상 코드']
+  investment_product_name varchar(255) [not null, note: '사용자가 선택한 투자 대상명']
+  status recurring_investment_plan_status_enum [not null, default: 'ACTIVE', note: '내부 적립 계획 상태']
+  next_contribution_date date [note: '다음 내부 적립 예정일']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    user_id [unique, name: 'uq_recurring_investment_plan_user']
+  }
+
+  checks {
+    `contribution_amount >= 0 AND maximum_monthly_amount >= 0` [name: 'chk_recurring_investment_plan_amounts']
+    `(frequency = 'WEEKLY' AND contribution_day BETWEEN 1 AND 7) OR (frequency = 'MONTHLY' AND contribution_day BETWEEN 1 AND 28)` [name: 'chk_recurring_investment_plan_day']
+  }
+}
+
+Table investment_guidance [note: '증권 평가와 전역 목표를 반영한 다음 적립금 가이드. 자동 매도·자동 주문 없음'] {
+  guidance_id bigint [pk, increment, note: '투자 가이드 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  plan_id bigint [not null, note: '계산에 사용한 적립 계획 ID']
+  forecast_id bigint [not null, note: '계산에 사용한 캐시플로우 예측 ID']
+  plan_updated_at timestamp [not null, note: '계산에 사용한 적립 계획 버전 시각']
+  input_data_hash char(64) [not null, note: '계획·목표·예측·증권평가 입력 해시']
+  service_stage investment_guidance_service_stage_enum [not null, note: '계급 기반 UI 여정 단계']
+  action_type investment_guidance_action_type_enum [not null, note: '다음 적립 회차 행동 가이드']
+  target_amount bigint [not null, note: '전역 목표금액']
+  current_contribution_amount bigint [not null, note: '현재 회차당 적립금']
+  recommended_contribution_amount bigint [not null, note: '추천 회차당 적립금']
+  continue_expected_asset bigint [not null, note: '현재 계획 유지 시 전역 예상자산']
+  recommended_expected_asset bigint [not null, note: '추천 계획 적용 시 전역 예상자산']
+  investment_principal bigint [not null, default: 0, note: '선택 투자대상의 매입원금']
+  market_value bigint [not null, default: 0, note: '선택 투자대상의 평가금액']
+  unrealized_profit_loss bigint [not null, default: 0, note: '선택 투자대상의 평가손익']
+  return_rate decimal(9,4) [not null, default: 0, note: '선택 투자대상의 수익률(%)']
+  safe_asset_amount bigint [note: '가이드 계산 당시 증권계좌 예수금(안전자산)']
+  risk_asset_amount bigint [note: '가이드 계산 당시 증권계좌 전체 보유종목 평가액(위험자산)']
+  expected_return_rate decimal(5,2) [not null, default: 0, note: '결정론 계산에 사용한 연 예상수익률(%)']
+  remaining_contribution_count int [not null, default: 0, note: '전역일까지 남은 적립 회차 수']
+  safety_buffer_amount bigint [not null, default: 0, note: 'SAFE_FOCUS 판정용 안전 여유금']
+  reason text [not null, note: '가이드 설명. 숫자와 행동은 Spring이 결정']
+  market_data_as_of timestamp [note: '증권 평가 데이터 기준시각']
+  next_review_at timestamp [not null, note: '다음 가이드 계산 예정시각']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (user_id, created_at, guidance_id) [name: 'idx_investment_guidance_user_created']
+    (user_id, input_data_hash) [name: 'idx_investment_guidance_user_hash']
+  }
+
+  checks {
+    `target_amount >= 0 AND current_contribution_amount >= 0 AND recommended_contribution_amount >= 0 AND remaining_contribution_count >= 0 AND safety_buffer_amount >= 0` [name: 'chk_investment_guidance_amounts']
+  }
+}
+
+Table strategy_application [note: '최신 AI 추천 적용 행은 활성 캐시플로우 전략이며 전체 행은 적용 감사 이력. 실제 금융 주문은 수행하지 않음'] {
+  application_id bigint [pk, increment, note: '전략 적용 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  source_type strategy_application_source_type_enum [not null, note: '적용 출처']
+  analysis_id bigint [note: '원본 AI 분석 ID — AI 추천 적용 멱등성 키']
+  simulation_id bigint [note: '원본 시뮬레이션 ID']
+  ai_scenario_id bigint [note: '원본 AI 추천 시나리오 ID']
+  guidance_id bigint [note: '원본 적립식 투자 가이드 ID']
+  applied_guidance_action strategy_application_applied_guidance_action_enum [note: '사용자가 실제 선택한 가이드 행동']
+  applied_investment_frequency strategy_application_applied_investment_frequency_enum [note: '적용한 적립 주기']
+  applied_recurring_contribution_amount bigint [note: '적용한 회차당 위험자산 적립금']
+  applied_monthly_saving_amount bigint [note: '적용 장병내일준비적금 월 납입액(원, 0~550000)']
+  applied_monthly_investment_amount bigint [note: '적용 월 투자 배분액(원)']
+  applied_expected_return_rate decimal(5,2) [note: '적용 목표 투자수익률']
+  applied_monthly_spending_amount bigint [note: '적용 월 소비액']
+  before_expected_asset bigint [note: '적용 전 예상 자산']
+  after_expected_asset bigint [note: '적용 후 예상 자산']
+  applied_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '적용 일시']
+
+  indexes {
+    (user_id, guidance_id, applied_guidance_action, applied_investment_frequency, applied_recurring_contribution_amount) [unique, name: 'uq_strategy_application_guidance_selection']
+    (user_id, analysis_id) [unique, name: 'uq_strategy_application_ai_analysis']
+  }
+
+  checks {
+    `(applied_monthly_spending_amount IS NULL OR applied_monthly_spending_amount >= 0) AND (applied_monthly_saving_amount IS NULL OR applied_monthly_saving_amount BETWEEN 0 AND 550000) AND (applied_monthly_investment_amount IS NULL OR applied_monthly_investment_amount >= 0)` [name: 'chk_strategy_application_monthly_amounts']
+    `applied_recurring_contribution_amount IS NULL OR applied_recurring_contribution_amount >= 0` [name: 'chk_strategy_application_recurring_amount']
+  }
+}
+
+Table discharge_report [note: '전역 리포트 — 전역 시점 1회성 결과물, 유저당 1행(2026-07-22 확정)'] {
+  report_id bigint [pk, increment, note: '전역 리포트 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  start_asset bigint [not null, default: 0, note: '입대 시 자산']
+  final_asset bigint [not null, default: 0, note: '전역 시 자산']
+  growth_rate decimal(5,2) [note: '자산 증가율']
+  goal_achievement_rate decimal(5,2) [note: '목표 달성률']
+  report_json json [note: '전역 리포트 상세 결과']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    user_id [unique, name: 'uq_discharge_report_user']
+  }
+}
+
+Table refresh_token [note: 'JWT Refresh Token 관리'] {
+  token_id bigint [pk, increment, note: '토큰 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  token_hash char(64) [not null, note: 'Refresh Token SHA-256 해시값']
+  user_agent varchar(255) [note: '발급 기기 정보(OS, 브라우저 등)']
+  expires_at datetime [not null, note: '만료 일시']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    token_hash [unique, name: 'uq_refresh_token_hash']
+  }
+}
+
+Table mission [note: '공통 데일리·성향별 추천·1회성·조건형 이벤트 미션을 관리하는 마스터'] {
+  mission_id bigint [pk, increment, note: '미션 ID']
+  mission_code varchar(50) [note: '변경되지 않는 미션 식별 코드']
+  mission_type mission_mission_type_enum [note: '미션 성향(공통 미션은 NULL)']
+  mission_category mission_mission_category_enum [not null, default: 'DAILY', note: '미션 노출 분류']
+  title varchar(255) [not null, note: '미션명 (예: 30일 연속 출석 체크, ETF 첫 투자 미션)']
+  description text [note: '미션 설명']
+  action_type varchar(50) [not null, note: '완료 조건 유형 (ATTENDANCE, PRODUCT_VIEW, SAVING_CHECK, SIMULATION_RUN 등)']
+  display_order int [not null, default: 0, note: '화면 노출 순서']
+  trigger_type mission_trigger_type_enum [not null, default: 'NONE', note: '이벤트 미션 노출 조건 유형']
+  trigger_value int [note: '이벤트 조건값(예: 전역까지 남은 일수)']
+  event_priority int [not null, default: 0, note: '동시 이벤트 발생 시 노출 우선순위']
+  is_active boolean [not null, default: true, note: '활성 여부']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    mission_code [unique, name: 'uq_mission_code']
+  }
+
+  checks {
+    `display_order >= 0` [name: 'chk_mission_display_order']
+    `trigger_value IS NULL OR trigger_value >= 0` [name: 'chk_mission_trigger_value']
+    `event_priority >= 0` [name: 'chk_mission_event_priority']
+    `mission_category <> 'RECOMMENDED' OR mission_type IS NOT NULL` [name: 'chk_mission_recommended_type']
+    `mission_category <> 'DAILY' OR mission_type IS NULL` [name: 'chk_mission_daily_common_type']
+    `mission_category <> 'EVENT' OR trigger_type <> 'NONE'` [name: 'chk_mission_event_trigger']
+  }
+}
+
+Table user_mission_completion [note: '미션 완료 이력'] {
+  completion_id bigint [pk, increment, note: '미션 완료 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  mission_id bigint [not null, note: '미션 ID']
+  completion_date date [not null, note: '완료 적용일']
+  completed_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '실제 완료 일시']
+
+  indexes {
+    (user_id, mission_id, completion_date) [unique, name: 'uq_user_mission_completion']
+  }
+}
+
+Table badge [note: '성향별 누적 미션 완료 수 티어를 정의하는 뱃지 마스터'] {
+  badge_id bigint [pk, increment, note: '뱃지 ID']
+  badge_name varchar(100) [not null, note: '뱃지명']
+  badge_description varchar(500) [note: '뱃지 획득 조건 설명']
+  mission_type badge_mission_type_enum [not null, note: '뱃지 투자 성향']
+  required_completion_count int [not null, note: '티어 획득에 필요한 누적 미션 완료 수']
+  grade badge_grade_enum [not null, note: '뱃지 등급']
+  is_active boolean [not null, default: true, note: '활성 여부']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    badge_name [unique, name: 'uq_badge_name']
+    (mission_type, grade) [unique, name: 'uq_badge_mission_type_grade']
+    (mission_type, required_completion_count) [unique, name: 'uq_badge_mission_type_completion_count']
+  }
+
+  checks {
+    `required_completion_count > 0` [name: 'chk_badge_required_completion_count']
+  }
+}
+
+Table user_badge [note: '사용자별 투자 뱃지 획득 이력'] {
+  user_badge_id bigint [pk, increment, note: '사용자 뱃지 이력 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  badge_id bigint [not null, note: '뱃지 ID']
+  acquired_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '획득 일시']
+
+  indexes {
+    (user_id, badge_id) [unique, name: 'uq_user_badge_user_badge']
+  }
+}
+
+Table investment_badge [note: '투자 뱃지 — 미션 완료 기반, 실시간 갱신(2026-07-25, 저녁 균형형 판정+콜드스타트 시드 추가)'] {
+  badge_id bigint [pk, increment, note: '투자 뱃지 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  initial_preference investment_badge_initial_preference_enum [note: '온보딩 선택 시드값']
+  badge_tier investment_badge_badge_tier_enum [note: '뱃지 유형']
+  safe_count int [not null, default: 0, note: '안정형 미션 누적 완료 수']
+  safe_grade investment_badge_safe_grade_enum [note: '안정형 누적 등급']
+  aggressive_count int [not null, default: 0, note: '공격형 미션 누적 완료 수']
+  aggressive_grade investment_badge_aggressive_grade_enum [note: '공격형 누적 등급']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    user_id [unique, name: 'uq_investment_badge_user']
+  }
+}
+
+Table leave_mode [note: '사용자 일정 및 휴가모드 자동 전환'] {
+  leave_mode_id bigint [pk, increment, note: '휴가모드 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  event_name varchar(100) [not null, note: '이벤트명(휴가, 외출, 외박 등)']
+  start_date date [not null, note: '휴가 시작일']
+  end_date date [not null, note: '휴가 종료일']
+  is_leave_mode_enabled boolean [not null, default: true, note: '일정 기간 휴가모드 자동 전환 여부']
+  deleted_at timestamp [note: '삭제 일시']
+  budget_amount bigint [note: '휴가 예산 설정값(선택 입력)']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (user_id, start_date) [name: 'idx_leave_mode_user_start_date']
+    (user_id, is_leave_mode_enabled, start_date, end_date) [name: 'idx_leave_mode_user_enabled_period']
+    (user_id, deleted_at, start_date) [name: 'idx_leave_mode_user_deleted_start_date']
+  }
+
+  checks {
+    `start_date <= end_date` [name: 'chk_leave_mode_period']
+    `budget_amount IS NULL OR budget_amount >= 0` [name: 'chk_leave_mode_budget']
+  }
+}
+
+Table daily_market_report [note: '오늘의 AI 시장 리포트 — 전체 사용자 공통 1일 1건'] {
+  report_id bigint [pk, increment, note: '오늘의 리포트 ID']
+  report_date date [not null, note: '서비스 기준일(17:00~익일 16:59:59 노출 구간의 기준 날짜)']
+  title varchar(200) [not null, note: '오늘의 AI 시장 리포트 제목']
+  summary varchar(500) [not null, note: '오늘의 AI 시장 리포트 한줄 요약']
+  content text [not null, note: '선별된 Finnhub 뉴스에 근거해 Gemini가 생성한 사실 기반 시장 리포트 본문']
+  report_status daily_market_report_report_status_enum [not null, default: 'NORMAL', note: '리포트 전체 상태 — PARTIAL: 일부 지표 DELAYED/MISSING, STALE: 당일 배치 실패로 이전 리포트 노출 중']
+  generation_source daily_market_report_generation_source_enum [not null, note: '본문 생성 경로 — Gemini 성공 또는 안전한 대체 상태']
+  model_name varchar(100) [not null, note: '생성에 사용한 모델명(gemini-3.6-flash)']
+  prompt_version varchar(100) [not null, note: 'Gemini Interactions 프롬프트 버전']
+  valid_from timestamp [not null, note: '노출 시작 시각(해당일 17:00)']
+  valid_until timestamp [not null, note: '노출 종료 시각(익일 16:59:59)']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    report_date [unique, name: 'uq_daily_market_report_date']
+  }
+}
+
+Table daily_market_indicator [note: '오늘의 AI 시장 리포트 지표별 원본값 — 리포트 1건당 4행'] {
+  indicator_id bigint [pk, increment, note: '지표 ID']
+  report_id bigint [not null, note: '소속 리포트']
+  indicator_type daily_market_indicator_indicator_type_enum [not null, note: '지표 종류']
+  data_as_of timestamp [note: '해당 지표 값의 실제 기준 시각(MISSING이면 NULL)']
+  source varchar(100) [not null, note: '제공처명']
+  observed_value decimal(18,4) [note: '관측값(지수·금리·환율, MISSING이면 NULL)']
+  change_value decimal(18,4) [note: '전일 대비 변화량']
+  change_rate decimal(6,2) [note: '전일 대비 변화율(%)']
+  status daily_market_indicator_status_enum [not null, note: '지표 단위 수집 상태']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (report_id, indicator_type) [unique, name: 'uq_daily_market_indicator']
+  }
+}
+
+Table daily_market_report_source [note: '오늘의 AI 시장 리포트가 사용한 인용 출처 메타데이터 — 기사 전문은 저장하지 않음'] {
+  source_id bigint [pk, increment, note: '출처 ID']
+  report_id bigint [not null, note: '소속 리포트']
+  source_order "smallint unsigned" [not null, note: '리포트 응답에 노출할 출처 순서']
+  title varchar(500) [not null, note: '인용 출처 제목']
+  url varchar(2048) [not null, note: '인용 출처 URL(http/https만 허용)']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+
+  indexes {
+    (report_id, source_order) [unique, name: 'uq_daily_market_report_source_order']
+  }
+
+  checks {
+    `LOWER(url) REGEXP '^(http|https)://'` [name: 'chk_daily_market_report_source_url']
+  }
+}
+
+Table device_token [note: 'FCM 디바이스 토큰 관리'] {
+  device_token_id bigint [pk, increment, note: '디바이스 토큰 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  fcm_token varchar(500) [not null, note: 'FCM 디바이스 토큰']
+  device_type device_token_device_type_enum [not null, note: '디바이스 유형']
+  is_active boolean [not null, default: true, note: '활성 여부']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    (user_id, is_active) [name: 'idx_device_token_user_active']
+    fcm_token [unique, name: 'uq_device_token_fcm']
+  }
+}
+
+Table notification_history [note: '개인 알림함과 FCM 발송 상태'] {
+  notification_id bigint [pk, increment, note: '알림 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  notification_type varchar(50) [not null, note: '알림 유형']
+  title varchar(255) [not null, note: '알림 제목']
+  body varchar(500) [note: '알림 본문']
+  deep_link varchar(500) [note: '클라이언트 이동 경로']
+  dedupe_key varchar(200) [not null, note: '알림 중복 방지 키']
+  is_read boolean [not null, default: false, note: '읽음 여부']
+  push_status notification_history_push_status_enum [not null, default: 'PENDING', note: 'Push 발송 상태']
+  push_attempts int [not null, default: 0, note: 'Push 발송 시도 횟수']
+  sent_at timestamp [note: 'FCM 발송 완료 일시']
+  read_at timestamp [note: '읽은 일시']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    dedupe_key [unique, name: 'uq_notification_history_dedupe']
+    (user_id, created_at, notification_id) [name: 'idx_notification_history_user_created', note: 'MySQL order: created_at DESC, notification_id DESC']
+    (user_id, is_read) [name: 'idx_notification_history_user_unread']
+  }
+}
+
+Table notification_campaign [note: 'Topic으로 발송하고 사용자별 행을 미리 만들지 않는 공통 알림'] {
+  campaign_id bigint [pk, increment, note: '전체 알림 ID']
+  notification_type varchar(50) [not null, note: '알림 유형']
+  title varchar(255) [not null, note: '알림 제목']
+  body varchar(500) [note: '알림 본문']
+  deep_link varchar(500) [note: '클라이언트 이동 경로']
+  topic varchar(200) [not null, note: 'FCM Topic']
+  dedupe_key varchar(200) [not null, note: '중복 방지 키']
+  push_status notification_campaign_push_status_enum [not null, default: 'PENDING', note: 'Push 발송 상태']
+  push_attempts int [not null, default: 0, note: 'Push 발송 시도 횟수']
+  visible_from timestamp [not null, note: '알림함 노출 시작']
+  visible_until timestamp [note: '알림함 노출 종료']
+  sent_at timestamp [note: 'FCM 발송 완료 일시']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    dedupe_key [unique, name: 'uq_notification_campaign_dedupe']
+    (visible_from, visible_until, created_at) [name: 'idx_notification_campaign_visible']
+  }
+}
+
+Table notification_campaign_receipt [note: '전체 공통 알림의 사용자별 읽음 상태'] {
+  campaign_id bigint [not null, note: '전체 알림 ID']
+  user_id bigint [not null, note: '사용자 ID']
+  read_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '읽은 일시']
+
+  indexes {
+    (campaign_id, user_id) [pk, name: 'PRIMARY']
+  }
+}
+
+Table notification_outbox [note: 'DB 트랜잭션과 Redis XADD 사이의 유실을 막는 Transactional Outbox'] {
+  outbox_id bigint [pk, increment, note: 'Outbox ID']
+  event_id char(36) [not null, note: '이벤트 UUID']
+  notification_id bigint [note: '개인 알림 ID']
+  campaign_id bigint [note: '전체 알림 ID']
+  dedupe_key varchar(200) [not null, note: 'Outbox 중복 방지 키']
+  status notification_outbox_status_enum [not null, default: 'PENDING', note: 'Stream 발행 상태']
+  publish_attempts int [not null, default: 0, note: 'Stream 발행 시도 횟수']
+  available_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '다음 발행 가능 시각']
+  claimed_at timestamp [note: 'Publisher claim 시각']
+  published_at timestamp [note: 'Stream 발행 완료 시각']
+  last_error varchar(500) [note: '최근 발행 실패 원인']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '생성 일시']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: '수정 일시 | ON UPDATE CURRENT_TIMESTAMP']
+
+  indexes {
+    event_id [unique, name: 'uq_notification_outbox_event']
+    dedupe_key [unique, name: 'uq_notification_outbox_dedupe']
+    (status, available_at, outbox_id) [name: 'idx_notification_outbox_publish']
+  }
+
+  checks {
+    `(notification_id IS NOT NULL) <> (campaign_id IS NOT NULL)` [name: 'chk_notification_outbox_target']
+  }
+}
+
+
+Ref fk_soldier_profile_user: soldier_profile.user_id > users.user_id [delete: cascade]
+Ref fk_user_agreement_user: user_agreement.user_id > users.user_id [delete: cascade]
+Ref fk_goal_user: goal.user_id > users.user_id [delete: cascade]
+Ref fk_cashflow_forecast_user: cashflow_forecast.user_id > users.user_id [delete: cascade]
+Ref fk_cashflow_forecast_month_forecast: cashflow_forecast_month.forecast_id > cashflow_forecast.forecast_id [delete: cascade]
+Ref fk_codef_connection_user: codef_connection.user_id > users.user_id [delete: cascade]
+Ref fk_codef_institution_connection_connection: codef_institution_connection.connection_id > codef_connection.connection_id [delete: cascade]
+Ref fk_connected_account_connection: connected_account.connection_id > codef_connection.connection_id [delete: cascade]
+Ref fk_soldier_saving_user: soldier_saving.user_id > users.user_id [delete: cascade]
+Ref fk_soldier_saving_account: soldier_saving.account_id > connected_account.account_id [delete: cascade]
+Ref fk_transaction_history_account: transaction_history.account_id > connected_account.account_id [delete: cascade]
+Ref fk_account_transaction_sync_account: account_transaction_sync.account_id > connected_account.account_id [delete: cascade]
+Ref fk_asset_snapshot_user: asset_snapshot.user_id > users.user_id [delete: cascade]
+Ref fk_challenge_member_group: challenge_member.group_id > challenge_group.group_id [delete: cascade]
+Ref fk_challenge_member_user: challenge_member.user_id > users.user_id [delete: cascade]
+Ref fk_challenge_monthly_result_member: challenge_monthly_result.member_id > challenge_member.member_id [delete: cascade]
+Ref fk_challenge_member_summary_member: challenge_member_summary.member_id > challenge_member.member_id [delete: cascade]
+Ref fk_simulation_user: simulation.user_id > users.user_id [delete: cascade]
+Ref fk_ai_analysis_user: ai_analysis.user_id > users.user_id [delete: cascade]
+Ref fk_ai_analysis_snapshot: ai_analysis.snapshot_id >? asset_snapshot.snapshot_id [delete: set null]
+Ref fk_ai_analysis_simulation: ai_analysis.simulation_id >? simulation.simulation_id [delete: set null]
+Ref fk_product_recommendation_user: product_recommendation.user_id > users.user_id [delete: cascade]
+Ref fk_product_recommendation_product: product_recommendation.product_id > financial_product.product_id [delete: restrict]
+Ref fk_ai_recommended_scenario_user: ai_recommended_scenario.user_id > users.user_id [delete: cascade]
+Ref fk_recurring_investment_plan_user: recurring_investment_plan.user_id > users.user_id [delete: cascade]
+Ref fk_recurring_investment_plan_account: recurring_investment_plan.brokerage_account_id > connected_account.account_id [delete: restrict]
+Ref fk_investment_guidance_user: investment_guidance.user_id > users.user_id [delete: cascade]
+Ref fk_investment_guidance_plan: investment_guidance.plan_id > recurring_investment_plan.plan_id [delete: cascade]
+Ref fk_investment_guidance_forecast: investment_guidance.forecast_id > cashflow_forecast.forecast_id [delete: restrict]
+Ref fk_strategy_application_user: strategy_application.user_id > users.user_id [delete: cascade]
+Ref fk_strategy_application_analysis: strategy_application.analysis_id >? ai_analysis.analysis_id [delete: set null]
+Ref fk_strategy_application_simulation: strategy_application.simulation_id >? simulation.simulation_id [delete: set null]
+Ref fk_strategy_application_ai_scenario: strategy_application.ai_scenario_id >? ai_recommended_scenario.scenario_id [delete: set null]
+Ref fk_strategy_application_guidance: strategy_application.guidance_id >? investment_guidance.guidance_id [delete: set null]
+Ref fk_discharge_report_user: discharge_report.user_id > users.user_id [delete: cascade]
+Ref fk_refresh_token_user: refresh_token.user_id > users.user_id [delete: cascade]
+Ref fk_user_mission_completion_user: user_mission_completion.user_id > users.user_id [delete: cascade]
+Ref fk_user_mission_completion_mission: user_mission_completion.mission_id > mission.mission_id [delete: cascade]
+Ref fk_user_badge_user: user_badge.user_id > users.user_id [delete: cascade]
+Ref fk_user_badge_badge: user_badge.badge_id > badge.badge_id [delete: cascade]
+Ref fk_investment_badge_user: investment_badge.user_id > users.user_id [delete: cascade]
+Ref fk_leave_mode_user: leave_mode.user_id > users.user_id [delete: cascade]
+Ref fk_daily_market_indicator_report: daily_market_indicator.report_id > daily_market_report.report_id [delete: cascade]
+Ref fk_daily_market_report_source_report: daily_market_report_source.report_id > daily_market_report.report_id [delete: cascade]
+Ref fk_device_token_user: device_token.user_id > users.user_id [delete: cascade]
+Ref fk_notification_history_user: notification_history.user_id > users.user_id [delete: cascade]
+Ref fk_notification_campaign_receipt_campaign: notification_campaign_receipt.campaign_id > notification_campaign.campaign_id [delete: cascade]
+Ref fk_notification_campaign_receipt_user: notification_campaign_receipt.user_id > users.user_id [delete: cascade]
+Ref fk_notification_outbox_notification: notification_outbox.notification_id >? notification_history.notification_id [delete: cascade]
+Ref fk_notification_outbox_campaign: notification_outbox.campaign_id >? notification_campaign.campaign_id [delete: cascade]
+
