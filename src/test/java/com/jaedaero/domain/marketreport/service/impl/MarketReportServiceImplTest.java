@@ -179,6 +179,12 @@ class MarketReportServiceImplTest {
               .status(MarketIndicatorStatus.NORMAL)
               .build());
     }
+
+    @Override
+    public DailyMarketIndicatorVo findLatestAvailableBefore(
+        MarketIndicatorType indicatorType, java.time.LocalDate beforeDate) {
+      return null;
+    }
   }
 
   private static class StubSourceMapper implements DailyMarketReportSourceMapper {

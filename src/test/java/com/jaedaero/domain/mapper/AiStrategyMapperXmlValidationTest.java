@@ -102,5 +102,9 @@ class AiStrategyMapperXmlValidationTest {
     assertTrue(
         configuration.hasStatement(
             "com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper.findByReportId"));
+    assertTrue(
+        configuration.hasStatement(
+            "com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper"
+                + ".findLatestAvailableBefore"));
   }
 }
