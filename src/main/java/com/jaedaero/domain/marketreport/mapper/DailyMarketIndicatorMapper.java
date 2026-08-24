@@ -1,6 +1,8 @@
 package com.jaedaero.domain.marketreport.mapper;
 
+import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
 import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
+import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -12,4 +14,8 @@ public interface DailyMarketIndicatorMapper {
   int deleteByReportId(@Param("reportId") long reportId);
 
   List<DailyMarketIndicatorVo> findByReportId(@Param("reportId") long reportId);
+
+  DailyMarketIndicatorVo findLatestAvailableBefore(
+      @Param("indicatorType") MarketIndicatorType indicatorType,
+      @Param("beforeDate") LocalDate beforeDate);
 }

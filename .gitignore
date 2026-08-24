@@ -45,6 +45,7 @@ bin/
 .env.*
 !.env.example
 /jaedaero_wiki
+/docs
 application-local.properties
 application-secret.properties
 

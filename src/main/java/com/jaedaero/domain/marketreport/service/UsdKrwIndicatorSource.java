@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UsdKrwIndicatorSource implements MarketIndicatorSource {
 
+  private static final int INITIAL_LOOKBACK_DAYS = 1;
   private static final int MAX_LOOKBACK_DAYS = 10;
   private static final DateTimeFormatter SEARCH_DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -20,8 +21,7 @@ public class UsdKrwIndicatorSource implements MarketIndicatorSource {
 
   private final EximbankExchangeRateClient eximbankExchangeRateClient;
 
-  public UsdKrwIndicatorSource(
-      EximbankExchangeRateClient eximbankExchangeRateClient) {
+  public UsdKrwIndicatorSource(EximbankExchangeRateClient eximbankExchangeRateClient) {
     this.eximbankExchangeRateClient = eximbankExchangeRateClient;
   }
 
@@ -32,19 +32,16 @@ public class UsdKrwIndicatorSource implements MarketIndicatorSource {
 
   @Override
   public Optional<MarketIndicatorObservation> fetch(LocalDate businessDate) {
-    for (int offset = 0; offset <= MAX_LOOKBACK_DAYS; offset++) {
+    for (int offset = INITIAL_LOOKBACK_DAYS; offset <= MAX_LOOKBACK_DAYS; offset++) {
       LocalDate candidate = businessDate.minusDays(offset);
       List<EximbankExchangeRateItem> rates =
-          eximbankExchangeRateClient.getExchangeRates(
-              candidate.format(SEARCH_DATE_FORMAT));
+          eximbankExchangeRateClient.getExchangeRates(candidate.format(SEARCH_DATE_FORMAT));
       Optional<EximbankExchangeRateItem> usd =
           rates.stream()
-              .filter(
-                  item -> item.result() == 1 && USD_CUR_UNIT.equals(item.curUnit()))
+              .filter(item -> item.result() == 1 && USD_CUR_UNIT.equals(item.curUnit()))
               .findFirst();
       if (usd.isPresent()) {
-        BigDecimal dealBasR =
-            new BigDecimal(usd.get().dealBasR().replace(",", ""));
+        BigDecimal dealBasR = new BigDecimal(usd.get().dealBasR().replace(",", ""));
         return Optional.of(
             new MarketIndicatorObservation(
                 type(),

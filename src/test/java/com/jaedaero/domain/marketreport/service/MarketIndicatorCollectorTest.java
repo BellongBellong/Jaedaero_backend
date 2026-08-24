@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorStatus;
 import com.jaedaero.domain.marketreport.dto.MarketIndicatorType;
+import com.jaedaero.domain.marketreport.mapper.DailyMarketIndicatorMapper;
+import com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -81,13 +83,57 @@ class MarketIndicatorCollectorTest {
     assertEquals(MarketIndicatorStatus.MISSING, statusOf(results, MarketIndicatorType.KOSPI));
   }
 
+  @Test
+  void collectUsesLatestStoredValueWhenExternalSourceReturnsEmpty() {
+    DailyMarketIndicatorVo storedKosdaq =
+        storedIndicator(
+            MarketIndicatorType.KOSDAQ,
+            BUSINESS_DATE.minusDays(3),
+            new BigDecimal("840.89"));
+    MarketIndicatorCollector collector =
+        new MarketIndicatorCollector(
+            List.of(emptySource(MarketIndicatorType.KOSDAQ)),
+            new StubIndicatorMapper(storedKosdaq));
+
+    MarketIndicatorResult result =
+        resultOf(collector.collect(BUSINESS_DATE), MarketIndicatorType.KOSDAQ);
+
+    assertEquals(MarketIndicatorStatus.DELAYED, result.status());
+    assertEquals(new BigDecimal("840.89"), result.observation().observedValue());
+    assertEquals(
+        "금융위원회 지수시세정보 (최근 저장값)", result.observation().source());
+  }
+
+  @Test
+  void collectUsesLatestStoredValueWhenExternalSourceThrows() {
+    DailyMarketIndicatorVo storedTreasury =
+        storedIndicator(
+            MarketIndicatorType.US_TREASURY_10Y,
+            BUSINESS_DATE.minusDays(1),
+            new BigDecimal("4.69"));
+    MarketIndicatorCollector collector =
+        new MarketIndicatorCollector(
+            List.of(failingSource(MarketIndicatorType.US_TREASURY_10Y)),
+            new StubIndicatorMapper(storedTreasury));
+
+    MarketIndicatorResult result =
+        resultOf(collector.collect(BUSINESS_DATE), MarketIndicatorType.US_TREASURY_10Y);
+
+    assertEquals(MarketIndicatorStatus.NORMAL, result.status());
+    assertEquals(new BigDecimal("4.69"), result.observation().observedValue());
+  }
+
   private MarketIndicatorStatus statusOf(
+      List<MarketIndicatorResult> results, MarketIndicatorType type) {
+    return resultOf(results, type).status();
+  }
+
+  private MarketIndicatorResult resultOf(
       List<MarketIndicatorResult> results, MarketIndicatorType type) {
     return results.stream()
         .filter(result -> result.type() == type)
         .findFirst()
-        .orElseThrow()
-        .status();
+        .orElseThrow();
   }
 
   private MarketIndicatorSource fixedSource(
@@ -136,5 +182,49 @@ class MarketIndicatorCollectorTest {
         throw new RuntimeException("소스 호출 실패");
       }
     };
+  }
+
+  private DailyMarketIndicatorVo storedIndicator(
+      MarketIndicatorType type, LocalDate dataAsOf, BigDecimal observedValue) {
+    return DailyMarketIndicatorVo.builder()
+        .indicatorType(type)
+        .dataAsOf(dataAsOf.atStartOfDay())
+        .source(
+            type == MarketIndicatorType.KOSDAQ
+                ? "금융위원회 지수시세정보"
+                : "FRED DGS10")
+        .observedValue(observedValue)
+        .status(MarketIndicatorStatus.NORMAL)
+        .build();
+  }
+
+  private static class StubIndicatorMapper implements DailyMarketIndicatorMapper {
+
+    private final DailyMarketIndicatorVo stored;
+
+    private StubIndicatorMapper(DailyMarketIndicatorVo stored) {
+      this.stored = stored;
+    }
+
+    @Override
+    public int insert(DailyMarketIndicatorVo indicator) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int deleteByReportId(long reportId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<DailyMarketIndicatorVo> findByReportId(long reportId) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DailyMarketIndicatorVo findLatestAvailableBefore(
+        MarketIndicatorType indicatorType, LocalDate beforeDate) {
+      return stored.getIndicatorType() == indicatorType ? stored : null;
+    }
   }
 }

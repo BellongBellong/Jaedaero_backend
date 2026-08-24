@@ -39,4 +39,17 @@
             ELSE 5
         END
     </select>
+
+    <select id="findLatestAvailableBefore"
+            resultType="com.jaedaero.domain.marketreport.vo.DailyMarketIndicatorVo">
+        SELECT <include refid="dailyMarketIndicatorColumns"/>
+        FROM daily_market_indicator
+        WHERE indicator_type = #{indicatorType}
+          AND data_as_of IS NOT NULL
+          AND observed_value IS NOT NULL
+          AND status != 'MISSING'
+          AND data_as_of &lt; #{beforeDate}
+        ORDER BY data_as_of DESC, indicator_id DESC
+        LIMIT 1
+    </select>
 </mapper>

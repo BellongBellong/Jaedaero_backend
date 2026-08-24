@@ -538,6 +538,12 @@ class MarketReportGenerationServiceTest {
     public List<DailyMarketIndicatorVo> findByReportId(long reportId) {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public DailyMarketIndicatorVo findLatestAvailableBefore(
+        MarketIndicatorType indicatorType, LocalDate beforeDate) {
+      return null;
+    }
   }
 
   private static class RecordingSourceMapper implements DailyMarketReportSourceMapper {
