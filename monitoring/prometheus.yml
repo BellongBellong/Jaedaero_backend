@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: backend-jmx
+    static_configs:
+      - targets: ['backend:9404']
+
+  - job_name: mysql
+    static_configs:
+      - targets: ['mysqld-exporter:9104']

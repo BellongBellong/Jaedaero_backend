@@ -272,6 +272,6 @@ public class CashflowCalculator {
 
   private double achievementRate(long expectedAsset, long targetAmount) {
     if (targetAmount == 0L) return 100D;
-    return Math.min(999.99D, expectedAsset * 100D / targetAmount);
+    return Math.max(0D, Math.min(999.99D, expectedAsset * 100D / targetAmount));
   }
 }

@@ -192,6 +192,7 @@ class CashflowCalculatorTest {
 
     assertEquals(0L, result.monthlySpendingLimit());
     assertEquals(-600_000L, result.months().get(0).expectedEndingAsset());
+    assertEquals(0D, result.achievementRate());
   }
 
   @Test

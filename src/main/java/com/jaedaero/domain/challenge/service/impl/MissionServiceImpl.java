@@ -1,5 +1,4 @@
 package com.jaedaero.domain.challenge.service.impl;
-
 import com.jaedaero.domain.challenge.common.enums.MissionType;
 import com.jaedaero.domain.challenge.common.enums.RankingPeriod;
 import com.jaedaero.domain.challenge.dto.MissionCompletionResponse;
@@ -7,6 +6,7 @@ import com.jaedaero.domain.challenge.dto.MissionResponse;
 import com.jaedaero.domain.challenge.exception.ChallengeErrorCode;
 import com.jaedaero.domain.challenge.exception.ChallengeException;
 import com.jaedaero.domain.challenge.mapper.MissionMapper;
+import com.jaedaero.domain.challenge.service.ChallengeGroupService;
 import com.jaedaero.domain.challenge.mapper.ChallengeGroupMapper;
 import com.jaedaero.domain.challenge.service.MissionService;
 import com.jaedaero.domain.challenge.vo.BadgeVo;
@@ -22,18 +22,43 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class MissionServiceImpl implements MissionService {
 
+  private static final int DEADLOCK_RETRY_MAX_ATTEMPTS = 5;
+
   private final MissionMapper missionMapper;
+  private final ChallengeGroupService challengeGroupService;
   private final ChallengeGroupMapper challengeGroupMapper;
   private final NotificationCommandService notificationCommandService;
   private final Clock applicationClock;
+  private final TransactionTemplate missionCompletionTransaction;
+
+  public MissionServiceImpl(
+      MissionMapper missionMapper,
+      ChallengeGroupService challengeGroupService,
+      ChallengeGroupMapper challengeGroupMapper,
+      NotificationCommandService notificationCommandService,
+      Clock applicationClock,
+      PlatformTransactionManager transactionManager) {
+    this.missionMapper = missionMapper;
+    this.challengeGroupService = challengeGroupService;
+    this.challengeGroupMapper = challengeGroupMapper;
+    this.notificationCommandService = notificationCommandService;
+    this.applicationClock = applicationClock;
+    this.missionCompletionTransaction = new TransactionTemplate(transactionManager);
+    this.missionCompletionTransaction.setPropagationBehavior(
+        TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+  }
 
   /** 오늘 사용자에게 노출할 미션 목록을 조회합니다. */
   @Override
@@ -44,8 +69,24 @@ public class MissionServiceImpl implements MissionService {
 
   /** 사용자의 미션 완료를 처리하고 뱃지 및 랭킹 집계를 갱신합니다. */
   @Override
-  @Transactional
   public MissionCompletionResponse completeMission(long userId, long missionId) {
+    for (int attempt = 1; attempt <= DEADLOCK_RETRY_MAX_ATTEMPTS; attempt++) {
+      try {
+        return missionCompletionTransaction.execute(
+            status -> completeMissionInTransaction(userId, missionId));
+      } catch (DeadlockLoserDataAccessException exception) {
+        if (attempt == DEADLOCK_RETRY_MAX_ATTEMPTS) {
+          throw new ChallengeException(
+              ChallengeErrorCode.MISSION_COMPLETION_RETRY_EXHAUSTED,
+              "미션 완료 처리 중 일시적인 충돌이 발생했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        waitBeforeDeadlockRetry(attempt);
+      }
+    }
+    throw new IllegalStateException("미션 완료 재시도 횟수를 확인할 수 없습니다.");
+  }
+
+  private MissionCompletionResponse completeMissionInTransaction(long userId, long missionId) {
     MissionVo mission =
         findTodayMissionVos(userId).stream()
             .filter(todayMission -> todayMission.getMissionId() == missionId)
@@ -70,6 +111,13 @@ public class MissionServiceImpl implements MissionService {
     InvestmentBadgeStatusVo badgeStatus = updateInvestmentBadge(userId, mission.getMissionType());
     missionMapper.incrementMonthlyChallengeMissionCount(userId);
     missionMapper.incrementTotalChallengeMissionCount(userId);
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            challengeGroupService.invalidateRankingCache(userId);
+          }
+        });
     ChallengeRankingMemberVo currentMonthlyRanking =
         findCurrentMonthlyRanking(userId, challengeGroup, completionDate);
     int monthlyMissionCount =
@@ -175,6 +223,7 @@ public class MissionServiceImpl implements MissionService {
         activeBadges.stream()
             .filter(badge -> isEligible(badge, badgeStatus))
             .map(BadgeVo::getBadgeId)
+            .sorted()
             .toList();
     if (!eligibleBadgeIds.isEmpty()) {
       missionMapper.insertUserBadges(userId, eligibleBadgeIds);
@@ -192,6 +241,17 @@ public class MissionServiceImpl implements MissionService {
       return false;
     }
     return completionCount >= badge.getRequiredCompletionCount();
+  }
+
+  private void waitBeforeDeadlockRetry(int failedAttempt) {
+    try {
+      Thread.sleep(25L * failedAttempt);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new ChallengeException(
+          ChallengeErrorCode.MISSION_COMPLETION_RETRY_EXHAUSTED,
+          "미션 완료 재시도 중 인터럽트가 발생했습니다.");
+    }
   }
 
   /** 누적 완료 수에 해당하는 성향별 최고 티어를 저장합니다. */

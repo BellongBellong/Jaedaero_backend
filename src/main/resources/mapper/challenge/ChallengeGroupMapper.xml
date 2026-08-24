@@ -12,6 +12,7 @@
     </resultMap>
 
     <resultMap id="rankingMemberResultMap" type="com.jaedaero.domain.challenge.vo.ChallengeRankingMemberVo">
+        <result property="userId" column="user_id"/>
         <result property="rankingNo" column="ranking_no"/>
         <result property="memberCount" column="member_count"/>
         <result property="nickname" column="nickname"/>
@@ -23,6 +24,7 @@
         <result property="highestBadgeType" column="highest_badge_type"
                 javaType="com.jaedaero.domain.challenge.common.enums.MissionType"/>
         <result property="highestBadgeGrade" column="highest_badge_grade"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
     <resultMap id="rankingStatisticsResultMap"
@@ -134,6 +136,29 @@
         WHERE u.is_withdrawn = FALSE
         ORDER BY rm.ranking_no
         LIMIT 3
+    </select>
+
+    <select id="findRankedMembersByGroupId" resultMap="rankingMemberResultMap">
+        <include refid="rankedMembersCte"/>
+        <include refid="highestBadgesCte"/>
+        SELECT
+            rm.user_id,
+            rm.ranking_no,
+            rm.member_count,
+            u.nickname,
+            u.profile_image,
+            u.profile_source,
+            rm.mission_completion_count,
+            hb.highest_badge_type,
+            hb.highest_badge_grade,
+            rm.updated_at
+        FROM ranked_members rm
+        INNER JOIN users u ON u.user_id = rm.user_id
+        LEFT JOIN highest_badges hb
+            ON hb.user_id = rm.user_id
+            AND hb.badge_ranking_no = 1
+        WHERE u.is_withdrawn = FALSE
+        ORDER BY rm.ranking_no
     </select>
 
     <select id="findMyRankingByGroupId" resultMap="rankingMemberResultMap">

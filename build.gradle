@@ -42,6 +42,7 @@ dependencies {
     // 데이터베이스 관련 의존성
     implementation 'com.mysql:mysql-connector-j:9.3.0'     // MySQL JDBC 드라이버
     implementation 'com.zaxxer:HikariCP:3.4.5'             // 커넥션 풀 라이브러리
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8' // 그룹 랭킹 단기 캐시
 
     // Tomcat 9 / Servlet 4.0
     compileOnly 'javax.servlet:javax.servlet-api:4.0.1'

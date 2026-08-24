@@ -1,0 +1,2 @@
+jmx_prometheus_javaagent.jar
+!.env.performance.example
