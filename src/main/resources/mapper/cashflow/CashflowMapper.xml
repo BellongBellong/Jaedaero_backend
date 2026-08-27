@@ -10,7 +10,8 @@
                 FROM connected_account account
                 INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
                 WHERE connection.user_id = #{userId}
-                  AND connection.status = 'ACTIVE'
+                  AND (connection.status = 'ACTIVE'
+                       OR connection.last_sync_error_message = 'DEMO_CONNECTION')
                   AND account.status = 'ACTIVE'
             ), 0) AS base_asset,
             goal.target_amount,
@@ -20,6 +21,9 @@
                 INNER JOIN connected_account account ON account.account_id = history.account_id
                 INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
                 WHERE connection.user_id = #{userId}
+                  AND (connection.status = 'ACTIVE'
+                       OR connection.last_sync_error_message = 'DEMO_CONNECTION')
+                  AND account.status = 'ACTIVE'
                   AND history.transaction_type = 'WITHDRAW'
                   AND TRIM(COALESCE(history.transaction_description, '')) LIKE '체크카드%'
                   AND history.transaction_datetime >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
@@ -64,7 +68,8 @@
         INNER JOIN connected_account account ON account.account_id = saving.account_id
         INNER JOIN codef_connection connection ON connection.connection_id = account.connection_id
         WHERE saving.user_id = #{userId}
-          AND connection.status = 'ACTIVE'
+          AND (connection.status = 'ACTIVE'
+               OR connection.last_sync_error_message = 'DEMO_CONNECTION')
           AND account.status = 'ACTIVE'
           AND saving.start_date IS NOT NULL
     </select>

@@ -143,7 +143,7 @@ public class TransactionController {
 
   private void synchronizeMissingPeriods(
       long userId, Long accountId, LocalDate startDate, LocalDate endDate) {
-    if (transactionSyncService == null) {
+    if (transactionSyncService == null || repository.isDemoConnectionActivated(userId)) {
       return;
     }
     List<StoredConnectedAccount> accounts =

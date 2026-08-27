@@ -37,6 +37,17 @@ public class CodefPersistenceRepository {
     return rows.stream().findFirst();
   }
 
+  /** 시연용 계좌가 사용자 입력을 통해 활성화되었는지 확인합니다. */
+  public boolean isDemoConnectionActivated(long userId) {
+    Integer count =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM codef_connection WHERE user_id = ? "
+                + "AND last_sync_error_message = 'DEMO_CONNECTION'",
+            Integer.class,
+            userId);
+    return count != null && count > 0;
+  }
+
   /** 매일 일괄 동기화할 활성 CODEF 연결 사용자를 반환합니다. */
   public List<Long> findActiveConnectionUserIds() {
     return jdbcTemplate.query(
@@ -67,6 +78,14 @@ public class CodefPersistenceRepository {
     jdbcTemplate.update(
         "UPDATE codef_connection SET last_sync_error_message = ? WHERE connection_id = ?",
         truncate(message, 500),
+        connectionId);
+  }
+
+  /** 시연 전용 연결은 CODEF 일괄 동기화 대상에서 제외합니다. */
+  public void markConnectionAsDemo(long connectionId) {
+    jdbcTemplate.update(
+        "UPDATE codef_connection SET status = 'ERROR', last_sync_error_message = 'DEMO_CONNECTION' "
+            + "WHERE connection_id = ?",
         connectionId);
   }
 
@@ -249,7 +268,7 @@ public class CodefPersistenceRepository {
     return jdbcTemplate.query(
         "SELECT cic.institution_code, cic.business_type FROM codef_institution_connection cic "
             + "JOIN codef_connection cc ON cc.connection_id = cic.connection_id "
-            + "WHERE cc.user_id = ? AND cic.status = 'ACTIVE'",
+            + "WHERE cc.user_id = ? AND cc.status = 'ACTIVE' AND cic.status = 'ACTIVE'",
         (rs, rowNum) ->
             new StoredInstitutionSyncTarget(
                 rs.getString("institution_code"), rs.getString("business_type")),
@@ -287,6 +306,17 @@ public class CodefPersistenceRepository {
         userId);
   }
 
+  /** 시연 계좌 재연결 시 선택 화면에 다시 노출할 계좌만 활성화합니다. */
+  public int activateAccountByConnectionInstitutionAndAccountHash(
+      long connectionId, String institutionCode, String accountNumberHash) {
+    return jdbcTemplate.update(
+        "UPDATE connected_account SET status = 'ACTIVE' WHERE connection_id = ? "
+            + "AND institution_code = ? AND account_number_hash = ? AND status = 'DISCONNECTED'",
+        connectionId,
+        institutionCode,
+        accountNumberHash);
+  }
+
   /** 멱등 계좌 upsert 후 로컬에 준비된 계좌를 찾습니다. */
   public Optional<Long> findAccountIdByConnectionInstitutionAndAccountHash(
       long connectionId, String institutionCode, String accountNumberHash) {
@@ -299,6 +329,31 @@ public class CodefPersistenceRepository {
             institutionCode,
             accountNumberHash);
     return accountIds.stream().findFirst();
+  }
+
+  /** 시연용 장병내일준비적금만 정리합니다. 실제 CODEF 적금은 유지합니다. */
+  public void deleteDemoSoldierSavings(long userId) {
+    jdbcTemplate.update(
+        "DELETE ca FROM connected_account ca JOIN codef_connection cc ON cc.connection_id ="
+            + " ca.connection_id JOIN soldier_saving ss ON ss.account_id = ca.account_id WHERE"
+            + " cc.user_id = ? AND ss.source_type = 'DEMO'",
+        userId);
+  }
+
+  /** 시연 적금은 CODEF 거래내역 동기화 대상에서 제외합니다. */
+  public boolean isDemoSoldierSavingAccount(long accountId) {
+    Integer count =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM soldier_saving WHERE account_id = ? AND source_type = 'DEMO'",
+            Integer.class,
+            accountId);
+    return count != null && count > 0;
+  }
+
+  /** CODEF가 제공하지 않는 계좌 역할을 시연 데이터에만 보완합니다. */
+  public void updateAccountRole(long accountId, String accountRole) {
+    jdbcTemplate.update(
+        "UPDATE connected_account SET account_role = ? WHERE account_id = ?", accountRole, accountId);
   }
 
   public boolean isTransactionPeriodCovered(
@@ -374,6 +429,31 @@ public class CodefPersistenceRepository {
             + "ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), bank_name = VALUES(bank_name), "
             + "monthly_amount = VALUES(monthly_amount), interest_rate = VALUES(interest_rate), "
             + "start_date = VALUES(start_date), end_date = VALUES(end_date)",
+        userId,
+        accountId,
+        bankName,
+        monthlyAmount,
+        interestRate,
+        toSqlDate(startDate),
+        toSqlDate(endDate));
+  }
+
+  /** 시연용 장병내일준비적금은 실제 CODEF 적금과 구분해 저장합니다. */
+  public void upsertDemoSoldierSaving(
+      long userId,
+      long accountId,
+      String bankName,
+      Long monthlyAmount,
+      java.math.BigDecimal interestRate,
+      LocalDate startDate,
+      LocalDate endDate) {
+    jdbcTemplate.update(
+        "INSERT INTO soldier_saving (user_id, account_id, source_type, bank_name, monthly_amount, "
+            + "interest_rate, start_date, end_date) VALUES (?, ?, 'DEMO', ?, ?, ?, ?, ?) "
+            + "ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), source_type = 'DEMO', "
+            + "bank_name = VALUES(bank_name), monthly_amount = VALUES(monthly_amount), "
+            + "interest_rate = VALUES(interest_rate), start_date = VALUES(start_date), "
+            + "end_date = VALUES(end_date)",
         userId,
         accountId,
         bankName,

@@ -79,8 +79,8 @@ public class DashboardServiceImpl implements DashboardService {
 
   @Override
   public DashboardResponse get(long userId) {
-    CashflowForecastResponse cashflow = latestOrGenerate(userId);
     CashflowCalculationInputResponse calculationInput = cashflowService.getCalculationInput(userId);
+    CashflowForecastResponse cashflow = latestOrGenerate(userId, calculationInput);
     CurrentAssetEstimate currentAssetEstimate = currentAssetEstimate(calculationInput);
     SimulationVo latestSimulation = latestSimulation(userId);
     return DashboardResponse.from(
@@ -142,11 +142,14 @@ public class DashboardServiceImpl implements DashboardService {
     return simulationMapper.findByUserId(userId, 0, 1).stream().findFirst().orElse(null);
   }
 
-  private CashflowForecastResponse latestOrGenerate(long userId) {
+  private CashflowForecastResponse latestOrGenerate(
+      long userId, CashflowCalculationInputResponse calculationInput) {
     try {
       CashflowForecastResponse latest = cashflowService.getLatest(userId);
       if (!ConservativeMonthlyCashflowEngine.CALCULATION_POLICY_VERSION.equals(
-          latest.getCalculationPolicyVersion())) {
+              latest.getCalculationPolicyVersion())
+          || latest.getBaseAsset() == null
+          || latest.getBaseAsset() != calculationInput.getBaseAsset()) {
         return cashflowService.generate(userId);
       }
       return latest;

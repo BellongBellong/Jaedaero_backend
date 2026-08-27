@@ -71,6 +71,10 @@ public class CodefDailySyncService {
       String end,
       LocalDate startDate,
       LocalDate endDate) {
+    if (repository.isDemoSoldierSavingAccount(account.accountId())) {
+      return;
+    }
+
     if ("ST".equals(account.businessType())) {
       securitiesCashTransactionSyncService.sync(userId, account.accountId(), start, end);
       repository.recordTransactionSyncPeriod(

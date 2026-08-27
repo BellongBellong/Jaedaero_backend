@@ -30,14 +30,25 @@ public class AccountConnectionController {
   private final CodefConnectionService connectionService;
   private final CodefPersistenceRepository repository;
   private final CodefAccountSyncService accountSyncService;
+  private final CodefDemoAccountService demoAccountService;
 
   public AccountConnectionController(
       CodefConnectionService connectionService,
       CodefPersistenceRepository repository,
       CodefAccountSyncService accountSyncService) {
+    this(connectionService, repository, accountSyncService, null);
+  }
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public AccountConnectionController(
+      CodefConnectionService connectionService,
+      CodefPersistenceRepository repository,
+      CodefAccountSyncService accountSyncService,
+      CodefDemoAccountService demoAccountService) {
     this.connectionService = connectionService;
     this.repository = repository;
     this.accountSyncService = accountSyncService;
+    this.demoAccountService = demoAccountService;
   }
 
   @ApiOperation(
@@ -65,6 +76,9 @@ public class AccountConnectionController {
       @ApiParam(value = "CODEF에서 최신 계좌 정보를 다시 조회할지 여부", example = "false")
           @RequestParam(defaultValue = "false")
           boolean refresh) {
+    if (demoAccountService != null && demoAccountService.shouldHideAccountsUntilConnected(userId)) {
+      return List.of();
+    }
     if (refresh) {
       accountSyncService.refreshAllAccounts(userId);
     }

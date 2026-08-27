@@ -323,6 +323,7 @@ CREATE TABLE soldier_saving (
                                 saving_id                    BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '장병 적금 ID',
                                 user_id                      BIGINT NOT NULL COMMENT '사용자 ID',
                                 account_id                   BIGINT NOT NULL COMMENT '연동 적금 계좌 ID',
+                                source_type                  ENUM('CODEF', 'DEMO') NOT NULL DEFAULT 'CODEF' COMMENT '적금 데이터 출처',
                                 bank_name                    VARCHAR(100) NULL COMMENT '은행명',
                                 monthly_amount               BIGINT NULL COMMENT '월 납입액',
                                 interest_rate                DECIMAL(5,2) NULL COMMENT '적용 금리',

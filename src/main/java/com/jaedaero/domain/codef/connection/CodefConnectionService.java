@@ -20,6 +20,7 @@ public class CodefConnectionService {
   private final SensitiveValueCipher cipher;
   private final Sha256Hasher hasher;
   private final CodefAccountSyncService syncService;
+  private final CodefDemoAccountService demoAccountService;
 
   public CodefConnectionService(
       CodefAccountClient accountClient,
@@ -27,11 +28,23 @@ public class CodefConnectionService {
       SensitiveValueCipher cipher,
       Sha256Hasher hasher,
       CodefAccountSyncService syncService) {
+    this(accountClient, repository, cipher, hasher, syncService, null);
+  }
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public CodefConnectionService(
+      CodefAccountClient accountClient,
+      CodefPersistenceRepository repository,
+      SensitiveValueCipher cipher,
+      Sha256Hasher hasher,
+      CodefAccountSyncService syncService,
+      CodefDemoAccountService demoAccountService) {
     this.accountClient = accountClient;
     this.repository = repository;
     this.cipher = cipher;
     this.hasher = hasher;
     this.syncService = syncService;
+    this.demoAccountService = demoAccountService;
   }
 
   @Transactional
@@ -43,6 +56,12 @@ public class CodefConnectionService {
     String businessTypeCode = businessType.getCode();
     String organizationCode = request.getOrganizationCode();
     validateInstitution(organizationCode, businessType);
+    if (demoAccountService != null && demoAccountService.isDemoUser(userId)) {
+      if (!demoAccountService.supports(userId, request)) {
+        throw new IllegalArgumentException("시연용 국민·하나은행·미래에셋증권 로그인 ID 또는 기관 코드를 확인해주세요.");
+      }
+      return demoAccountService.connect(userId, request);
+    }
     if (repository
         .findInstitutionConnection(userId, organizationCode, businessTypeCode)
         .filter(connection -> "ACTIVE".equals(connection.status()))

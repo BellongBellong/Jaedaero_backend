@@ -50,6 +50,9 @@ public class CodefSecuritiesInquiryService {
     if (!"ST".equals(account.businessType())) {
       throw new IllegalArgumentException("증권 계좌에 대해서만 조회할 수 있습니다.");
     }
+    if (repository.isDemoConnectionActivated(userId)) {
+      return demoResponse(account);
+    }
     StoredCodefConnection connection =
         repository
             .findConnectionByUserId(userId)
@@ -67,6 +70,11 @@ public class CodefSecuritiesInquiryService {
         account.accountMasked(),
         number(data.path("resDepositReceived")),
         holdings);
+  }
+
+  private SecuritiesAssetResponse demoResponse(StoredConnectedAccount account) {
+    return new SecuritiesAssetResponse(
+        account.accountId(), account.accountMasked(), 0L, List.of());
   }
 
   private List<SecuritiesHoldingResponse> toHoldings(JsonNode data, boolean stockOnly) {

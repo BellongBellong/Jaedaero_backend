@@ -30,8 +30,13 @@ gemini.generate-content-url=https://generativelanguage.googleapis.com/v1beta/mod
 # Never commit the actual key. Losing it makes stored Connected IDs/account numbers unreadable.
 app.crypto.master-key-base64=your_32_byte_aes256_key_base64
 
-# JSP 데모가 사용할 users.user_id. 해당 사용자가 없으면 데모 전용 사용자로 한 번 생성됩니다.
-codef.demo.user-id=1
+# CODEF 호출 없이 시연 데이터만 연결할 사용자와 로그인 ID입니다.
+# 운영에서는 false로 유지하고, 실제 ID/비밀번호는 이 파일에 커밋하지 않습니다.
+codef.demo.enabled=false
+codef.demo.user-id=YOUR_DEMO_USER_ID
+codef.demo.kookmin-login-id=YOUR_KOOKMIN_LOGIN_ID
+codef.demo.hana-login-id=YOUR_HANA_LOGIN_ID
+codef.demo.mirae-asset-login-id=YOUR_MIRAE_ASSET_LOGIN_ID
 # KRX Open API 인증키 — ETF 기능에서만 사용
 krx.api.auth-key=YOUR_KRX_AUTH_KEY
 # 금융위원회_지수시세정보 공공데이터포털 서비스키 — KOSPI/KOSDAQ 시장 리포트
